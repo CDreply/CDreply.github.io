@@ -1,0 +1,16 @@
+title: "🎮 小游戏乐园"
+description: "一个收集小游戏的网站"
+theme: minima
+
+# 关闭默认主题样式，使用自定义布局
+# theme: minima
+
+plugins:
+  - jekyll-seo-tag
+
+# 让 .html 文件也被 Jekyll 处理
+include:
+  - games
+
+# 语言设置
+lang: zh-CN
