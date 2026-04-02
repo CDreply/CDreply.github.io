@@ -1,9 +1,10 @@
-title: "🎮 小游戏乐园"
-description: "一个收集小游戏的网站"
-theme: minima
+title: "🎮 沉答Ai小游戏乐园"
+description: "余风清韵与WorkBuddy合作打造的HTML小游戏集合。包含贪吃蛇等经典游戏，持续更新中。"
+url: "https://cdreply.github.io"  # 你的仓库地址
+baseurl: ""  # 如果部署在子路径则修改
 
 # 关闭默认主题样式，使用自定义布局
-# theme: minima
+theme: minima
 
 plugins:
   - jekyll-seo-tag

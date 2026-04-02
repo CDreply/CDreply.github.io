@@ -40,13 +40,19 @@
     #hud {
       width: 480px;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 16px;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px 16px;
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
+      border-radius: 16px;
       backdrop-filter: blur(10px);
+    }
+
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .hud-item {
@@ -54,6 +60,49 @@
       flex-direction: column;
       align-items: center;
       gap: 2px;
+      flex: 1;
+    }
+
+    .hud-controls {
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .control-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 0.5px;
+    }
+
+    .control-btn {
+      font-size: 18px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.15s, opacity 0.2s;
+      padding: 2px;
+      border-radius: 6px;
+    }
+
+    .control-btn:hover {
+      transform: scale(1.1);
+      opacity: 0.9;
+    }
+
+    .control-btn:active {
+      transform: scale(0.95);
+    }
+
+    #mute-btn {
+      color: #7DF9FF;
     }
 
     .hud-label {
@@ -78,6 +127,7 @@
     #score-display { color: #7DF9FF; text-shadow: 0 0 12px #7DF9FF; }
     #best-display  { color: #FFD700; text-shadow: 0 0 12px #FFD700; }
     #level-display { color: #FF6B9D; text-shadow: 0 0 12px #FF6B9D; }
+    #length-display { color: #A78BFA; text-shadow: 0 0 12px #A78BFA; }
 
     /* 道具状态栏 */
     #buff-bar {
@@ -268,10 +318,25 @@
 
     @media (max-width: 520px) {
       #hud, #buff-bar { width: 360px; }
+      #hud { padding: 10px 12px; gap: 8px; }
+      .hud-item { min-width: 0; }
+      .hud-label { font-size: 9px; }
+      .hud-value { font-size: 18px; }
+      .hud-controls { justify-content: space-around; gap: 10px; padding-top: 6px; }
+      .control-label { font-size: 10px; }
+      .control-btn { font-size: 16px; }
       #game-canvas { width: 360px !important; height: 360px !important; }
       #overlay { width: 360px; height: 360px; }
       #dpad { display: flex; }
       #controls-hint { display: none; }
+    }
+
+    @media (max-width: 400px) {
+      #hud, #buff-bar { width: 320px; }
+      #game-canvas { width: 320px !important; height: 320px !important; }
+      #overlay { width: 320px; height: 320px; }
+      .hud-label { font-size: 8px; letter-spacing: 0.3px; }
+      .hud-value { font-size: 16px; }
     }
 
     /* 粒子容器 */
@@ -350,21 +415,36 @@
 <div id="game-container">
   <!-- HUD -->
   <div id="hud">
-    <div class="hud-item">
-      <span class="hud-label">SCORE</span>
-      <span class="hud-value" id="score-display">0</span>
+    <!-- 第一行：核心指标 -->
+    <div class="hud-row">
+      <div class="hud-item">
+        <span class="hud-label">得分</span>
+        <span class="hud-value" id="score-display">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">等级</span>
+        <span class="hud-value" id="level-display">1</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">长度</span>
+        <span class="hud-value" id="length-display">3</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">最高分</span>
+        <span class="hud-value" id="best-display">0</span>
+      </div>
     </div>
-    <div class="hud-item">
-      <span class="hud-label">BEST</span>
-      <span class="hud-value" id="best-display">0</span>
-    </div>
-    <div class="hud-item">
-      <span class="hud-label">LEVEL</span>
-      <span class="hud-value" id="level-display">1</span>
-    </div>
-    <div class="hud-item">
-      <span class="hud-label">LENGTH</span>
-      <span class="hud-value" id="length-display">3</span>
+    
+    <!-- 第二行：状态控制 -->
+    <div class="hud-controls">
+      <div class="control-item">
+        <span class="control-label">音效</span>
+        <span class="control-btn" id="mute-btn" title="点击切换静音">🔊</span>
+      </div>
+      <div class="control-item">
+        <span class="control-label">暂停</span>
+        <span class="control-btn" id="pause-hint" title="按 P 键暂停">⏸️</span>
+      </div>
     </div>
   </div>
 
@@ -424,6 +504,118 @@ const CFG = {
   ITEM_LIFE:  8000,    // 道具在场上存活时间 ms
   BUFF_DUR:   5000,    // buff 持续时间 ms
 };
+
+// ============================================================
+//  音效系统（Web Audio API 合成，不依赖外部文件）
+// ============================================================
+let audioCtx = null;
+function initAudio() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch (e) {
+    console.warn('Web Audio API 不支持，音效将静音');
+  }
+}
+
+// 音效映射：每个道具类型对应不同音效
+function playSoundForItem(itemType) {
+  if (!audioCtx || audioCtx.state === 'suspended') return;
+  
+  const now = audioCtx.currentTime;
+  const oscillator = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  
+  // 基础音高（C5 = 523.25Hz）
+  const baseFreq = 523.25;
+  
+  // 根据道具类型调整音效
+  switch (itemType) {
+    case 'food_normal':
+      oscillator.type = 'square';
+      oscillator.frequency.setValueAtTime(baseFreq, now);
+      oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + 0.08);
+      gainNode.gain.setValueAtTime(0.3, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      oscillator.start(now);
+      oscillator.stop(now + 0.15);
+      break;
+      
+    case 'food_gold':
+      oscillator.type = 'triangle';
+      oscillator.frequency.setValueAtTime(baseFreq * 1.2, now);
+      oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 2.5, now + 0.25);
+      gainNode.gain.setValueAtTime(0.4, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      oscillator.start(now);
+      oscillator.stop(now + 0.3);
+      break;
+      
+    case 'buff_freeze':
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(baseFreq * 0.8, now);
+      oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 1.2, now + 0.2);
+      gainNode.gain.setValueAtTime(0.25, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      oscillator.start(now);
+      oscillator.stop(now + 0.25);
+      break;
+      
+    case 'buff_double':
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.setValueAtTime(baseFreq * 1.5, now);
+      oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 3, now + 0.3);
+      gainNode.gain.setValueAtTime(0.35, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      oscillator.start(now);
+      oscillator.stop(now + 0.35);
+      break;
+      
+    case 'buff_shrink':
+      // 剪刀剪断音效（快速锯齿波衰减）
+      oscillator.type = 'sawtooth';
+      oscillator.frequency.setValueAtTime(baseFreq * 2, now);
+      oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + 0.1);
+      gainNode.gain.setValueAtTime(0.4, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      oscillator.start(now);
+      oscillator.stop(now + 0.12);
+      break;
+      
+    case 'buff_ghost':
+      // 幽灵音效（低频震颤）
+      oscillator.type = 'triangle';
+      oscillator.frequency.setValueAtTime(baseFreq * 0.6, now);
+      const tremolo = audioCtx.createOscillator();
+      const tremoloGain = audioCtx.createGain();
+      tremolo.type = 'sine';
+      tremolo.frequency.value = 8;
+      tremoloGain.gain.value = 0.15;
+      tremolo.connect(tremoloGain);
+      tremoloGain.connect(gainNode.gain);
+      gainNode.gain.setValueAtTime(0.3, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      oscillator.start(now);
+      tremolo.start(now);
+      oscillator.stop(now + 0.4);
+      tremolo.stop(now + 0.4);
+      break;
+      
+    default:
+      // 默认音效
+      oscillator.type = 'square';
+      oscillator.frequency.value = baseFreq;
+      gainNode.gain.setValueAtTime(0.2, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      oscillator.start(now);
+      oscillator.stop(now + 0.1);
+  }
+}
+
+// 游戏启动时初始化音频
+initAudio();
 
 // ============================================================
 //  道具定义
@@ -707,6 +899,11 @@ function eatItem(idx) {
   // 粒子爆炸
   spawnParticles(item.x * CFG.CELL + CFG.CELL / 2 + 0,
                  item.y * CFG.CELL + CFG.CELL / 2, def.color, 12);
+
+  // 🎵 播放道具音效（静音时不播放）
+  if (!window._snakeMuted) {
+    playSoundForItem(item.type);
+  }
 }
 
 function checkCollision() {
@@ -1110,6 +1307,17 @@ document.getElementById('best-display').textContent = G.best;
     ctx.beginPath(); ctx.moveTo(0, i * C); ctx.lineTo(W, i * C); ctx.stroke();
   }
 })();
+
+// 静音按钮点击切换
+const muteBtn = document.getElementById('mute-btn');
+if (muteBtn) {
+  muteBtn.addEventListener('click', function() {
+    window._snakeMuted = !window._snakeMuted;
+    muteBtn.textContent = window._snakeMuted ? '🔇' : '🔊';
+    // 可选：改变颜色提示
+    muteBtn.style.color = window._snakeMuted ? '#FF6B6B' : '#7DF9FF';
+  });
+}
 </script>
 </body>
 </html>

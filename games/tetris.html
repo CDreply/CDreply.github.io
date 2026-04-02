@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>沉淀方块 - 沉答Ai小游戏乐园</title>
+    <style>
+        /* ===== 全局样式 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: #0a0a1a;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* ===== 返回按钮 ===== */
+        .back-home {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 1000;
+        }
+
+        .back-home a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #7DF9FF;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-home a:hover {
+            background: rgba(125, 249, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(125, 249, 255, 0.2);
+        }
+
+        /* ===== 游戏容器 ===== */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 80px 20px 40px;
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .game-title {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 900;
+            background: linear-gradient(135deg, #FF6B9D, #A78BFA);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .game-subtitle {
+            color: rgba(255, 255, 255, 0.4);
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        /* ===== 游戏区域 ===== */
+        .game-area {
+            display: grid;
+            grid-template-columns: auto 320px; /* 左侧自动宽度，右侧固定320px */
+            gap: 32px;
+            width: 100%;
+            max-width: 1100px; /* 增加最大宽度以适应两栏布局 */
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .game-area {
+                grid-template-columns: 1fr;
+                max-width: 800px;
+            }
+            
+            .info-control-area {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 16px;
+            }
+            
+            .game-status {
+                grid-column: span 2;
+            }
+        }
+
+        /* ===== 游戏窗口独占区域 ===== */
+        .game-window-area {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .game-canvas-container {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        #game-canvas {
+            display: block;
+            background: #111122;
+        }
+
+        /* ===== 右侧信息控制区域 ===== */
+        .info-control-area {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .game-canvas-container {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        #game-canvas {
+            display: block;
+            background: #111122;
+        }
+
+        /* ===== HUD ===== */
+        .hud-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            margin-bottom: 0;
+        }
+        
+        /* 紧凑型HUD项（用于等级、炸弹、最高分） */
+        .hud-item.compact {
+            padding: 6px 4px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .hud-item.compact .hud-label {
+            font-size: 11px;
+        }
+        
+        .hud-item.compact .hud-value {
+            font-size: 18px;
+        }
+
+        .hud-item {
+            text-align: center;
+            padding: 10px 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .hud-label {
+            display: block;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 4px;
+        }
+
+        .hud-value {
+            display: block;
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        #score-value {
+            color: #7DF9FF;
+            text-shadow: 0 0 10px rgba(125, 249, 255, 0.5);
+        }
+
+        #level-value {
+            color: #FF6B9D;
+            text-shadow: 0 0 10px rgba(255, 107, 157, 0.5);
+        }
+
+        #lines-value {
+            color: #A78BFA;
+            text-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+        }
+
+        #highscore-value {
+            color: #FFD700;
+            text-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+        }
+        
+        #time-value {
+            color: #4ADE80;
+            text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+        }
+        
+        #space-count-value {
+            color: #7DF9FF;
+            text-shadow: 0 0 10px rgba(125, 249, 255, 0.5);
+        }
+        
+        /* HUD项的特殊效果（更新后的顺序） */
+        .hud-item:nth-child(1) { /* 得分 */
+            border-color: rgba(125, 249, 255, 0.2);
+        }
+        .hud-item:nth-child(2) { /* 行数 */
+            border-color: rgba(167, 139, 250, 0.2);
+        }
+        .hud-item:nth-child(3) { /* 时间 */
+            border-color: rgba(74, 222, 128, 0.2);
+        }
+        .hud-item:nth-child(4) { /* 空格键 */
+            border-color: rgba(125, 249, 255, 0.2);
+        }
+        .hud-item.compact:nth-child(5) { /* 等级 */
+            border-color: rgba(255, 107, 157, 0.2);
+        }
+        .hud-item.compact:nth-child(6) { /* 炸弹 */
+            border-color: rgba(255, 159, 28, 0.3);
+        }
+        .hud-item.compact:nth-child(7) { /* 最高分 */
+            border-color: rgba(255, 215, 0, 0.3);
+        }
+
+        /* ===== 侧边面板 ===== */
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 200px;
+        }
+
+        /* 下一个方块预览 */
+        .preview-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .preview-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 12px;
+        }
+
+        #next-piece-canvas {
+            display: block;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .control-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 10px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .control-btn.primary {
+            background: linear-gradient(135deg, #7DF9FF, #3B5BDB);
+            color: #0a0a1a;
+            font-weight: 700;
+        }
+
+        .control-btn.warning {
+            background: linear-gradient(135deg, #FF6B9D, #C62A88);
+            color: #fff;
+        }
+
+        /* 游戏状态 */
+        .game-status {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .status-message {
+            font-size: 17px;
+            font-weight: 700;
+            color: #7DF9FF;
+            text-align: center;
+            margin: 12px 0 16px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 28px;
+            padding: 4px 12px;
+            background: rgba(125, 249, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(125, 249, 255, 0.1);
+        }
+
+        /* ===== 紧凑操作指南 ===== */
+        .compact-instructions {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .compact-instructions-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .compact-instructions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+
+        .compact-instruction-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 6px;
+            background: rgba(255, 255, 255, 0.01);
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .compact-instruction-key {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            color: #7DF9FF;
+            min-width: 40px;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .compact-instruction-text {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        /* ===== 响应式调整 ===== */
+        @media (max-width: 768px) {
+            .hud-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .controls-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .compact-instructions-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .game-container {
+                padding: 60px 16px 30px;
+            }
+            
+            .info-control-area {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            
+            .hud-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .hud-item {
+                padding: 8px 6px;
+            }
+            
+            .hud-item.compact {
+                padding: 6px 4px;
+            }
+            
+            .hud-label {
+                font-size: 12px;
+            }
+            
+            .hud-item.compact .hud-label {
+                font-size: 10px;
+            }
+            
+            .hud-value {
+                font-size: 20px;
+            }
+            
+            .hud-item.compact .hud-value {
+                font-size: 18px;
+            }
+            
+            .preview-box,
+            .control-panel,
+            .game-status {
+                padding: 16px;
+            }
+            
+            .preview-title,
+            .control-title,
+            .compact-instructions-title {
+                font-size: 15px;
+                margin-bottom: 12px;
+            }
+            
+            .status-message {
+                font-size: 15px;
+                margin: 10px 0 14px;
+                min-height: 24px;
+            }
+            
+            .controls-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .control-btn {
+                padding: 10px 8px;
+                font-size: 13px;
+                min-height: 40px;
+            }
+            
+            .compact-instructions-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .compact-instruction-key {
+                min-width: 42px;
+                font-size: 11px;
+                padding: 2px 6px;
+            }
+            
+            .compact-instruction-text {
+                font-size: 11px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .game-container {
+                padding: 50px 12px 25px;
+            }
+            
+            .game-title {
+                font-size: 2rem;
+            }
+            
+            .game-subtitle {
+                font-size: 14px;
+            }
+            
+            .hud-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .hud-item {
+                padding: 6px 4px;
+            }
+            
+            .hud-label {
+                font-size: 11px;
+            }
+            
+            .hud-value {
+                font-size: 18px;
+            }
+            
+            .preview-box,
+            .control-panel,
+            .game-status {
+                padding: 14px;
+            }
+            
+            .preview-title,
+            .control-title,
+            .compact-instructions-title {
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+            
+            .status-message {
+                font-size: 14px;
+                margin: 8px 0 12px;
+                min-height: 22px;
+            }
+            
+            .controls-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .control-btn {
+                padding: 8px 6px;
+                font-size: 12px;
+                min-height: 36px;
+            }
+            
+            .compact-instructions-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .compact-instruction-key {
+                min-width: 40px;
+                font-size: 10px;
+                padding: 2px 4px;
+            }
+            
+            .compact-instruction-text {
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 返回首页按钮 -->
+    <div class="back-home">
+        <a href="../index.html">
+            <span>←</span>
+            返回首页
+        </a>
+    </div>
+
+    <!-- 游戏主容器 -->
+    <main class="game-container">
+        <h1 class="game-title">沉淀方块 🧩</h1>
+        <p class="game-subtitle">经典方块沉淀游戏，挑战你的反应速度和空间思维能力！</p>
+
+        <div class="game-area">
+            <!-- 左侧：游戏窗口独占区域 -->
+            <div class="game-window-area">
+                <div class="game-canvas-container">
+                    <canvas id="game-canvas" width="300" height="600"></canvas>
+                </div>
+            </div>
+
+            <!-- 右侧：信息和控制面板 -->
+            <div class="info-control-area">
+                <!-- HUD 统计信息 -->
+                <div class="hud-container">
+                    <div class="hud-item">
+                        <span class="hud-label">得分</span>
+                        <span id="score-value" class="hud-value">0</span>
+                    </div>
+                    <div class="hud-item">
+                        <span class="hud-label">行数</span>
+                        <span id="lines-value" class="hud-value">0</span>
+                    </div>
+                    <div class="hud-item">
+                        <span class="hud-label">时间</span>
+                        <span id="time-value" class="hud-value">00:00</span>
+                    </div>
+                    <div class="hud-item">
+                        <span class="hud-label">空格键</span>
+                        <span id="space-count-value" class="hud-value">0</span>
+                    </div>
+                    <div class="hud-item compact">
+                        <span class="hud-label">等级</span>
+                        <span id="level-value" class="hud-value">1</span>
+                    </div>
+                    <div class="hud-item compact">
+                        <span class="hud-label">炸弹</span>
+                        <span id="bombs-value" class="hud-value" style="color: #FF9F1C; text-shadow: 0 0 8px rgba(255, 159, 28, 0.5);">0</span>
+                    </div>
+                    <div class="hud-item compact" style="grid-column: span 2;">
+                        <span class="hud-label">最高分</span>
+                        <span id="highscore-value" class="hud-value">0</span>
+                    </div>
+                </div>
+
+                <!-- 下一个方块预览 -->
+                <div class="preview-box">
+                    <div class="preview-title">下一个方块</div>
+                    <canvas id="next-piece-canvas" width="120" height="120"></canvas>
+                </div>
+
+                <!-- 控制面板 -->
+                <div class="control-panel">
+                    <div class="control-title">游戏控制</div>
+                    <div class="controls-grid">
+                        <button id="start-btn" class="control-btn primary">▶ 开始</button>
+                        <button id="pause-btn" class="control-btn">⏸️ 暂停</button>
+                        <button id="restart-btn" class="control-btn warning">🔄 重来</button>
+                        <button id="bomb-btn" class="control-btn" style="background: linear-gradient(135deg, #FF9F1C, #E57C00);">💣 炸弹</button>
+                        <button id="mute-btn" class="control-btn">🔊 音效</button>
+                    </div>
+                </div>
+
+                <!-- 游戏状态和操作指南 -->
+                <div class="game-status">
+                    <div class="control-title">游戏状态</div>
+                    <div id="status-message" class="status-message">准备开始</div>
+                    
+                    <!-- 紧凑操作指南 -->
+                    <div class="compact-instructions">
+                        <div class="compact-instructions-title">操作指南</div>
+                        <div class="compact-instructions-grid">
+                            <div class="compact-instruction-item">
+                                <div class="compact-instruction-key">← →</div>
+                                <div class="compact-instruction-text">移动</div>
+                            </div>
+                            <div class="compact-instruction-item">
+                                <div class="compact-instruction-key">↑</div>
+                                <div class="compact-instruction-text">旋转</div>
+                            </div>
+                            <div class="compact-instruction-item">
+                                <div class="compact-instruction-key">↓</div>
+                                <div class="compact-instruction-text">加速</div>
+                            </div>
+                            <div class="compact-instruction-item">
+                                <div class="compact-instruction-key">空格</div>
+                                <div class="compact-instruction-text">快速下落</div>
+                            </div>
+                            <div class="compact-instruction-item">
+                                <div class="compact-instruction-key">P</div>
+                                <div class="compact-instruction-text">暂停</div>
+                            </div>
+                            <div class="compact-instruction-item">
+                                <div class="compact-instruction-key">B</div>
+                                <div class="compact-instruction-text">炸弹</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // ===== 游戏核心配置 =====
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+        const COLORS = [
+            null,
+            '#FF6B9D', // I型方块
+            '#7DF9FF', // J型方块
+            '#A78BFA', // L型方块
+            '#FFD700', // O型方块
+            '#4ADE80', // S型方块
+            '#FF9F1C', // T型方块
+            '#FF4D6D', // Z型方块
+        ];
+
+        // 七种俄罗斯方块形状定义
+        const TETROMINOS = [
+            // I
+            [
+                [0,0,0,0],
+                [1,1,1,1],
+                [0,0,0,0],
+                [0,0,0,0]
+            ],
+            // J
+            [
+                [2,0,0],
+                [2,2,2],
+                [0,0,0]
+            ],
+            // L
+            [
+                [0,0,3],
+                [3,3,3],
+                [0,0,0]
+            ],
+            // O
+            [
+                [4,4],
+                [4,4]
+            ],
+            // S
+            [
+                [0,5,5],
+                [5,5,0],
+                [0,0,0]
+            ],
+            // T
+            [
+                [0,6,0],
+                [6,6,6],
+                [0,0,0]
+            ],
+            // Z
+            [
+                [7,7,0],
+                [0,7,7],
+                [0,0,0]
+            ]
+        ];
+
+        // ===== 游戏状态变量 =====
+        let canvas = document.getElementById('game-canvas');
+        let ctx = canvas.getContext('2d');
+        let nextCanvas = document.getElementById('next-piece-canvas');
+        let nextCtx = nextCanvas.getContext('2d');
+        
+        let board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        let piece = null;
+        let nextPiece = null;
+        let score = 0;
+        let level = 1;
+        let lines = 0;
+        let bombs = 0; // 炸弹道具数量
+        let highscore = localStorage.getItem('tetris_highscore') || 0;
+        let gameTime = 0; // 游戏时间（秒）
+        let gameStartTime = null; // 游戏开始时间戳
+        let spaceCount = 0; // 空格键使用次数
+        let gameOver = false;
+        let paused = false;
+        let dropCounter = 0;
+        let dropInterval = 1000; // 初始下落速度（毫秒）
+        let lastTime = 0;
+        let muted = false;
+
+        // ===== DOM元素引用 =====
+        const scoreElement = document.getElementById('score-value');
+        const levelElement = document.getElementById('level-value');
+        const linesElement = document.getElementById('lines-value');
+        const bombsElement = document.getElementById('bombs-value');
+        const highscoreElement = document.getElementById('highscore-value');
+        const timeElement = document.getElementById('time-value');
+        const spaceCountElement = document.getElementById('space-count-value');
+        const statusElement = document.getElementById('status-message');
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const muteBtn = document.getElementById('mute-btn');
+        const bombBtn = document.getElementById('bomb-btn');
+
+        // ===== 音效系统 =====
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function createBeep(frequency, duration, type = 'sine', volume = 0.15) {
+            if (muted || !audioContext) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playSound(type) {
+            switch(type) {
+                case 'move':
+                    createBeep(220, 0.05, 'square', 0.08);
+                    break;
+                case 'rotate':
+                    createBeep(330, 0.1, 'sine', 0.12);
+                    break;
+                case 'drop':
+                    createBeep(440, 0.15, 'sawtooth', 0.15);
+                    break;
+                case 'line':
+                    createBeep(523.25, 0.2, 'triangle', 0.2);
+                    break;
+                case 'tetris':
+                    // 四行消除的特殊音效
+                    createBeep(659.25, 0.1, 'square', 0.25);
+                    setTimeout(() => createBeep(783.99, 0.1, 'square', 0.25), 100);
+                    setTimeout(() => createBeep(987.77, 0.1, 'square', 0.25), 200);
+                    break;
+                case 'gameover':
+                    createBeep(174.61, 0.5, 'sawtooth', 0.25);
+                    setTimeout(() => createBeep(146.83, 0.5, 'sawtooth', 0.2), 150);
+                    break;
+                case 'bomb':
+                    // 炸弹爆炸音效
+                    createBeep(87.31, 0.3, 'sawtooth', 0.3);
+                    setTimeout(() => createBeep(130.81, 0.2, 'sawtooth', 0.2), 50);
+                    setTimeout(() => createBeep(174.61, 0.1, 'sawtooth', 0.15), 100);
+                    break;
+            }
+        }
+
+        // ===== 方块相关函数 =====
+        function createPiece() {
+            const pieceType = nextPiece !== null ? nextPiece : Math.floor(Math.random() * TETROMINOS.length);
+            nextPiece = Math.floor(Math.random() * TETROMINOS.length);
+            
+            return {
+                matrix: JSON.parse(JSON.stringify(TETROMINOS[pieceType])),
+                pos: { x: Math.floor((COLS - TETROMINOS[pieceType][0].length) / 2), y: 0 },
+                type: pieceType + 1
+            };
+        }
+
+        function drawNextPiece() {
+            nextCtx.fillStyle = '#111122';
+            nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+            
+            if (nextPiece !== null) {
+                const matrix = TETROMINOS[nextPiece];
+                const offsetX = (nextCanvas.width - matrix[0].length * 20) / 2;
+                const offsetY = (nextCanvas.height - matrix.length * 20) / 2;
+                
+                matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            nextCtx.fillStyle = COLORS[nextPiece + 1];
+                            nextCtx.fillRect(
+                                offsetX + x * 20,
+                                offsetY + y * 20,
+                                19, 19
+                            );
+                            
+                            // 方块内高光
+                            nextCtx.fillStyle = 'rgba(255,255,255,0.2)';
+                            nextCtx.fillRect(
+                                offsetX + x * 20 + 2,
+                                offsetY + y * 20 + 2,
+                                15, 15
+                            );
+                        }
+                    });
+                });
+            }
+        }
+
+        function drawBlock(ctx, x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            
+            // 方块边框
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            
+            // 方块内高光
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.fillRect(
+                x * BLOCK_SIZE + 2,
+                y * BLOCK_SIZE + 2,
+                BLOCK_SIZE - 4,
+                BLOCK_SIZE - 4
+            );
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#111122';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制网格线
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x <= COLS; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * BLOCK_SIZE, 0);
+                ctx.lineTo(x * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y <= ROWS; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, y * BLOCK_SIZE);
+                ctx.stroke();
+            }
+            
+            // 绘制已固定的方块
+            board.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        drawBlock(ctx, x, y, COLORS[value]);
+                    }
+                });
+            });
+            
+            // 绘制当前下落方块
+            if (piece) {
+                piece.matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            drawBlock(ctx, x + piece.pos.x, y + piece.pos.y, COLORS[piece.type]);
+                        }
+                    });
+                });
+                
+                // 绘制方块阴影（预测位置）
+                let shadowY = piece.pos.y;
+                while (!collide(piece.matrix, piece.pos.x, shadowY + 1)) {
+                    shadowY++;
+                }
+                
+                if (shadowY > piece.pos.y) {
+                    piece.matrix.forEach((row, y) => {
+                        row.forEach((value, x) => {
+                            if (value) {
+                                ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                                ctx.fillRect(
+                                    (x + piece.pos.x) * BLOCK_SIZE,
+                                    (shadowY + y) * BLOCK_SIZE,
+                                    BLOCK_SIZE,
+                                    BLOCK_SIZE
+                                );
+                            }
+                        });
+                    });
+                }
+            }
+        }
+
+        // ===== 碰撞检测 =====
+        function collide(matrix, offsetX, offsetY) {
+            for (let y = 0; y < matrix.length; y++) {
+                for (let x = 0; x < matrix[y].length; x++) {
+                    if (matrix[y][x] &&
+                        (board[y + offsetY] &&
+                         board[y + offsetY][x + offsetX]) !== 0) {
+                        return true;
+                    }
+                    if (matrix[y][x] &&
+                        (x + offsetX < 0 ||
+                         x + offsetX >= COLS ||
+                         y + offsetY >= ROWS)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // ===== 方块旋转 =====
+        function rotate(matrix) {
+            const rotated = matrix[0].map((_, i) =>
+                matrix.map(row => row[i]).reverse()
+            );
+            return rotated;
+        }
+
+        // ===== 合并方块到游戏板 =====
+        function merge() {
+            piece.matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        const boardY = y + piece.pos.y;
+                        const boardX = x + piece.pos.x;
+                        if (boardY >= 0) {
+                            board[boardY][boardX] = piece.type;
+                        }
+                    }
+                });
+            });
+            
+            // 方块合并后检查是否生成炸弹道具
+            maybeSpawnBomb();
+        }
+
+        // ===== 清除已满行 =====
+        function sweep() {
+            let rowsCleared = 0;
+            
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(value => value !== 0)) {
+                    // 删除该行
+                    const row = board.splice(y, 1)[0];
+                    board.unshift(Array(COLS).fill(0));
+                    rowsCleared++;
+                    y++; // 重新检查同一位置（因为行已下移）
+                }
+            }
+            
+            if (rowsCleared > 0) {
+                // 计算得分
+                let points = 0;
+                switch (rowsCleared) {
+                    case 1: points = 100 * level; break;
+                    case 2: points = 300 * level; break;
+                    case 3: points = 500 * level; break;
+                    case 4: points = 800 * level; break;
+                }
+                
+                score += points;
+                lines += rowsCleared;
+                
+                // 更新等级（每清除10行升一级）
+                const newLevel = Math.floor(lines / 10) + 1;
+                if (newLevel > level) {
+                    level = newLevel;
+                    dropInterval = Math.max(100, 1000 - (level - 1) * 100); // 速度递增
+                    playSound('tetris');
+                } else if (rowsCleared === 4) {
+                    playSound('tetris');
+                } else {
+                    playSound('line');
+                }
+                
+                updateHUD();
+            }
+        }
+
+        // ===== 炸弹道具系统 =====
+        function maybeSpawnBomb() {
+            // 炸弹生成概率与等级挂钩：初始2%，每级提高2%，最大40%
+            const baseProbability = 0.02; // 初始2%
+            const probabilityPerLevel = 0.02; // 每级提高2%
+            const maxProbability = 0.4; // 最大40%
+            
+            // 计算当前等级对应的概率
+            const bombProbability = Math.min(
+                baseProbability + ((level - 1) * probabilityPerLevel),
+                maxProbability
+            );
+            
+            // 显示概率提示（调试用）
+            if (Math.random() < 0.05) { // 5%概率显示概率信息
+                console.log(`当前等级: ${level}, 炸弹生成概率: ${(bombProbability * 100).toFixed(1)}%`);
+            }
+            
+            if (Math.random() < bombProbability) {
+                bombs++;
+                updateHUD();
+                
+                // 显示提示消息，包含当前概率信息
+                statusElement.textContent = `获得炸弹道具！(概率${(bombProbability * 100).toFixed(1)}%)`;
+                statusElement.style.color = '#FF9F1C';
+                setTimeout(() => {
+                    if (!gameOver && !paused) {
+                        statusElement.textContent = '游戏中...';
+                        statusElement.style.color = '#4ADE80';
+                    }
+                }, 1500);
+            }
+        }
+
+        function useBomb() {
+            if (bombs <= 0 || gameOver || paused) return;
+            
+            // 以当前下落方块的中心点作为炸弹中心
+            const centerX = piece.pos.x + Math.floor(piece.matrix[0].length / 2);
+            const centerY = piece.pos.y + Math.floor(piece.matrix.length / 2);
+            
+            // 清除9x9区域
+            let blocksCleared = 0;
+            const bombRadius = 4; // 9x9区域的半径
+            
+            for (let dy = -bombRadius; dy <= bombRadius; dy++) {
+                for (let dx = -bombRadius; dx <= bombRadius; dx++) {
+                    const x = centerX + dx;
+                    const y = centerY + dy;
+                    
+                    // 检查是否在边界内且不是空的
+                    if (x >= 0 && x < COLS && y >= 0 && y < ROWS && board[y][x] !== 0) {
+                        board[y][x] = 0;
+                        blocksCleared++;
+                    }
+                }
+            }
+            
+            if (blocksCleared > 0) {
+                bombs--;
+                
+                // 计算炸弹得分（每个方块50分）
+                const bombPoints = blocksCleared * 50 * level;
+                score += bombPoints;
+                
+                // 播放炸弹音效
+                playSound('bomb');
+                
+                // 显示效果消息
+                statusElement.textContent = `炸弹清除了${blocksCleared}个方块！+${bombPoints}分`;
+                statusElement.style.color = '#FF9F1C';
+                setTimeout(() => {
+                    if (!gameOver && !paused) {
+                        statusElement.textContent = '游戏中...';
+                        statusElement.style.color = '#4ADE80';
+                    }
+                }, 1500);
+                
+                updateHUD();
+            } else {
+                // 炸弹没有清除任何方块，但仍然消耗一个炸弹
+                bombs--;
+                statusElement.textContent = '炸弹未击中任何方块！';
+                statusElement.style.color = '#FF4D6D';
+                setTimeout(() => {
+                    if (!gameOver && !paused) {
+                        statusElement.textContent = '游戏中...';
+                        statusElement.style.color = '#4ADE80';
+                    }
+                }, 1000);
+                updateHUD();
+            }
+        }
+
+        // ===== 格式化时间为 MM:SS =====
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // ===== 更新时间 =====
+        function updateTime() {
+            if (gameStartTime && !gameOver) {
+                // 游戏时间不受暂停影响
+                const currentTime = Math.floor((Date.now() - gameStartTime) / 1000);
+                gameTime = currentTime;
+                timeElement.textContent = formatTime(gameTime);
+            }
+        }
+        
+        // ===== 实时计时器 =====
+        let timeInterval = null;
+        
+        function startTimeInterval() {
+            if (timeInterval) clearInterval(timeInterval);
+            
+            // 每秒更新一次时间显示
+            timeInterval = setInterval(() => {
+                updateTime();
+            }, 1000); // 每秒更新一次
+        }
+        
+        function stopTimeInterval() {
+            if (timeInterval) {
+                clearInterval(timeInterval);
+                timeInterval = null;
+            }
+        }
+
+        // ===== 更新HUD =====
+        function updateHUD() {
+            scoreElement.textContent = score.toLocaleString();
+            levelElement.textContent = level;
+            linesElement.textContent = lines;
+            bombsElement.textContent = bombs;
+            highscoreElement.textContent = highscore.toLocaleString();
+            spaceCountElement.textContent = spaceCount;
+            updateTime(); // 更新时间显示
+        }
+
+        // ===== 游戏控制 =====
+        function movePiece(dir) {
+            if (!piece || gameOver || paused) return;
+            
+            piece.pos.x += dir;
+            if (collide(piece.matrix, piece.pos.x, piece.pos.y)) {
+                piece.pos.x -= dir;
+                return false;
+            }
+            playSound('move');
+            return true;
+        }
+
+        function rotatePiece() {
+            if (!piece || gameOver || paused) return;
+            
+            const rotated = rotate(piece.matrix);
+            if (!collide(rotated, piece.pos.x, piece.pos.y)) {
+                piece.matrix = rotated;
+                playSound('rotate');
+                return true;
+            }
+            return false;
+        }
+
+        function dropPiece() {
+            if (!piece || gameOver || paused) return;
+            
+            piece.pos.y++;
+            if (collide(piece.matrix, piece.pos.x, piece.pos.y)) {
+                piece.pos.y--;
+                merge();
+                playSound('drop');
+                sweep();
+                piece = createPiece();
+                
+                // 检查游戏是否结束
+                if (collide(piece.matrix, piece.pos.x, piece.pos.y)) {
+                    gameOver = true;
+                    statusElement.textContent = '游戏结束！';
+                    statusElement.style.color = '#FF4D6D';
+                    playSound('gameover');
+                    
+                    // 游戏结束时停止计时器
+                    stopTimeInterval();
+                    
+                    // 更新最高分
+                    if (score > highscore) {
+                        highscore = score;
+                        localStorage.setItem('tetris_highscore', highscore);
+                        updateHUD();
+                    }
+                }
+            }
+        }
+
+        function hardDrop() {
+            if (!piece || gameOver || paused) return;
+            
+            let dropped = 0;
+            while (!collide(piece.matrix, piece.pos.x, piece.pos.y + 1)) {
+                piece.pos.y++;
+                dropped++;
+            }
+            
+            if (dropped > 0) {
+                // 增加空格键使用次数计数
+                spaceCount++;
+                spaceCountElement.textContent = spaceCount; // 立即更新显示
+                playSound('drop');
+                merge();
+                sweep();
+                piece = createPiece();
+                
+                if (collide(piece.matrix, piece.pos.x, piece.pos.y)) {
+                    gameOver = true;
+                    statusElement.textContent = '游戏结束！';
+                    statusElement.style.color = '#FF4D6D';
+                    playSound('gameover');
+                    stopTimeInterval(); // 游戏结束时停止计时器
+                }
+            }
+        }
+
+        // ===== 游戏循环 =====
+        function update(time = 0) {
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            
+            if (!paused && !gameOver) {
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    dropPiece();
+                    dropCounter = 0;
+                }
+            }
+            
+            drawBoard();
+            drawNextPiece();
+            
+            if (!gameOver) {
+                requestAnimationFrame(update);
+            }
+        }
+
+        // ===== 初始化游戏 =====
+        function init() {
+            board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            score = 0;
+            level = 1;
+            lines = 0;
+            bombs = 0;
+            gameTime = 0;
+            gameStartTime = null;
+            spaceCount = 0;
+            dropInterval = 1000;
+            dropCounter = 0;
+            gameOver = false;
+            paused = false;
+            
+            // 停止之前的计时器
+            stopTimeInterval();
+            
+            piece = createPiece();
+            nextPiece = Math.floor(Math.random() * TETROMINOS.length);
+            
+            // 初始化时间显示
+            timeElement.textContent = '00:00';
+            spaceCountElement.textContent = '0';
+            
+            updateHUD();
+            statusElement.textContent = '准备开始';
+            statusElement.style.color = '#7DF9FF';
+            
+            drawBoard();
+            drawNextPiece();
+            
+            // 尝试恢复音频上下文
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
+
+        // ===== 事件监听器 =====
+        document.addEventListener('keydown', event => {
+            if (gameOver) return;
+            
+            switch(event.key) {
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    movePiece(-1);
+                    break;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    movePiece(1);
+                    break;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    dropPiece();
+                    dropCounter = 0;
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    rotatePiece();
+                    break;
+                case ' ':
+                    event.preventDefault();
+                    hardDrop();
+                    break;
+                case 'p':
+                case 'P':
+                    event.preventDefault();
+                    togglePause();
+                    break;
+                case 'b':
+                case 'B':
+                    event.preventDefault();
+                    useBomb();
+                    break;
+            }
+        });
+
+        startBtn.addEventListener('click', () => {
+            if (!piece) {
+                init();
+                piece = createPiece();
+            }
+            
+            if (gameOver) {
+                init();
+                piece = createPiece();
+            }
+            
+            if (!paused) {
+                statusElement.textContent = '游戏中...';
+                statusElement.style.color = '#4ADE80';
+                
+                // 开始时间计时（如果还没有开始）
+                if (!gameStartTime) {
+                    gameStartTime = Date.now();
+                    startTimeInterval(); // 启动实时计时器
+                }
+            }
+            
+            requestAnimationFrame(update);
+        });
+
+        pauseBtn.addEventListener('click', togglePause);
+
+        function togglePause() {
+            if (gameOver) return;
+            
+            paused = !paused;
+            if (paused) {
+                statusElement.textContent = '已暂停';
+                statusElement.style.color = '#FF9F1C';
+                pauseBtn.textContent = '▶ 继续';
+                // 暂停时停止计时器更新（但时间仍然继续累加）
+            } else {
+                statusElement.textContent = '游戏中...';
+                statusElement.style.color = '#4ADE80';
+                pauseBtn.textContent = '⏸️ 暂停';
+                lastTime = performance.now();
+                requestAnimationFrame(update);
+            }
+        }
+
+        restartBtn.addEventListener('click', () => {
+            init();
+            statusElement.textContent = '准备开始';
+            statusElement.style.color = '#7DF9FF';
+        });
+
+        muteBtn.addEventListener('click', () => {
+            muted = !muted;
+            muteBtn.textContent = muted ? '🔇 音效' : '🔊 音效';
+        });
+
+        bombBtn.addEventListener('click', useBomb);
+
+        // ===== 触摸控制（移动端支持）=====
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        canvas.addEventListener('touchstart', event => {
+            event.preventDefault();
+            const touch = event.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        });
+
+        canvas.addEventListener('touchmove', event => {
+            event.preventDefault();
+        });
+
+        canvas.addEventListener('touchend', event => {
+            event.preventDefault();
+            if (!touchStartX || !touchStartY || gameOver || paused) return;
+            
+            const touch = event.changedTouches[0];
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+            
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // 水平滑动
+                if (Math.abs(deltaX) > 20) {
+                    if (deltaX > 0) movePiece(1);
+                    else movePiece(-1);
+                }
+            } else {
+                // 垂直滑动
+                if (Math.abs(deltaY) > 20) {
+                    if (deltaY > 0) dropPiece();
+                    else rotatePiece();
+                }
+            }
+            
+            touchStartX = 0;
+            touchStartY = 0;
+        });
+
+        // ===== 初始化 =====
+        init();
+        updateHUD();
+
+        // 设置画布尺寸
+        canvas.width = COLS * BLOCK_SIZE;
+        canvas.height = ROWS * BLOCK_SIZE;
+        
+        console.log('俄罗斯方块游戏已加载！操作说明：');
+        console.log('← →：移动方块 | ↑：旋转 | ↓：加速 | 空格：快速下落 | P：暂停');
+    </script>
+</body>
+</html>

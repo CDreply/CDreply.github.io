@@ -1,6 +1,6 @@
 ---
 layout: default
-title: 🎮 小游戏乐园
+title: 🎮 沉答Ai小游戏乐园
 ---
 
 <style>
@@ -204,8 +204,8 @@ title: 🎮 小游戏乐园
 </style>
 
 <header class="site-header">
-  <h1 class="site-title">🎮 小游戏乐园</h1>
-  <p class="site-subtitle">休闲 · 益智 · 好玩</p>
+  <h1 class="site-title">🎮 沉答Ai小游戏乐园</h1>
+  <p class="site-subtitle">余风清韵 & WorkBuddy 共同努力打造</p>
 </header>
 
 <main class="games-grid">
@@ -229,22 +229,25 @@ title: 🎮 小游戏乐园
     </div>
   </a>
 
-  <!-- ===== 占位：更多游戏即将到来 ===== -->
-  <div class="game-card coming-soon">
-    <div class="card-cover" style="background: linear-gradient(135deg, #1a1a1a, #2a2a2a);">
+  <!-- ===== 沉淀方块 ===== -->
+  <a class="game-card" href="games/tetris.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #1a0d2a, #2d1b4a);">
       <span class="card-cover-emoji">🧩</span>
     </div>
     <div class="card-body">
-      <div class="card-title">俄罗斯方块</div>
-      <div class="card-desc">敬请期待……</div>
+      <div class="card-title">沉淀方块</div>
+      <div class="card-desc">经典方块沉淀游戏！炸弹道具、时间计时、操作统计，全面升级的方块消除体验！</div>
       <div class="card-tags">
-        <span class="tag" style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.3);">即将上线</span>
+        <span class="tag" style="background:rgba(255,107,157,0.15);color:#FF6B9D;">益智</span>
+        <span class="tag" style="background:rgba(167,139,250,0.15);color:#A78BFA;">策略</span>
+        <span class="tag" style="background:rgba(74,222,128,0.15);color:#4ADE80;">单人</span>
+        <span class="tag" style="background:rgba(255,159,28,0.15);color:#FF9F1C;">道具</span>
       </div>
     </div>
     <div class="card-footer">
-      <span class="play-btn" style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.3);">🔒 敬请期待</span>
+      <span class="play-btn" style="background:linear-gradient(135deg,#FF6B9D,#C62A88);color:#fff;">▶ 开始游戏</span>
     </div>
-  </div>
+  </a>
 
   <div class="game-card coming-soon">
     <div class="card-cover" style="background: linear-gradient(135deg, #1a1a1a, #2a2a2a);">
@@ -265,5 +268,6 @@ title: 🎮 小游戏乐园
 </main>
 
 <footer class="site-footer">
-  Made with ❤️ · Powered by GitHub Pages
+  🛠️ 合作打造：余风清韵 · WorkBuddy · GitHub Pages<br>
+  <small style="opacity:0.4;">访问 <a href="https://cdreply.github.io" style="color:rgba(125,249,255,0.6);text-decoration:none;">cdreply.github.io</a> 获取最新内容</small>
 </footer>
