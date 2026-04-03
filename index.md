@@ -249,23 +249,23 @@ title: 🎮 沉答Ai小游戏乐园
     </div>
   </a>
 
-  <!-- ===== 乒乓球 ===== -->
+  <!-- ===== 沉哒乒乓 ===== -->
   <a class="game-card" href="games/PPQ2.html">
     <div class="card-cover" style="background: linear-gradient(135deg, #001a2a, #0d2240);">
       <span class="card-cover-emoji">🏓</span>
     </div>
     <div class="card-body">
-      <div class="card-title">乒乓球</div>
-      <div class="card-desc">挑战AI对手！三种难度自由选择，随等级加速的球速，看你能坚持多久！</div>
+      <div class="card-title">沉哒乒乓</div>
+      <div class="card-desc">新增双人PvP模式！挑战AI或与朋友本地对战，连击系统、连胜记录，v2.1全新体验！</div>
       <div class="card-tags">
         <span class="tag" style="background:rgba(0,170,255,0.15);color:#0af;">竞技</span>
-        <span class="tag" style="background:rgba(170,85,255,0.15);color:#a5f;">AI对战</span>
-        <span class="tag" style="background:rgba(255,187,0,0.15);color:#fb0;">等级</span>
-        <span class="tag" style="background:rgba(74,222,128,0.15);color:#4ADE80;">单人</span>
+        <span class="tag" style="background:rgba(170,85,255,0.15);color:#a5f;">双人对战</span>
+        <span class="tag" style="background:rgba(255,187,0,0.15);color:#fb0;">连击系统</span>
+        <span class="tag" style="background:rgba(74,222,128,0.15);color:#4ADE80;">AI可选</span>
       </div>
     </div>
     <div class="card-footer">
-      <span class="play-btn" style="background:linear-gradient(135deg,#0af,#06c);color:#fff;">▶ 开始游戏</span>
+      <span class="play-btn" style="background:linear-gradient(135deg,#0af,#06c);color:#fff;">▶ 开始游戏 (v2.1)</span>
     </div>
   </a>
 
