@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>乒乓球</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      touch-action: none;
+    }
+    body {
+      background: #0a0a12;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 20%, rgba(0,170,255,0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(255,0,170,0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    #game-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 820px;
+      padding: 0 8px;
+    }
+    /* 标题 */
+    #title {
+      font-size: clamp(20px, 5vw, 36px);
+      font-weight: 900;
+      background: linear-gradient(135deg, #0af, #f0a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none;
+      letter-spacing: 4px;
+    }
+    #best-record {
+      font-size: clamp(10px, 2.5vw, 12px);
+      color: #fb0;
+      margin-top: -6px;
+      margin-bottom: 2px;
+    }
+    #hud {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      gap: 4px;
+    }
+    .hud-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+    }
+    .hud-label {
+      font-size: clamp(8px, 1.8vw, 11px);
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .hud-value {
+      font-size: clamp(16px, 4vw, 28px);
+      font-weight: 800;
+    }
+    #player-score { color: #0af; text-shadow: 0 0 15px rgba(0,170,255,0.6); }
+    #ai-score { color: #f0a; text-shadow: 0 0 15px rgba(255,0,170,0.6); }
+    #level-display { color: #fb0; text-shadow: 0 0 15px rgba(255,187,0,0.6); }
+    #streak-display { color: #0fb; text-shadow: 0 0 15px rgba(0,255,187,0.6); }
+    #difficulty-display { color: #a5f; text-shadow: 0 0 15px rgba(170,85,255,0.6); }
+    #canvas-wrap {
+      position: relative;
+      width: 100%;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: #080810;
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.1);
+      box-shadow: 0 0 50px rgba(0,150,255,0.1);
+      touch-action: none;
+    }
+    #overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10,10,18,0.92);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      z-index: 10;
+      padding: 16px;
+    }
+    #overlay h1 {
+      font-size: clamp(24px, 6vw, 42px);
+      font-weight: 900;
+      background: linear-gradient(135deg, #0af, #f0a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    #overlay .subtitle {
+      color: rgba(255,255,255,0.5);
+      font-size: clamp(11px, 2.5vw, 14px);
+    }
+    .result-box {
+      display: flex;
+      gap: clamp(15px, 5vw, 40px);
+      margin: 6px 0;
+    }
+    .result-item { text-align: center; }
+    .result-item .r-label {
+      font-size: clamp(10px, 2.5vw, 12px);
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 1px;
+    }
+    .result-item .r-value {
+      font-size: clamp(22px, 5.5vw, 32px);
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    /* 难度选择 */
+    .difficulty-select {
+      display: flex;
+      gap: clamp(8px, 2.5vw, 15px);
+      margin: 6px 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .diff-btn {
+      padding: clamp(8px, 2vw, 12px) clamp(16px, 4vw, 28px);
+      font-size: clamp(12px, 3vw, 14px);
+      font-weight: 600;
+      color: #fff;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .diff-btn:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.4);
+    }
+    .diff-btn.active {
+      border-color: #a5f;
+      background: rgba(170,85,255,0.2);
+      box-shadow: 0 0 20px rgba(170,85,255,0.3);
+    }
+    .diff-btn[data-diff="easy"] { color: #4f4; }
+    .diff-btn[data-diff="normal"] { color: #fb0; }
+    .diff-btn[data-diff="hard"] { color: #f44; }
+    
+    #start-btn {
+      padding: clamp(10px, 2.5vw, 14px) clamp(30px, 8vw, 50px);
+      font-size: clamp(13px, 3.5vw, 16px);
+      font-weight: 700;
+      color: #000;
+      background: linear-gradient(135deg, #0af, #09d);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      box-shadow: 0 4px 25px rgba(0,170,255,0.4);
+      transition: transform 0.15s;
+    }
+    #start-btn:hover { transform: scale(1.05); }
+    #controls-hint {
+      color: rgba(255,255,255,0.3);
+      font-size: clamp(10px, 2.5vw, 12px);
+      text-align: center;
+    }
+
+    /* 移动端触摸区域指示器 */
+    #touch-hint {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: rgba(255,255,255,0.15);
+      font-size: 13px;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    /* 移动端底部触控按钮（辅助） */
+    #mobile-controls {
+      display: none;
+      gap: 16px;
+      width: 100%;
+      justify-content: space-between;
+      padding: 0 4px;
+    }
+    .mobile-btn {
+      flex: 1;
+      height: 52px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.1s;
+      touch-action: none;
+    }
+    .mobile-btn:active {
+      background: rgba(255,255,255,0.18);
+    }
+
+    @media (pointer: coarse) {
+      /* 触摸设备：显示移动控制按钮 */
+      #mobile-controls { display: flex; }
+      #controls-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="title">沉哒乒乓</div>
+    <div id="best-record">最高连击: <span id="best-combo">0</span> / 最高连胜: <span id="best-streak">0</span></div>
+    <div id="hud">
+      <div class="hud-item">
+        <span class="hud-label">玩家</span>
+        <span class="hud-value" id="player-score">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">等级</span>
+        <span class="hud-value" id="level-display">1</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">连击</span>
+        <span class="hud-value" id="combo-display">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">连胜</span>
+        <span class="hud-value" id="streak-display">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">难度</span>
+        <span class="hud-value" id="difficulty-display">标准</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">电脑</span>
+        <span class="hud-value" id="ai-score">0</span>
+      </div>
+    </div>
+    
+    <div id="canvas-wrap">
+      <canvas id="canvas" width="800" height="500"></canvas>
+      <div id="overlay">
+        <h1>乒乓球</h1>
+        <p class="subtitle" id="overlay-subtitle">选择难度后开始游戏</p>
+        
+        <div class="difficulty-select">
+          <button class="diff-btn" data-diff="easy">简单</button>
+          <button class="diff-btn active" data-diff="normal">标准</button>
+          <button class="diff-btn" data-diff="hard">困难</button>
+        </div>
+        
+        <div class="result-box" id="result-box" style="display:none"></div>
+        <button id="start-btn">开始游戏</button>
+        
+        <div id="controls-hint">↑↓ / WS 控制挡板 | 获胜后自动进入下一关</div>
+      </div>
+    </div>
+
+    <!-- 移动端触控按钮 -->
+    <div id="mobile-controls">
+      <div class="mobile-btn" id="btn-up">▲</div>
+      <div class="mobile-btn" id="btn-down">▼</div>
+    </div>
+  </div>
+
+<script>
+// 配置
+const CANVAS_W = 800;
+const CANVAS_H = 500;
+const PADDLE_W = 16;
+const PADDLE_H = 90;
+const PADDLE_SPEED = 9;
+const BALL_SIZE = 12;
+const BASE_BALL_SPEED = 8;
+const WIN_SCORE = 5;
+
+// AI 难度配置
+const AI_DIFFICULTY = {
+  easy:   { speedMult: 0.5, label: '简单' },
+  normal: { speedMult: 0.75, label: '标准' },
+  hard:   { speedMult: 1.0, label: '困难' },
+};
+
+// 游戏状态
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let state = 'idle';
+let animationId = null;
+let difficulty = 'normal';
+
+// 游戏数据
+let player = { x: 25, y: CANVAS_H/2 - PADDLE_H/2, score: 0, combo: 0 };
+let ai = { x: CANVAS_W - 25 - PADDLE_W, y: CANVAS_H/2 - PADDLE_H/2, score: 0 };
+let ball = { x: CANVAS_W/2, y: CANVAS_H/2, vx: 0, vy: 0 };
+let paddleDir = 0;
+let level = 1;
+let ballSpeedMult = 1;
+
+// 音效（Web Audio API）
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playHitSound() {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.05);
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.05);
+}
+
+// 历史记录（最高连击、最高连胜）
+let bestRecord = JSON.parse(localStorage.getItem('ppqBestRecord')) || { combo: 0, streak: 0 };
+let currentStreak = 0;  // 当前连胜（本局）
+
+// 加载历史记录
+document.getElementById('best-combo').textContent = bestRecord.combo;
+document.getElementById('best-streak').textContent = bestRecord.streak;
+
+// 难度选择
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    difficulty = btn.dataset.diff;
+    updateHUD();
+  });
+});
+
+// 初始化
+function init() {
+  lastTime = 0;  // 重置时间增量
+  player = { x: 25, y: CANVAS_H/2 - PADDLE_H/2, score: 0, combo: 0 };
+  ai = { x: CANVAS_W - 25 - PADDLE_W, y: CANVAS_H/2 - PADDLE_H/2, score: 0 };
+  ball = { x: CANVAS_W/2, y: CANVAS_H/2, vx: 0, vy: 0 };
+  paddleDir = 0;
+  level = 1;
+  ballSpeedMult = 1;
+  // 连胜不重置，跨局累计
+  updateHUD();
+}
+
+// 更新 HUD
+function updateHUD() {
+  document.getElementById('player-score').textContent = player.score;
+  document.getElementById('ai-score').textContent = ai.score;
+  document.getElementById('level-display').textContent = level;
+  document.getElementById('combo-display').textContent = player.combo;
+  document.getElementById('streak-display').textContent = currentStreak;
+  document.getElementById('difficulty-display').textContent = AI_DIFFICULTY[difficulty].label;
+}
+
+// 开始游戏
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  state = 'playing';
+  init();
+  serveBall();
+  gameLoop();
+  // 移动端：恢复音频上下文
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+// 发球（失球后从中心垂直发出，避免连续失球）
+function serveBall(fromCenter = false) {
+  ball.x = CANVAS_W / 2;
+  ball.y = CANVAS_H / 2;
+  const dir = Math.random() > 0.5 ? 1 : -1;
+  const speed = BASE_BALL_SPEED * ballSpeedMult;
+  ball.vx = dir * speed;
+  // 失球重置时垂直发出，否则随机角度
+  ball.vy = fromCenter ? 0 : (Math.random() - 0.5) * speed * 0.7;
+}
+
+// 游戏循环
+let lastTime = 0;
+
+function gameLoop(timestamp) {
+  if (state !== 'playing') return;
+  
+  // 计算时间增量，标准化到60fps
+  const deltaTime = lastTime ? (timestamp - lastTime) / (1000/60) : 1;
+  lastTime = timestamp;
+  
+  update(deltaTime);
+  render();
+  
+  animationId = requestAnimationFrame(gameLoop);
+}
+
+// 更新
+function update(deltaTime) {
+  // 玩家移动
+  player.y += paddleDir * PADDLE_SPEED * deltaTime;
+  player.y = Math.max(0, Math.min(CANVAS_H - PADDLE_H, player.y));
+  
+  // AI 移动 - 根据难度
+  const aiSpeed = PADDLE_SPEED * AI_DIFFICULTY[difficulty].speedMult * (0.8 + level * 0.08);
+  const aiTarget = ball.y - PADDLE_H / 2;
+  if (ball.vx > 0) { // 球朝AI飞时全力回位
+    if (ai.y < aiTarget - 8) ai.y += aiSpeed * deltaTime;
+    else if (ai.y > aiTarget + 8) ai.y -= aiSpeed * deltaTime;
+  } else { // 球朝玩家飞时AI放松
+    if (ai.y < aiTarget - 30) ai.y += aiSpeed * 0.5 * deltaTime;
+    else if (ai.y > aiTarget + 30) ai.y -= aiSpeed * 0.5 * deltaTime;
+  }
+  ai.y = Math.max(0, Math.min(CANVAS_H - PADDLE_H, ai.y));
+  
+  // 球移动
+  const speed = BASE_BALL_SPEED * ballSpeedMult;
+  ball.x += ball.vx * (speed / BASE_BALL_SPEED) * deltaTime;
+  ball.y += ball.vy * (speed / BASE_BALL_SPEED) * deltaTime;
+  
+  // 球上下边界反弹
+  if (ball.y <= 0) {
+    ball.y = 0;
+    ball.vy = Math.abs(ball.vy);
+  }
+  if (ball.y >= CANVAS_H - BALL_SIZE) {
+    ball.y = CANVAS_H - BALL_SIZE;
+    ball.vy = -Math.abs(ball.vy);
+  }
+  
+  // 玩家接球
+  if (ball.vx < 0 && 
+      ball.x <= player.x + PADDLE_W &&
+      ball.x + BALL_SIZE >= player.x &&
+      ball.y + BALL_SIZE >= player.y &&
+      ball.y <= player.y + PADDLE_H) {
+    ball.vx = Math.abs(ball.vx) * 1.05;
+    ball.x = player.x + PADDLE_W + 1;
+    const hitPos = (ball.y - (player.y + PADDLE_H/2)) / (PADDLE_H/2);
+    ball.vy = hitPos * speed;
+    player.combo++;
+    // 实时更新最高连击
+    if (player.combo > bestRecord.combo) {
+      bestRecord.combo = player.combo;
+      localStorage.setItem('ppqBestRecord', JSON.stringify(bestRecord));
+      document.getElementById('best-combo').textContent = bestRecord.combo;
+    }
+    playHitSound();
+    checkLevelUp();
+  }
+  
+  // AI 接球
+  if (ball.vx > 0 &&
+      ball.x + BALL_SIZE >= ai.x &&
+      ball.x <= ai.x + PADDLE_W &&
+      ball.y + BALL_SIZE >= ai.y &&
+      ball.y <= ai.y + PADDLE_H) {
+    ball.vx = -Math.abs(ball.vx) * 1.05;
+    ball.x = ai.x - BALL_SIZE - 1;
+    const hitPos = (ball.y - (ai.y + PADDLE_H/2)) / (PADDLE_H/2);
+    ball.vy = hitPos * speed;
+    playHitSound();
+  }
+  
+  // 得分
+  if (ball.x < -20) {
+    ai.score++;
+    player.combo = 0;  // 玩家失球，重置连击
+    level = 1;         // 玩家失球，重置等级
+    ballSpeedMult = 1; // 玩家失球，重置球速
+    updateHUD();
+    if (ai.score >= WIN_SCORE) {
+      gameOver(false);
+    } else {
+      serveBall(true);  // 失球后从中心垂直发出
+    }
+  }
+  if (ball.x > CANVAS_W + 20) {
+    player.score++;
+    // 玩家得分，连击继续（不清零）
+    updateHUD();
+    if (player.score >= WIN_SCORE) {
+      gameOver(true);
+    } else {
+      serveBall(true);  // 失球后从中心垂直发出
+    }
+  }
+}
+
+// 升级检测
+function checkLevelUp() {
+  if (player.combo > 0 && player.combo % 3 === 0) {
+    level = Math.min(10, level + 1);
+    ballSpeedMult = 1 + (level - 1) * 0.15;
+    updateHUD();
+  }
+}
+
+// 渲染
+function render() {
+  ctx.fillStyle = '#080810';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  
+  // 网格背景
+  ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < CANVAS_W; i += 40) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, CANVAS_H); ctx.stroke();
+  }
+  for (let i = 0; i < CANVAS_H; i += 40) {
+    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(CANVAS_W, i); ctx.stroke();
+  }
+  
+  // 中线
+  ctx.setLineDash([15, 15]);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(CANVAS_W/2, 0);
+  ctx.lineTo(CANVAS_W/2, CANVAS_H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // 玩家挡板
+  const pGrad = ctx.createLinearGradient(player.x, player.y, player.x + PADDLE_W, player.y);
+  pGrad.addColorStop(0, '#0af');
+  pGrad.addColorStop(1, '#068');
+  ctx.fillStyle = pGrad;
+  ctx.shadowColor = '#0af';
+  ctx.shadowBlur = 15;
+  ctx.beginPath();
+  ctx.roundRect(player.x, player.y, PADDLE_W, PADDLE_H, 6);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  
+  // AI 挡板
+  const aiGrad = ctx.createLinearGradient(ai.x, ai.y, ai.x + PADDLE_W, ai.y);
+  aiGrad.addColorStop(0, '#f0a');
+  aiGrad.addColorStop(1, '#c08');
+  ctx.fillStyle = aiGrad;
+  ctx.shadowColor = '#f0a';
+  ctx.shadowBlur = 15;
+  ctx.beginPath();
+  ctx.roundRect(ai.x, ai.y, PADDLE_W, PADDLE_H, 6);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  
+  // 球
+  const cx = ball.x + BALL_SIZE/2;
+  const cy = ball.y + BALL_SIZE/2;
+  const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, BALL_SIZE * 1.5);
+  glow.addColorStop(0, 'rgba(255,255,255,0.8)');
+  glow.addColorStop(0.5, 'rgba(150,200,255,0.3)');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(cx, cy, BALL_SIZE * 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(cx, cy, BALL_SIZE/2, 0, Math.PI*2);
+  ctx.fill();
+}
+
+// 游戏结束
+function gameOver(playerWin) {
+  state = 'gameover';
+  cancelAnimationFrame(animationId);
+  const overlay = document.getElementById('overlay');
+  overlay.style.display = 'flex';
+  document.getElementById('overlay-subtitle').style.display = 'none';
+  
+  const box = document.getElementById('result-box');
+  box.style.display = 'flex';
+  box.innerHTML = `
+    <div class="result-item">
+      <div class="r-label">玩家</div>
+      <div class="r-value" style="color:#0af">${player.score}</div>
+    </div>
+    <div class="result-item">
+      <div class="r-label">电脑</div>
+      <div class="r-value" style="color:#f0a">${ai.score}</div>
+    </div>
+    <div class="result-item">
+      <div class="r-label">等级</div>
+      <div class="r-value" style="color:#fb0">${level}</div>
+    </div>
+  `;
+  
+  overlay.querySelector('h1').textContent = playerWin ? '🎉 获胜！' : '游戏结束';
+  document.getElementById('start-btn').textContent = playerWin ? '下一关' : '重新开始';
+  
+  // 更新并保存历史记录
+  if (player.combo > bestRecord.combo) {
+    bestRecord.combo = player.combo;
+    localStorage.setItem('ppqBestRecord', JSON.stringify(bestRecord));
+    document.getElementById('best-combo').textContent = bestRecord.combo;
+  }
+  
+  if (playerWin) {
+    currentStreak++;  // 当前连胜+1
+    // 更新最高连胜（只增不减）
+    if (currentStreak > bestRecord.streak) {
+      bestRecord.streak = currentStreak;
+      localStorage.setItem('ppqBestRecord', JSON.stringify(bestRecord));
+      document.getElementById('best-streak').textContent = bestRecord.streak;
+    }
+  } else {
+    currentStreak = 0;  // 输了清零当前连胜
+  }
+}
+
+// ==================== 输入处理 ====================
+
+// 键盘控制
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') paddleDir = -1;
+  else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') paddleDir = 1;
+});
+document.addEventListener('keyup', e => {
+  if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') && paddleDir === -1) paddleDir = 0;
+  else if ((e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') && paddleDir === 1) paddleDir = 0;
+});
+
+// ===== 触摸控制（Canvas 上滑动跟随）=====
+// 将触摸的 Canvas 内 Y 坐标映射到逻辑坐标，挡板中心跟随手指
+let touchActive = false;
+let lastTouchY = null;
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (state !== 'playing') return;
+  touchActive = true;
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  // 将屏幕坐标映射到 Canvas 逻辑坐标
+  const scaleY = CANVAS_H / rect.height;
+  const logicY = (touch.clientY - rect.top) * scaleY;
+  // 挡板中心对齐手指
+  player.y = Math.max(0, Math.min(CANVAS_H - PADDLE_H, logicY - PADDLE_H / 2));
+  lastTouchY = touch.clientY;
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (state !== 'playing' || !touchActive) return;
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const scaleY = CANVAS_H / rect.height;
+  const logicY = (touch.clientY - rect.top) * scaleY;
+  player.y = Math.max(0, Math.min(CANVAS_H - PADDLE_H, logicY - PADDLE_H / 2));
+  lastTouchY = touch.clientY;
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  touchActive = false;
+  paddleDir = 0;
+  lastTouchY = null;
+}, { passive: false });
+
+// ===== 移动端底部按钮控制 =====
+const btnUp = document.getElementById('btn-up');
+const btnDown = document.getElementById('btn-down');
+
+function bindMobileBtn(btn, dir) {
+  btn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (state !== 'playing') return;
+    paddleDir = dir;
+  }, { passive: false });
+  btn.addEventListener('touchend', e => {
+    e.preventDefault();
+    paddleDir = 0;
+  }, { passive: false });
+  btn.addEventListener('mousedown', () => { if (state === 'playing') paddleDir = dir; });
+  btn.addEventListener('mouseup', () => { paddleDir = 0; });
+}
+
+bindMobileBtn(btnUp, -1);
+bindMobileBtn(btnDown, 1);
+
+// ===== 鼠标控制（PC 备用）=====
+canvas.addEventListener('mousemove', e => {
+  if (state !== 'playing') return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleY = CANVAS_H / rect.height;
+  const logicY = (e.clientY - rect.top) * scaleY;
+  player.y = Math.max(0, Math.min(CANVAS_H - PADDLE_H, logicY - PADDLE_H / 2));
+});
+
+// 开始按钮
+document.getElementById('start-btn').addEventListener('click', startGame);
+
+// 初始渲染
+render();
+</script>
+</body>
+</html>
