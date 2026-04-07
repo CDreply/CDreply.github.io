@@ -217,15 +217,16 @@ title: 🎮 沉答Ai小游戏乐园
     </div>
     <div class="card-body">
       <div class="card-title">贪吃蛇</div>
-      <div class="card-desc">经典贪吃蛇升级版！收集道具触发特效，越吃越长越难控制，挑战你的最高分！</div>
+      <div class="card-desc">全新双人模式上线！支持道具特效、多人对战，越吃越长越难控制，挑战你的最高分！</div>
       <div class="card-tags">
         <span class="tag" style="background:rgba(125,249,255,0.15);color:#7DF9FF;">益智</span>
         <span class="tag" style="background:rgba(167,139,250,0.15);color:#A78BFA;">道具</span>
-        <span class="tag" style="background:rgba(74,222,128,0.15);color:#4ADE80;">单人</span>
+        <span class="tag" style="background:rgba(0,170,255,0.15);color:#0af;">双人对战</span>
+        <span class="tag" style="background:rgba(255,107,157,0.15);color:#FF6B9D;">版本1.2</span>
       </div>
     </div>
     <div class="card-footer">
-      <span class="play-btn" style="background:linear-gradient(135deg,#7DF9FF,#3B5BDB);color:#0a0a1a;">▶ 开始游戏</span>
+      <span class="play-btn" style="background:linear-gradient(135deg,#7DF9FF,#3B5BDB);color:#0a0a1a;">▶ 开始游戏 (v1.2)</span>
     </div>
   </a>
 
@@ -266,6 +267,46 @@ title: 🎮 沉答Ai小游戏乐园
     </div>
     <div class="card-footer">
       <span class="play-btn" style="background:linear-gradient(135deg,#0af,#06c);color:#fff;">▶ 开始游戏 (v2.1)</span>
+    </div>
+  </a>
+
+  <!-- ===== 赛博五子棋 ===== -->
+  <a class="game-card" href="games/cyberpunk-gomoku-v1.2.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #0a0a1f, #1a1a3a);">
+      <span class="card-cover-emoji">⚡</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">赛博五子棋</div>
+      <div class="card-desc">赛博朋克风格五子棋！人机对战/双人对战自由切换，霓虹灯效、电子音效，全新视觉体验！</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(0,255,255,0.15);color:#0ff;">赛博朋克</span>
+        <span class="tag" style="background:rgba(255,0,255,0.15);color:#f0f;">电子音效</span>
+        <span class="tag" style="background:rgba(255,187,0,0.15);color:#fb0;">人机对战</span>
+        <span class="tag" style="background:rgba(74,222,128,0.15);color:#4ADE80;">双人</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#0ff,#0aa);color:#0a0a1a;">▶ 开始游戏 (v1.2)</span>
+    </div>
+  </a>
+
+  <!-- ===== 简约围棋 ===== -->
+  <a class="game-card" href="games/plain-go-v1.1.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #2a241a, #3a2a1a);">
+      <span class="card-cover-emoji">🎴</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">简约围棋</div>
+      <div class="card-desc">经典黑白对弈，人机/双人模式可选！AI执白自动计算，悔棋功能，适合新老棋手！</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(0,0,0,0.15);color:#222;">围棋</span>
+        <span class="tag" style="background:rgba(255,255,255,0.15);color:#fff;">策略</span>
+        <span class="tag" style="background:rgba(255,187,0,0.15);color:#fb0;">人机对战</span>
+        <span class="tag" style="background:rgba(74,222,128,0.15);color:#4ADE80;">双人</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#222,#000);color:#fff;">▶ 开始游戏 (v1.1)</span>
     </div>
   </a>
 

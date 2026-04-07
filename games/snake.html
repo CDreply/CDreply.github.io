@@ -33,10 +33,39 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
-    /* ===== HUD ===== */
+    /* ===== 模式切换 Tab ===== */
+    .mode-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 2px;
+    }
+    .mode-tab {
+      padding: 6px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.45);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .mode-tab.active {
+      background: rgba(125,249,255,0.15);
+      border-color: rgba(125,249,255,0.5);
+      color: #7DF9FF;
+      text-shadow: 0 0 10px rgba(125,249,255,0.5);
+    }
+    .mode-tab:hover:not(.active) {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.7);
+    }
+
+    /* ===== HUD（单人） ===== */
     #hud {
       width: 480px;
       display: flex;
@@ -48,13 +77,11 @@
       border-radius: 16px;
       backdrop-filter: blur(10px);
     }
-
     .hud-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-
     .hud-item {
       display: flex;
       flex-direction: column;
@@ -62,7 +89,6 @@
       gap: 2px;
       flex: 1;
     }
-
     .hud-controls {
       display: flex;
       justify-content: flex-end;
@@ -70,19 +96,16 @@
       padding-top: 8px;
       border-top: 1px solid rgba(255,255,255,0.07);
     }
-
     .control-item {
       display: flex;
       align-items: center;
       gap: 6px;
     }
-
     .control-label {
       font-size: 11px;
       color: rgba(255,255,255,0.4);
       letter-spacing: 0.5px;
     }
-
     .control-btn {
       font-size: 18px;
       cursor: pointer;
@@ -91,19 +114,53 @@
       padding: 2px;
       border-radius: 6px;
     }
+    .control-btn:hover { transform: scale(1.1); opacity: 0.9; }
+    .control-btn:active { transform: scale(0.95); }
+    #mute-btn { color: #7DF9FF; }
 
-    .control-btn:hover {
-      transform: scale(1.1);
-      opacity: 0.9;
+    /* ===== HUD（双人 PVP）===== */
+    #hud-pvp {
+      width: 480px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
     }
-
-    .control-btn:active {
-      transform: scale(0.95);
+    .pvp-hud-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
     }
-
-    #mute-btn {
-      color: #7DF9FF;
+    #pvp-hud-p1 {
+      background: rgba(0,170,255,0.08);
+      border: 1px solid rgba(0,170,255,0.25);
     }
+    #pvp-hud-p2 {
+      background: rgba(255,80,80,0.08);
+      border: 1px solid rgba(255,80,80,0.25);
+    }
+    .pvp-hud-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      flex: 1;
+    }
+    .pvp-label {
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .pvp-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    #pvp-hud-p1 .pvp-label { color: rgba(0,170,255,0.8); }
+    #pvp-hud-p1 .pvp-value { color: #0af; text-shadow: 0 0 12px rgba(0,170,255,0.7); }
+    #pvp-hud-p2 .pvp-label { color: rgba(255,80,80,0.8); }
+    #pvp-hud-p2 .pvp-value { color: #f55; text-shadow: 0 0 12px rgba(255,80,80,0.7); }
 
     .hud-label {
       font-size: 10px;
@@ -111,7 +168,6 @@
       letter-spacing: 1px;
       text-transform: uppercase;
     }
-
     .hud-value {
       font-size: 22px;
       font-weight: 700;
@@ -119,11 +175,7 @@
       text-shadow: 0 0 10px rgba(100,200,255,0.6);
       transition: transform 0.15s;
     }
-
-    .hud-value.pop {
-      transform: scale(1.4);
-    }
-
+    .hud-value.pop { transform: scale(1.4); }
     #score-display { color: #7DF9FF; text-shadow: 0 0 12px #7DF9FF; }
     #best-display  { color: #FFD700; text-shadow: 0 0 12px #FFD700; }
     #level-display { color: #FF6B9D; text-shadow: 0 0 12px #FF6B9D; }
@@ -138,7 +190,6 @@
       align-items: center;
       padding: 4px 8px;
     }
-
     .buff-tag {
       display: flex;
       align-items: center;
@@ -149,16 +200,11 @@
       font-weight: 600;
       animation: buffIn 0.3s ease;
     }
-
     @keyframes buffIn {
       from { transform: scale(0) rotate(-20deg); opacity: 0; }
       to   { transform: scale(1) rotate(0deg);  opacity: 1; }
     }
-
-    .buff-timer {
-      font-size: 10px;
-      opacity: 0.8;
-    }
+    .buff-timer { font-size: 10px; opacity: 0.8; }
 
     /* ===== Canvas ===== */
     #game-canvas {
@@ -178,6 +224,14 @@
       color: rgba(255,255,255,0.3);
       font-size: 12px;
     }
+    #pvp-hint {
+      display: none;
+      gap: 20px;
+      color: rgba(255,255,255,0.35);
+      font-size: 12px;
+    }
+    #pvp-hint .p1-hint { color: rgba(0,170,255,0.7); }
+    #pvp-hint .p2-hint { color: rgba(255,80,80,0.7); }
 
     /* ===== 覆盖层（开始/结束界面） ===== */
     #overlay {
@@ -192,14 +246,13 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 20px;
+      gap: 18px;
       z-index: 10;
-      /* 偏移补偿 HUD 高度 */
-      top: calc(44px + 12px + 36px + 12px);
+      top: calc(36px + 10px + 44px + 10px + 36px + 10px);
     }
 
     #overlay h1 {
-      font-size: 42px;
+      font-size: 40px;
       font-weight: 900;
       background: linear-gradient(135deg, #7DF9FF, #A78BFA, #FF6B9D);
       -webkit-background-clip: text;
@@ -210,26 +263,39 @@
 
     #overlay .subtitle {
       color: rgba(255,255,255,0.5);
-      font-size: 14px;
+      font-size: 13px;
       text-align: center;
-      line-height: 1.6;
+      line-height: 1.7;
     }
+
+    #overlay .version {
+      color: rgba(255,255,255,0.3);
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    #pvp-overlay-info {
+      display: none;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,0.45);
+      line-height: 1.9;
+    }
+    #pvp-overlay-info .p1-info { color: rgba(0,170,255,0.8); }
+    #pvp-overlay-info .p2-info { color: rgba(255,80,80,0.8); }
 
     .result-box {
       display: flex;
       gap: 32px;
     }
-
     .result-item {
       text-align: center;
     }
-
     .result-item .r-label {
       font-size: 11px;
       color: rgba(255,255,255,0.4);
       letter-spacing: 1px;
     }
-
     .result-item .r-value {
       font-size: 28px;
       font-weight: 700;
@@ -249,15 +315,11 @@
       box-shadow: 0 4px 24px rgba(125,249,255,0.4);
       transition: transform 0.15s, box-shadow 0.15s;
     }
-
     #btn-start:hover {
       transform: translateY(-2px) scale(1.03);
       box-shadow: 0 8px 32px rgba(125,249,255,0.6);
     }
-
-    #btn-start:active {
-      transform: scale(0.97);
-    }
+    #btn-start:active { transform: scale(0.97); }
 
     /* 道具说明 */
     .item-legend {
@@ -267,7 +329,6 @@
       justify-content: center;
       max-width: 380px;
     }
-
     .item-legend-item {
       display: flex;
       align-items: center;
@@ -275,7 +336,6 @@
       font-size: 12px;
       color: rgba(255,255,255,0.55);
     }
-
     .item-dot {
       width: 14px;
       height: 14px;
@@ -291,7 +351,6 @@
       height: 130px;
       margin-top: 8px;
     }
-
     .dpad-btn {
       position: absolute;
       width: 40px;
@@ -308,13 +367,63 @@
       user-select: none;
       transition: background 0.1s;
     }
-
     .dpad-btn:active { background: rgba(125,249,255,0.25); }
-
     #dpad-up    { top: 0;   left: 45px; }
     #dpad-down  { bottom: 0; left: 45px; }
     #dpad-left  { left: 0;  top: 45px; }
     #dpad-right { right: 0; top: 45px; }
+
+    /* 双人移动端 */
+    #dpad-p1, #dpad-p2 {
+      display: none;
+      position: relative;
+      width: 110px;
+      height: 110px;
+    }
+    #dpad-p1 { margin-top: 6px; }
+    #dpad-p2 { margin-bottom: 6px; }
+    .dpad-p1-btn {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      background: rgba(0,170,255,0.12);
+      border: 1px solid rgba(0,170,255,0.3);
+      border-radius: 8px;
+      color: #0af;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.1s;
+    }
+    .dpad-p1-btn:active { background: rgba(0,170,255,0.35); }
+    .dpad-p2-btn {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      background: rgba(255,80,80,0.12);
+      border: 1px solid rgba(255,80,80,0.3);
+      border-radius: 8px;
+      color: #f55;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.1s;
+    }
+    .dpad-p2-btn:active { background: rgba(255,80,80,0.35); }
+    #dp1-up    { top: 0;   left: 37px; }
+    #dp1-down  { bottom: 0; left: 37px; }
+    #dp1-left  { left: 0;  top: 37px; }
+    #dp1-right { right: 0; top: 37px; }
+    #dp2-up    { top: 0;   left: 37px; }
+    #dp2-down  { bottom: 0; left: 37px; }
+    #dp2-left  { left: 0;  top: 37px; }
+    #dp2-right { right: 0; top: 37px; }
 
     @media (max-width: 520px) {
       #hud, #buff-bar { width: 360px; }
@@ -342,7 +451,7 @@
     /* 粒子容器 */
     #particles {
       position: absolute;
-      top: calc(44px + 12px + 36px + 12px);
+      top: calc(36px + 10px + 44px + 10px + 36px + 10px);
       left: 0;
       width: 480px;
       height: 480px;
@@ -357,7 +466,6 @@
       border-radius: 50%;
       animation: particleFly 0.8s ease-out forwards;
     }
-
     @keyframes particleFly {
       0%   { transform: translate(0,0) scale(1); opacity: 1; }
       100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
@@ -374,7 +482,6 @@
       animation: scoreRise 1s ease-out forwards;
       z-index: 6;
     }
-
     @keyframes scoreRise {
       0%   { transform: translateY(0) scale(1); opacity: 1; }
       100% { transform: translateY(-60px) scale(0.7); opacity: 0; }
@@ -413,9 +520,34 @@
 </style>
 
 <div id="game-container">
-  <!-- HUD -->
+  <!-- 模式切换 -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="pve">单蛇</button>
+    <button class="mode-tab" data-mode="pvp">双蛇</button>
+  </div>
+
+  <!-- ===== PVP 模式：P1（蓝色）在上方 ===== -->
+  <div id="pvp-top" style="display:none">
+    <div class="pvp-hud-row" id="pvp-hud-p1" style="width:480px; position:relative">
+      <div class="pvp-hud-item">
+        <span class="pvp-label">🔵 P1 得分</span>
+        <span class="pvp-value" id="pvp-score-p1">0</span>
+      </div>
+      <div class="pvp-hud-item">
+        <span class="pvp-label">长度</span>
+        <span class="pvp-value" id="pvp-length-p1">3</span>
+      </div>
+      <div id="dpad-p1" style="position:absolute; right:-120px; top:50%; transform:translateY(-50%)">
+        <div class="dpad-p1-btn" id="dp1-up">▲</div>
+        <div class="dpad-p1-btn" id="dp1-down">▼</div>
+        <div class="dpad-p1-btn" id="dp1-left">◀</div>
+        <div class="dpad-p1-btn" id="dp1-right">▶</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD（单人）-->
   <div id="hud">
-    <!-- 第一行：核心指标 -->
     <div class="hud-row">
       <div class="hud-item">
         <span class="hud-label">得分</span>
@@ -434,8 +566,6 @@
         <span class="hud-value" id="best-display">0</span>
       </div>
     </div>
-    
-    <!-- 第二行：状态控制 -->
     <div class="hud-controls">
       <div class="control-item">
         <span class="control-label">音效</span>
@@ -448,11 +578,31 @@
     </div>
   </div>
 
-  <!-- Buff 状态栏 -->
+  <!-- Buff 状态栏（单人） -->
   <div id="buff-bar"></div>
 
   <!-- 游戏画布 -->
   <canvas id="game-canvas" width="480" height="480"></canvas>
+
+  <!-- ===== PVP 模式：P2（红色）在下方 ===== -->
+  <div id="pvp-bottom" style="display:none">
+    <div class="pvp-hud-row" id="pvp-hud-p2" style="width:480px; position:relative">
+      <div id="dpad-p2" style="position:absolute; left:-120px; top:50%; transform:translateY(-50%)">
+        <div class="dpad-p2-btn" id="dp2-up">▲</div>
+        <div class="dpad-p2-btn" id="dp2-down">▼</div>
+        <div class="dpad-p2-btn" id="dp2-left">◀</div>
+        <div class="dpad-p2-btn" id="dp2-right">▶</div>
+      </div>
+      <div class="pvp-hud-item">
+        <span class="pvp-label">🔴 P2 得分</span>
+        <span class="pvp-value" id="pvp-score-p2">0</span>
+      </div>
+      <div class="pvp-hud-item">
+        <span class="pvp-label">长度</span>
+        <span class="pvp-value" id="pvp-length-p2">3</span>
+      </div>
+    </div>
+  </div>
 
   <!-- 粒子层 -->
   <div id="particles"></div>
@@ -460,10 +610,15 @@
   <!-- 覆盖层 -->
   <div id="overlay">
     <h1 id="overlay-title">贪吃蛇</h1>
+    <p class="version">版本 1.2</p>
     <p class="subtitle" id="overlay-subtitle">吃食物变长，收集道具获得特效<br>别撞墙，别咬自己！</p>
+    <div id="pvp-overlay-info">
+      <span class="p1-info">🔵 P1：W A S D 移动</span><br>
+      <span class="p2-info">🔴 P2：↑ ↓ ← → 移动</span>
+    </div>
     <div class="result-box" id="result-box" style="display:none"></div>
     <button id="btn-start">开始游戏</button>
-    <div class="item-legend">
+    <div class="item-legend" id="item-legend">
       <div class="item-legend-item"><div class="item-dot" style="background:#FF6B6B"></div>普通食物 +1分</div>
       <div class="item-legend-item"><div class="item-dot" style="background:#FFD700"></div>金苹果 +5分</div>
       <div class="item-legend-item"><div class="item-dot" style="background:#7DF9FF"></div>冰冻 速度减半</div>
@@ -473,14 +628,18 @@
     </div>
   </div>
 
-  <!-- 操控提示 -->
+  <!-- 操控提示（单人） -->
   <div id="controls-hint">
     <span>↑↓←→ 或 WASD 移动</span>
     <span>P 暂停</span>
     <span>吃到同色道具取消效果</span>
   </div>
+  <div id="pvp-hint">
+    <span class="p1-hint">🔵 P1：W A S D</span>
+    <span class="p2-hint">🔴 P2：↑ ↓ ← →</span>
+  </div>
 
-  <!-- 移动端方向键 -->
+  <!-- 移动端方向键（单人） -->
   <div id="dpad">
     <div class="dpad-btn" id="dpad-up">▲</div>
     <div class="dpad-btn" id="dpad-down">▼</div>
@@ -494,19 +653,19 @@
 //  配置
 // ============================================================
 const CFG = {
-  GRID:       20,      // 格子数
-  CELL:       24,      // 格子像素
-  BASE_SPEED: 150,     // 基础间隔 ms（越小越快）
-  LEVEL_UP:   10,      // 每多少分升一级
-  SPEED_STEP: 8,       // 每级加速 ms
-  MIN_SPEED:  60,      // 最快限制
-  ITEM_SPAWN: 0.25,    // 每次吃食物后生成道具的概率
-  ITEM_LIFE:  8000,    // 道具在场上存活时间 ms
-  BUFF_DUR:   5000,    // buff 持续时间 ms
+  GRID:       20,
+  CELL:       24,
+  BASE_SPEED: 150,
+  LEVEL_UP:   10,
+  SPEED_STEP: 8,
+  MIN_SPEED:  60,
+  ITEM_SPAWN: 0.25,
+  ITEM_LIFE:  8000,
+  BUFF_DUR:   5000,
 };
 
 // ============================================================
-//  音效系统（Web Audio API 合成，不依赖外部文件）
+//  音效系统
 // ============================================================
 let audioCtx = null;
 function initAudio() {
@@ -517,21 +676,14 @@ function initAudio() {
   }
 }
 
-// 音效映射：每个道具类型对应不同音效
 function playSoundForItem(itemType) {
   if (!audioCtx || audioCtx.state === 'suspended') return;
-  
   const now = audioCtx.currentTime;
   const oscillator = audioCtx.createOscillator();
   const gainNode = audioCtx.createGain();
-  
   oscillator.connect(gainNode);
   gainNode.connect(audioCtx.destination);
-  
-  // 基础音高（C5 = 523.25Hz）
   const baseFreq = 523.25;
-  
-  // 根据道具类型调整音效
   switch (itemType) {
     case 'food_normal':
       oscillator.type = 'square';
@@ -539,53 +691,41 @@ function playSoundForItem(itemType) {
       oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + 0.08);
       gainNode.gain.setValueAtTime(0.3, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-      oscillator.start(now);
-      oscillator.stop(now + 0.15);
+      oscillator.start(now); oscillator.stop(now + 0.15);
       break;
-      
     case 'food_gold':
       oscillator.type = 'triangle';
       oscillator.frequency.setValueAtTime(baseFreq * 1.2, now);
       oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 2.5, now + 0.25);
       gainNode.gain.setValueAtTime(0.4, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-      oscillator.start(now);
-      oscillator.stop(now + 0.3);
+      oscillator.start(now); oscillator.stop(now + 0.3);
       break;
-      
     case 'buff_freeze':
       oscillator.type = 'sine';
       oscillator.frequency.setValueAtTime(baseFreq * 0.8, now);
       oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 1.2, now + 0.2);
       gainNode.gain.setValueAtTime(0.25, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-      oscillator.start(now);
-      oscillator.stop(now + 0.25);
+      oscillator.start(now); oscillator.stop(now + 0.25);
       break;
-      
     case 'buff_double':
       oscillator.type = 'sawtooth';
       oscillator.frequency.setValueAtTime(baseFreq * 1.5, now);
       oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 3, now + 0.3);
       gainNode.gain.setValueAtTime(0.35, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-      oscillator.start(now);
-      oscillator.stop(now + 0.35);
+      oscillator.start(now); oscillator.stop(now + 0.35);
       break;
-      
     case 'buff_shrink':
-      // 剪刀剪断音效（快速锯齿波衰减）
       oscillator.type = 'sawtooth';
       oscillator.frequency.setValueAtTime(baseFreq * 2, now);
       oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + 0.1);
       gainNode.gain.setValueAtTime(0.4, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-      oscillator.start(now);
-      oscillator.stop(now + 0.12);
+      oscillator.start(now); oscillator.stop(now + 0.12);
       break;
-      
     case 'buff_ghost':
-      // 幽灵音效（低频震颤）
       oscillator.type = 'triangle';
       oscillator.frequency.setValueAtTime(baseFreq * 0.6, now);
       const tremolo = audioCtx.createOscillator();
@@ -597,24 +737,18 @@ function playSoundForItem(itemType) {
       tremoloGain.connect(gainNode.gain);
       gainNode.gain.setValueAtTime(0.3, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-      oscillator.start(now);
-      tremolo.start(now);
-      oscillator.stop(now + 0.4);
-      tremolo.stop(now + 0.4);
+      oscillator.start(now); tremolo.start(now);
+      oscillator.stop(now + 0.4); tremolo.stop(now + 0.4);
       break;
-      
     default:
-      // 默认音效
       oscillator.type = 'square';
       oscillator.frequency.value = baseFreq;
       gainNode.gain.setValueAtTime(0.2, now);
       gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-      oscillator.start(now);
-      oscillator.stop(now + 0.1);
+      oscillator.start(now); oscillator.stop(now + 0.1);
   }
 }
 
-// 游戏启动时初始化音频
 initAudio();
 
 // ============================================================
@@ -623,13 +757,11 @@ initAudio();
 const ITEMS = {
   food_normal: {
     label: '食物', emoji: '🍎', color: '#FF6B6B',
-    glow: 'rgba(255,107,107,0.6)', score: 1, isFood: true,
-    effect: null,
+    glow: 'rgba(255,107,107,0.6)', score: 1, isFood: true, effect: null,
   },
   food_gold: {
     label: '金苹果', emoji: '⭐', color: '#FFD700',
-    glow: 'rgba(255,215,0,0.6)', score: 5, isFood: true,
-    effect: null,
+    glow: 'rgba(255,215,0,0.6)', score: 5, isFood: true, effect: null,
   },
   buff_freeze: {
     label: '冰冻', emoji: '❄️', color: '#7DF9FF',
@@ -663,19 +795,21 @@ const buffBar = document.getElementById('buff-bar');
 const particlesEl = document.getElementById('particles');
 
 let state; // 'idle' | 'playing' | 'paused' | 'dead'
+let gameMode = 'pve'; // 'pve' | 'pvp'
 
 const G = {
-  snake: [],
-  dir:   { x: 1, y: 0 },
-  nextDir: { x: 1, y: 0 },
-  score: 0,
-  best:  parseInt(localStorage.getItem('snakeBest') || '0'),
+  snake: [], dir: { x: 1, y: 0 }, nextDir: { x: 1, y: 0 },
+  score: 0, best: parseInt(localStorage.getItem('snakeBest') || '0'),
   level: 1,
-  items: [],          // 场上的道具/食物
-  buffs: {},          // 激活的 buff: { type: { endTime, timerId } }
+  items: [],
+  buffs: {},
   loopTimer: null,
   frameReq: null,
-  lastRenderTime: 0,
+  // 双人模式
+  snake2: null, dir2: null, nextDir2: null,
+  score2: 0,
+  alive2: true,
+  popAnim: {}, // { id: timestamp }
 };
 
 // ============================================================
@@ -692,9 +826,10 @@ function allCells() {
   return cells;
 }
 
-function freeCell() {
+function freeCell(excludeSnakes) {
   const occupied = new Set([
     ...G.snake.map(s => `${s.x},${s.y}`),
+    ...(excludeSnakes && G.snake2 ? G.snake2.map(s => `${s.x},${s.y}`) : []),
     ...G.items.map(i => `${i.x},${i.y}`),
   ]);
   const free = allCells().filter(c => !occupied.has(`${c.x},${c.y}`));
@@ -712,19 +847,22 @@ function getSpeed() {
 //  UI 更新
 // ============================================================
 function updateHUD() {
-  const scoreEl  = document.getElementById('score-display');
-  const bestEl   = document.getElementById('best-display');
-  const levelEl  = document.getElementById('level-display');
-  const lengthEl = document.getElementById('length-display');
-
-  scoreEl.textContent  = G.score;
-  bestEl.textContent   = G.best;
-  levelEl.textContent  = G.level;
-  lengthEl.textContent = G.snake.length;
+  if (gameMode === 'pve') {
+    document.getElementById('score-display').textContent  = G.score;
+    document.getElementById('best-display').textContent   = G.best;
+    document.getElementById('level-display').textContent  = G.level;
+    document.getElementById('length-display').textContent = G.snake.length;
+  } else {
+    document.getElementById('pvp-score-p1').textContent   = G.score;
+    document.getElementById('pvp-length-p1').textContent  = G.snake.length;
+    document.getElementById('pvp-score-p2').textContent   = G.score2;
+    document.getElementById('pvp-length-p2').textContent  = G.snake2 ? G.snake2.length : 0;
+  }
 }
 
 function popHUD(id) {
   const el = document.getElementById(id);
+  if (!el) return;
   el.classList.remove('pop');
   void el.offsetWidth;
   el.classList.add('pop');
@@ -735,7 +873,7 @@ function updateBuffBar() {
   buffBar.innerHTML = '';
   const now = Date.now();
   for (const [type, info] of Object.entries(G.buffs)) {
-    const def = ITEMS[`buff_${type}`] || Object.values(ITEMS).find(i => i.effect === type);
+    const def = Object.values(ITEMS).find(i => i.effect === type);
     if (!def) continue;
     const remain = Math.ceil((info.endTime - now) / 1000);
     const tag = document.createElement('div');
@@ -752,16 +890,17 @@ function updateBuffBar() {
 //  食物 & 道具生成
 // ============================================================
 function spawnFood() {
-  const cell = freeCell();
-  if (!cell) return;
-  G.items.push({ ...cell, type: 'food_normal' });
+  const count = gameMode === 'pvp' ? 2 : 1;
+  for (let i = 0; i < count; i++) {
+    const cell = freeCell(false);
+    if (!cell) return;
+    G.items.push({ ...cell, type: 'food_normal' });
+  }
 }
 
 function spawnRandomItem() {
-  const cell = freeCell();
+  const cell = freeCell(false);
   if (!cell) return;
-
-  // 权重：金苹果15%，各buff各有概率
   const pool = [
     { type: 'food_gold',   w: 15 },
     { type: 'buff_freeze', w: 20 },
@@ -776,12 +915,8 @@ function spawnRandomItem() {
     r -= p.w;
     if (r <= 0) { chosen = p.type; break; }
   }
-
-  const item = { ...cell, type: chosen };
+  const item = { ...cell, type: chosen, spawnTime: Date.now() };
   G.items.push(item);
-
-  // 超时消失
-  item.spawnTime = Date.now();
   item.expireTimer = setTimeout(() => {
     G.items = G.items.filter(i => i !== item);
   }, CFG.ITEM_LIFE);
@@ -791,7 +926,6 @@ function spawnRandomItem() {
 //  Buff 管理
 // ============================================================
 function applyBuff(effect) {
-  // 同效果已有则刷新时间
   if (G.buffs[effect]) {
     clearTimeout(G.buffs[effect].timerId);
   }
@@ -801,9 +935,8 @@ function applyBuff(effect) {
     updateBuffBar();
     if (effect === 'freeze' || effect === 'ghost') restartLoop();
   }, CFG.BUFF_DUR);
-
   G.buffs[effect] = { endTime, timerId };
-  if (effect === 'freeze') restartLoop(); // 立即改速度
+  if (effect === 'freeze') restartLoop();
   updateBuffBar();
 }
 
@@ -814,7 +947,7 @@ function restartLoop() {
 }
 
 // ============================================================
-//  核心游戏逻辑
+//  核心游戏逻辑（单人）
 // ============================================================
 function gameTick() {
   G.dir = { ...G.nextDir };
@@ -829,22 +962,17 @@ function moveSnake() {
   const head = G.snake[0];
   let nx = head.x + G.dir.x;
   let ny = head.y + G.dir.y;
-
-  // 穿墙 buff
   if (G.buffs.ghost) {
     nx = (nx + CFG.GRID) % CFG.GRID;
     ny = (ny + CFG.GRID) % CFG.GRID;
   }
-
   const newHead = { x: nx, y: ny };
   G.snake.unshift(newHead);
-
-  // 检测是否吃到东西
   const hitIdx = G.items.findIndex(i => i.x === nx && i.y === ny);
   if (hitIdx !== -1) {
     eatItem(hitIdx);
   } else {
-    G.snake.pop(); // 正常移动，去掉尾巴
+    G.snake.pop();
   }
 }
 
@@ -853,11 +981,7 @@ function eatItem(idx) {
   const def  = ITEMS[item.type];
   clearTimeout(item.expireTimer);
   G.items.splice(idx, 1);
-
-  // 去掉尾巴（吃食物不去尾=变长；吃道具去尾=不变长）
   if (!def.isFood) G.snake.pop();
-
-  // 积分
   let pts = def.score;
   if (G.buffs.double && pts > 0) pts *= 2;
   if (pts > 0) {
@@ -866,7 +990,6 @@ function eatItem(idx) {
       G.best = G.score;
       localStorage.setItem('snakeBest', G.best);
     }
-    // 升级判断
     const newLevel = Math.floor(G.score / CFG.LEVEL_UP) + 1;
     if (newLevel > G.level) {
       G.level = newLevel;
@@ -876,11 +999,8 @@ function eatItem(idx) {
     popHUD('score-display');
     showScorePopup(item.x, item.y, `+${pts}`);
   }
-
-  // Buff 效果
   if (def.effect) {
     if (def.effect === 'shrink') {
-      // 切断蛇尾：保留头部前一半
       const keep = Math.max(3, Math.ceil(G.snake.length / 2));
       G.snake = G.snake.slice(0, keep);
       showScorePopup(item.x, item.y, '✂️ 截断！');
@@ -888,35 +1008,20 @@ function eatItem(idx) {
       applyBuff(def.effect);
     }
   }
-
-  // 保证场上始终有普通食物
   const hasFood = G.items.some(i => ITEMS[i.type]?.isFood);
   if (!hasFood) spawnFood();
-
-  // 随机生成额外道具
   if (Math.random() < CFG.ITEM_SPAWN) spawnRandomItem();
-
-  // 粒子爆炸
-  spawnParticles(item.x * CFG.CELL + CFG.CELL / 2 + 0,
-                 item.y * CFG.CELL + CFG.CELL / 2, def.color, 12);
-
-  // 🎵 播放道具音效（静音时不播放）
-  if (!window._snakeMuted) {
-    playSoundForItem(item.type);
-  }
+  spawnParticles(item.x * CFG.CELL + CFG.CELL / 2, item.y * CFG.CELL + CFG.CELL / 2, def.color, 12);
+  if (!window._snakeMuted) playSoundForItem(item.type);
 }
 
 function checkCollision() {
   const head = G.snake[0];
-
-  // 撞墙
   if (!G.buffs.ghost) {
     if (head.x < 0 || head.x >= CFG.GRID || head.y < 0 || head.y >= CFG.GRID) {
       return gameOver();
     }
   }
-
-  // 撞自身（忽略最后一节，因为它刚被移走）
   for (let i = 1; i < G.snake.length; i++) {
     if (G.snake[i].x === head.x && G.snake[i].y === head.y) {
       return gameOver();
@@ -925,14 +1030,177 @@ function checkCollision() {
 }
 
 // ============================================================
+//  核心游戏逻辑（双人 PvP）
+// ============================================================
+function gameTickPVP() {
+  G.dir  = { ...G.nextDir };
+  G.dir2 = { ...G.nextDir2 };
+  moveSnakePVP();
+  const dead = checkCollisionPVP();
+  updateHUD();
+  render();
+  if (dead) return;
+  updateBuffBar();
+  // 两蛇都死了才停止（有一方存活则继续）
+  if (G.snake.length === 0 && !G.alive2) return;
+}
+
+function moveSnakePVP() {
+  // P1 存活才移动
+  if (G.snake.length === 0) {
+    // 蛇1已死，蛇2单独移动
+    if (G.alive2) moveSnake2();
+    return;
+  }
+  // 蛇1
+  const h1 = G.snake[0];
+  let nx1 = h1.x + G.dir.x, ny1 = h1.y + G.dir.y;
+  if (G.buffs.ghost) { nx1 = (nx1 + CFG.GRID) % CFG.GRID; ny1 = (ny1 + CFG.GRID) % CFG.GRID; }
+  const nh1 = { x: nx1, y: ny1 };
+  G.snake.unshift(nh1);
+  const hit1 = G.items.findIndex(i => i.x === nx1 && i.y === ny1);
+  if (hit1 !== -1) eatItemPVP(hit1, 1); else G.snake.pop();
+
+  // 蛇2
+  if (G.alive2) moveSnake2();
+}
+
+function moveSnake2() {
+  if (!G.alive2 || G.snake2.length === 0) return;
+  const h2 = G.snake2[0];
+  let nx2 = h2.x + G.dir2.x, ny2 = h2.y + G.dir2.y;
+  // P2 不穿墙，让碰撞检测来处理越界
+  const nh2 = { x: nx2, y: ny2 };
+  G.snake2.unshift(nh2);
+  // 越界时不吃食物，等碰撞检测处理死亡
+  if (nx2 < 0 || nx2 >= CFG.GRID || ny2 < 0 || ny2 >= CFG.GRID) return;
+  const hit2 = G.items.findIndex(i => i.x === nx2 && i.y === ny2);
+  if (hit2 !== -1) eatItemPVP(hit2, 2); else G.snake2.pop();
+}
+
+function eatItemPVP(idx, player) {
+  const item = G.items[idx];
+  const def  = ITEMS[item.type];
+  clearTimeout(item.expireTimer);
+  G.items.splice(idx, 1);
+  if (!def.isFood) {
+    // 道具不吃不增长，两蛇都各自减尾部
+    if (player === 1 && G.snake.length > 1) G.snake.pop();
+    else if (player === 2 && G.snake2.length > 1) G.snake2.pop();
+  }
+  let pts = def.score;
+  if (G.buffs.double && pts > 0) pts *= 2;
+  if (pts > 0) {
+    if (player === 1) { G.score += pts; popHUD('pvp-score-p1'); }
+    else              { G.score2 += pts; popHUD('pvp-score-p2'); }
+    showScorePopup(item.x, item.y, `+${pts}`, player);
+  }
+  if (def.effect) {
+    if (def.effect === 'shrink') {
+      if (player === 1) {
+        const keep = Math.max(3, Math.ceil(G.snake.length / 2));
+        G.snake = G.snake.slice(0, keep);
+      } else {
+        const keep = Math.max(3, Math.ceil(G.snake2.length / 2));
+        G.snake2 = G.snake2.slice(0, keep);
+      }
+      showScorePopup(item.x, item.y, '✂️', player);
+    } else {
+      applyBuff(def.effect);
+    }
+  }
+  const hasFood = G.items.filter(i => ITEMS[i.type]?.isFood).length;
+  if (hasFood < (gameMode === 'pvp' ? 2 : 1)) spawnFood();
+  // 双人模式禁止道具刷新
+  // if (Math.random() < CFG.ITEM_SPAWN) spawnRandomItem();
+  spawnParticles(item.x * CFG.CELL + CFG.CELL / 2, item.y * CFG.CELL + CFG.CELL / 2, def.color, 12);
+  if (!window._snakeMuted) playSoundForItem(item.type);
+  // 长度更新
+  if (player === 1) popHUD('pvp-length-p1');
+  else popHUD('pvp-length-p2');
+  updateHUD();
+}
+
+function checkCollisionPVP() {
+  const h1 = G.snake[0];
+  let p1Dead = false, p2Dead = false, draw = false;
+  
+  // P1 撞墙
+  if (!G.buffs.ghost) {
+    if (h1.x < 0 || h1.x >= CFG.GRID || h1.y < 0 || h1.y >= CFG.GRID) {
+      p1Dead = true;
+    }
+  }
+  // P1 撞自己
+  for (let i = 1; i < G.snake.length; i++) {
+    if (G.snake[i].x === h1.x && G.snake[i].y === h1.y) {
+      p1Dead = true;
+    }
+  }
+  
+  // P2 撞墙/撞自己
+  if (G.alive2) {
+    const h2 = G.snake2[0];
+    if (h2.x < 0 || h2.x >= CFG.GRID || h2.y < 0 || h2.y >= CFG.GRID) {
+      p2Dead = true;
+    }
+    for (let i = 1; i < G.snake2.length; i++) {
+      if (G.snake2[i].x === h2.x && G.snake2[i].y === h2.y) {
+        p2Dead = true;
+      }
+    }
+    // 头碰头 - 双方都死，平局
+    if (h1.x === h2.x && h1.y === h2.y) {
+      p1Dead = true;
+      p2Dead = true;
+      draw = true;
+    }
+    // P1 撞 P2（P1头撞P2身体）
+    if (!p1Dead) {
+      for (let i = 0; i < G.snake2.length; i++) {
+        if (h1.x === G.snake2[i].x && h1.y === G.snake2[i].y) {
+          p1Dead = true;
+        }
+      }
+    }
+    // P2 撞 P1（P2头撞P1身体）
+    if (!p2Dead) {
+      for (let i = 1; i < G.snake.length; i++) {
+        if (h2.x === G.snake[i].x && h2.y === G.snake[i].y) {
+          p2Dead = true;
+        }
+      }
+    }
+  }
+  
+  // 处理死亡结果
+  if (p1Dead && p2Dead) {
+    endSnake1(); endSnake2();
+    gameOverPVP(0); // 平局
+    return true;
+  } else if (p1Dead) {
+    endSnake1();
+    gameOverPVP(2); // P2赢
+    return true;
+  } else if (p2Dead) {
+    endSnake2();
+    gameOverPVP(1); // P1赢
+    return true;
+  }
+  return false;
+}
+
+function endSnake1() { G.snake = []; }
+function endSnake2() { G.alive2 = false; G.snake2 = []; }
+
+// ============================================================
 //  渲染
 // ============================================================
 function render() {
-  const C = CFG.CELL;
-  const W = CFG.GRID * C;
+  const C = CFG.CELL, W = CFG.GRID * C;
   ctx.clearRect(0, 0, W, W);
 
-  // 背景网格
+  // 背景
   ctx.fillStyle = '#0d0d1f';
   ctx.fillRect(0, 0, W, W);
   ctx.strokeStyle = 'rgba(255,255,255,0.03)';
@@ -946,10 +1214,7 @@ function render() {
   const now = Date.now();
   for (const item of G.items) {
     const def = ITEMS[item.type];
-    const cx = item.x * C + C / 2;
-    const cy = item.y * C + C / 2;
-
-    // 快消失时闪烁
+    const cx = item.x * C + C / 2, cy = item.y * C + C / 2;
     let alpha = 1;
     if (item.spawnTime && !def.isFood) {
       const age = now - item.spawnTime;
@@ -957,93 +1222,36 @@ function render() {
         alpha = 0.4 + 0.6 * Math.abs(Math.sin(now / 180 * Math.PI));
       }
     }
-
     ctx.globalAlpha = alpha;
-
-    // 光晕
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, C * 0.8);
     grad.addColorStop(0, def.glow);
     grad.addColorStop(1, 'transparent');
     ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, C * 0.8, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 主体
-    ctx.fillStyle = def.color;
+    ctx.beginPath(); ctx.arc(cx, cy, C * 0.8, 0, Math.PI * 2); ctx.fill();
     const pulse = 1 + 0.08 * Math.sin(now / 400 + item.x + item.y);
     const r = C * 0.38 * pulse;
-    ctx.beginPath();
-    roundRect(ctx, cx - r, cy - r, r * 2, r * 2, r * 0.4);
-    ctx.fill();
-
-    // Emoji
+    ctx.fillStyle = def.color;
+    ctx.beginPath(); roundRect(ctx, cx - r, cy - r, r * 2, r * 2, r * 0.4); ctx.fill();
     ctx.globalAlpha = alpha;
     ctx.font = `${C * 0.5}px serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(def.emoji, cx, cy + 1);
-
     ctx.globalAlpha = 1;
   }
 
-  // 蛇
-  const ghostActive = !!G.buffs.ghost;
-  const snakeLen = G.snake.length;
-
-  for (let i = snakeLen - 1; i >= 0; i--) {
-    const seg = G.snake[i];
-    const t = i / snakeLen; // 0=头, 1=尾
-    const cx = seg.x * C + C / 2;
-    const cy = seg.y * C + C / 2;
-    const r  = C * 0.42 * (1 - t * 0.25);
-
-    // 蛇身渐变色（青→紫→尾部暗）
-    if (ghostActive) {
-      const h1 = lerpColor('#4ADE80', '#7DF9FF', t);
-      ctx.globalAlpha = 0.7;
-      ctx.fillStyle = h1;
-    } else {
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = lerpColor('#7DF9FF', '#3B5BDB', Math.min(t * 1.2, 1));
+  // 蛇渲染（单人模式）
+  if (gameMode === 'pve') {
+    renderSnake(G.snake, G.dir, G.buffs.ghost, '#7DF9FF', '#3B5BDB', null);
+  } else {
+    // 蛇1（蓝紫渐变）
+    if (G.snake.length > 0) {
+      renderSnake(G.snake, G.dir, G.buffs.ghost, '#00AAFF', '#7733FF', 'blue');
     }
-
-    ctx.beginPath();
-    roundRect(ctx, cx - r, cy - r, r * 2, r * 2, r * 0.5);
-    ctx.fill();
-
-    // 蛇头高光 & 眼睛
-    if (i === 0) {
-      ctx.globalAlpha = ghostActive ? 0.9 : 1;
-
-      // 高光
-      const hl = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, 0, cx, cy, r);
-      hl.addColorStop(0, 'rgba(255,255,255,0.4)');
-      hl.addColorStop(1, 'transparent');
-      ctx.fillStyle = hl;
-      ctx.beginPath();
-      roundRect(ctx, cx - r, cy - r, r * 2, r * 2, r * 0.5);
-      ctx.fill();
-
-      // 眼睛
-      ctx.globalAlpha = 1;
-      const eyeR = r * 0.22;
-      const ex1 = cx + G.dir.y * r * 0.35 + G.dir.x * r * 0.18;
-      const ey1 = cy - G.dir.x * r * 0.35 + G.dir.y * r * 0.18;
-      const ex2 = cx - G.dir.y * r * 0.35 + G.dir.x * r * 0.18;
-      const ey2 = cy + G.dir.x * r * 0.35 + G.dir.y * r * 0.18;
-
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(ex1, ey1, eyeR, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(ex2, ey2, eyeR, 0, Math.PI * 2); ctx.fill();
-
-      ctx.fillStyle = '#111';
-      ctx.beginPath(); ctx.arc(ex1 + G.dir.x * eyeR * 0.3, ey1 + G.dir.y * eyeR * 0.3, eyeR * 0.55, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(ex2 + G.dir.x * eyeR * 0.3, ey2 + G.dir.y * eyeR * 0.3, eyeR * 0.55, 0, Math.PI * 2); ctx.fill();
+    // 蛇2（红橙渐变）
+    if (G.alive2 && G.snake2 && G.snake2.length > 0) {
+      renderSnake(G.snake2, G.dir2, false, '#FF4400', '#FF8800', 'red');
     }
   }
-
-  ctx.globalAlpha = 1;
 
   // 暂停提示
   if (state === 'paused') {
@@ -1051,13 +1259,60 @@ function render() {
     ctx.fillRect(0, 0, W, W);
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 36px "Microsoft YaHei", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('⏸ 暂停', W / 2, W / 2 - 20);
     ctx.font = '16px "Microsoft YaHei", sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.fillText('按 P 继续', W / 2, W / 2 + 28);
   }
+}
+
+function renderSnake(snake, dir, ghostActive, color1, color2, tag) {
+  const C = CFG.CELL;
+  const len = snake.length;
+  for (let i = len - 1; i >= 0; i--) {
+    const seg = snake[i];
+    const t = i / len;
+    const cx = seg.x * C + C / 2, cy = seg.y * C + C / 2;
+    const r  = C * 0.42 * (1 - t * 0.25);
+
+    if (ghostActive) {
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = lerpColor('#4ADE80', '#7DF9FF', t);
+    } else {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = lerpColor(color1, color2, Math.min(t * 1.2, 1));
+    }
+    ctx.beginPath();
+    roundRect(ctx, cx - r, cy - r, r * 2, r * 2, r * 0.5);
+    ctx.fill();
+
+    if (i === 0) {
+      ctx.globalAlpha = ghostActive ? 0.9 : 1;
+      const hl = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, 0, cx, cy, r);
+      hl.addColorStop(0, 'rgba(255,255,255,0.4)');
+      hl.addColorStop(1, 'transparent');
+      ctx.fillStyle = hl;
+      ctx.beginPath();
+      roundRect(ctx, cx - r, cy - r, r * 2, r * 2, r * 0.5);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      const eyeR = r * 0.22;
+      const eyeColor = tag === 'red' ? '#ffcccc' : '#fff';
+      const d = dir;
+      const ex1 = cx + d.y * r * 0.35 + d.x * r * 0.18;
+      const ey1 = cy - d.x * r * 0.35 + d.y * r * 0.18;
+      const ex2 = cx - d.y * r * 0.35 + d.x * r * 0.18;
+      const ey2 = cy + d.x * r * 0.35 + d.y * r * 0.18;
+      ctx.fillStyle = eyeColor;
+      ctx.beginPath(); ctx.arc(ex1, ey1, eyeR, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ex2, ey2, eyeR, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(ex1 + d.x * eyeR * 0.3, ey1 + d.y * eyeR * 0.3, eyeR * 0.55, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(ex2 + d.x * eyeR * 0.3, ey2 + d.y * eyeR * 0.3, eyeR * 0.55, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
 }
 
 // ============================================================
@@ -1111,10 +1366,13 @@ function spawnParticles(x, y, color, count) {
   }
 }
 
-function showScorePopup(gx, gy, text) {
+function showScorePopup(gx, gy, text, player) {
   const el = document.createElement('div');
   el.className = 'score-popup';
   el.textContent = text;
+  const color = player === 2 ? '#f55' : '#7DF9FF';
+  el.style.color = color;
+  el.style.textShadow = `0 0 8px ${color}`;
   el.style.left = (gx * CFG.CELL + CFG.CELL / 2) + 'px';
   el.style.top  = (gy * CFG.CELL) + 'px';
   particlesEl.appendChild(el);
@@ -1131,25 +1389,63 @@ function initGame() {
   G.score   = 0;
   G.level   = 1;
   G.items   = [];
-
-  // 清理buff
   for (const b of Object.values(G.buffs)) clearTimeout(b.timerId);
   G.buffs = {};
   updateBuffBar();
-
   spawnFood();
   updateHUD();
 }
 
-function startGame() {
-  initGame();
-  state = 'playing';
-  overlay.style.display = 'none';
-  clearInterval(G.loopTimer);
-  G.loopTimer = setInterval(gameTick, getSpeed());
+function initGamePVP() {
+  // P1 从左侧出生，向右
+  G.snake   = [{ x: 4, y: 10 }, { x: 3, y: 10 }, { x: 2, y: 10 }];
+  G.dir     = { x: 1, y: 0 };
+  G.nextDir = { x: 1, y: 0 };
+  G.score   = 0;
+  // P2 从右侧出生，向左
+  G.snake2  = [{ x: 15, y: 10 }, { x: 16, y: 10 }, { x: 17, y: 10 }];
+  G.dir2    = { x: -1, y: 0 };
+  G.nextDir2= { x: -1, y: 0 };
+  G.score2  = 0;
+  G.alive2  = true;
+  G.items   = [];
+  for (const b of Object.values(G.buffs)) clearTimeout(b.timerId);
+  G.buffs = {};
+  updateBuffBar();
+  // PvP 初始 2 颗食物
+  if (gameMode === 'pvp') {
+    const c1 = freeCell(false); if (c1) G.items.push({ ...c1, type: 'food_normal' });
+    const c2 = freeCell(false); if (c2) G.items.push({ ...c2, type: 'food_normal' });
+  } else {
+    spawnFood();
+  }
+  updateHUD();
+}
 
-  // 启动渲染循环（平滑动画）
-  function renderLoop(ts) {
+function startGame() {
+  // 首次开始游戏时记录已选择模式
+  if (!localStorage.getItem('snakeModeSelected')) {
+    localStorage.setItem('snakeModeSelected', 'true');
+  }
+  if (gameMode === 'pve') {
+    initGame();
+    state = 'playing';
+    overlay.style.display = 'none';
+    clearInterval(G.loopTimer);
+    G.loopTimer = setInterval(gameTick, getSpeed());
+  } else {
+    initGamePVP();
+    state = 'playing';
+    overlay.style.display = 'none';
+    clearInterval(G.loopTimer);
+    G.loopTimer = setInterval(gameTickPVP, CFG.BASE_SPEED);
+  }
+  startRenderLoop();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function startRenderLoop() {
+  function renderLoop() {
     if (state === 'playing' || state === 'paused') {
       render();
       G.frameReq = requestAnimationFrame(renderLoop);
@@ -1159,12 +1455,13 @@ function startGame() {
   G.frameReq = requestAnimationFrame(renderLoop);
 }
 
+// ============================================================
+//  游戏结束（单人）
+// ============================================================
 function gameOver() {
   state = 'dead';
   clearInterval(G.loopTimer);
   cancelAnimationFrame(G.frameReq);
-
-  // 死亡动画：蛇闪烁
   let flash = 0;
   const flashTimer = setInterval(() => {
     flash++;
@@ -1180,10 +1477,8 @@ function gameOver() {
 
 function showGameOver() {
   const isNew = G.score >= G.best && G.score > 0;
-
   document.getElementById('overlay-title').textContent = isNew ? '新纪录！🎉' : '游戏结束';
   document.getElementById('overlay-subtitle').style.display = 'none';
-
   const box = document.getElementById('result-box');
   box.style.display = 'flex';
   box.innerHTML = `
@@ -1204,8 +1499,67 @@ function showGameOver() {
       <div class="r-value" style="color:#A78BFA">${G.level}</div>
     </div>
   `;
-
   document.getElementById('btn-start').textContent = '再来一局';
+  overlay.style.display = 'flex';
+}
+
+// ============================================================
+//  游戏结束（双人 PvP）
+// ============================================================
+function gameOverPVP(winner) {
+  state = 'dead';
+  clearInterval(G.loopTimer);
+  cancelAnimationFrame(G.frameReq);
+  let flash = 0;
+  const flashTimer = setInterval(() => {
+    flash++;
+    ctx.globalAlpha = flash % 2 === 0 ? 1 : 0.2;
+    render();
+    ctx.globalAlpha = 1;
+    if (flash >= 6) {
+      clearInterval(flashTimer);
+      showGameOverPVP(winner);
+    }
+  }, 100);
+}
+
+function showGameOverPVP(winner) {
+  const titleEl = document.getElementById('overlay-title');
+  if (winner === 0) {
+    titleEl.textContent = '⚡ 平局！';
+    titleEl.style.cssText = 'background:linear-gradient(135deg,#0af,#f55);-webkit-background-clip:text;-webkit-text-fill-color:transparent;';
+  } else {
+    const winnerColor = winner === 1 ? '#0af' : '#f55';
+    const winnerLabel = winner === 1 ? '🔵 P1 获胜！' : '🔴 P2 获胜！';
+    titleEl.textContent = winnerLabel;
+    titleEl.style.cssText = `background:none;-webkit-text-fill-color:${winnerColor};color:${winnerColor};text-shadow:0 0 20px ${winnerColor}88`;
+  }
+  document.getElementById('overlay-subtitle').style.display = 'none';
+  const box = document.getElementById('result-box');
+  box.style.display = 'flex';
+  box.innerHTML = `
+    <div class="result-item">
+      <div class="r-label">🔵 P1 得分</div>
+      <div class="r-value" style="color:#0af">${G.score}</div>
+    </div>
+    <div class="result-item">
+      <div class="r-label">🔵 P1 长度</div>
+      <div class="r-value" style="color:#0af">${G.snake.length}</div>
+    </div>
+    <div class="result-item">
+      <div class="r-label">🔴 P2 得分</div>
+      <div class="r-value" style="color:#f55">${G.score2}</div>
+    </div>
+    <div class="result-item">
+      <div class="r-label">🔴 P2 长度</div>
+      <div class="r-value" style="color:#f55">${G.alive2 ? G.snake2.length : 0}</div>
+    </div>
+  `;
+  document.getElementById('btn-start').textContent = '再来一局';
+  document.getElementById('btn-start').onclick = () => {
+    titleEl.style.cssText = '';
+    startGame();
+  };
   overlay.style.display = 'flex';
 }
 
@@ -1216,20 +1570,24 @@ function togglePause() {
     render();
   } else if (state === 'paused') {
     state = 'playing';
-    G.loopTimer = setInterval(gameTick, getSpeed());
+    if (gameMode === 'pve') {
+      G.loopTimer = setInterval(gameTick, getSpeed());
+    } else {
+      G.loopTimer = setInterval(gameTickPVP, CFG.BASE_SPEED);
+    }
   }
 }
 
 // ============================================================
 //  输入处理
 // ============================================================
-const DIR_MAP = {
-  ArrowUp:    { x:  0, y: -1 }, w: { x:  0, y: -1 },
-  ArrowDown:  { x:  0, y:  1 }, s: { x:  0, y:  1 },
-  ArrowLeft:  { x: -1, y:  0 }, a: { x: -1, y:  0 },
-  ArrowRight: { x:  1, y:  0 }, d: { x:  1, y:  0 },
-  W: { x:  0, y: -1 }, S: { x:  0, y:  1 },
-  A: { x: -1, y:  0 }, D: { x:  1, y:  0 },
+const DIR_MAP_WASD = {
+  w: { x: 0, y: -1 }, s: { x: 0, y: 1 }, a: { x: -1, y: 0 }, d: { x: 1, y: 0 },
+  W: { x: 0, y: -1 }, S: { x: 0, y: 1 }, A: { x: -1, y: 0 }, D: { x: 1, y: 0 },
+};
+const DIR_MAP_ARROW = {
+  ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 },
+  ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 },
 };
 
 document.addEventListener('keydown', e => {
@@ -1237,36 +1595,81 @@ document.addEventListener('keydown', e => {
     if (state === 'playing' || state === 'paused') togglePause();
     return;
   }
-  const d = DIR_MAP[e.key];
-  if (!d) return;
   if (state !== 'playing') return;
-  // 防止反向
-  if (d.x !== 0 && d.x === -G.dir.x) return;
-  if (d.y !== 0 && d.y === -G.dir.y) return;
-  G.nextDir = d;
-  e.preventDefault();
+
+  // P2 用方向键（双人模式）
+  if (gameMode === 'pvp') {
+    const d2 = DIR_MAP_ARROW[e.key];
+    if (d2) {
+      if (d2.x !== 0 && d2.x === -G.dir2.x) return;
+      if (d2.y !== 0 && d2.y === -G.dir2.y) return;
+      G.nextDir2 = d2;
+      e.preventDefault();
+      return;
+    }
+  }
+
+  // P1 / 单人用 WASD
+  const d = DIR_MAP_WASD[e.key];
+  if (d) {
+    if (gameMode === 'pve') {
+      if (d.x !== 0 && d.x === -G.dir.x) return;
+      if (d.y !== 0 && d.y === -G.dir.y) return;
+      G.nextDir = d;
+    } else {
+      if (d.x !== 0 && d.x === -G.dir.x) return;
+      if (d.y !== 0 && d.y === -G.dir.y) return;
+      G.nextDir = d;
+    }
+    e.preventDefault();
+  }
 });
 
-// 移动端方向键
+// 移动端方向键（单人）
 ['up','down','left','right'].forEach(dir => {
   document.getElementById(`dpad-${dir}`).addEventListener('click', () => {
+    if (gameMode !== 'pve' || state !== 'playing') return;
     const dMap = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
     const d = dMap[dir];
-    if (state !== 'playing') return;
     if (d.x !== 0 && d.x === -G.dir.x) return;
     if (d.y !== 0 && d.y === -G.dir.y) return;
     G.nextDir = d;
   });
 });
 
-// 滑动手势（移动端）
+// 双人移动端 P1
+['up','down','left','right'].forEach(dir => {
+  document.getElementById(`dp1-${dir}`).addEventListener('click', () => {
+    if (gameMode !== 'pvp' || state !== 'playing') return;
+    const dMap = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
+    const d = dMap[dir];
+    if (d.x !== 0 && d.x === -G.dir.x) return;
+    if (d.y !== 0 && d.y === -G.dir.y) return;
+    G.nextDir = d;
+  });
+});
+
+// 双人移动端 P2
+['up','down','left','right'].forEach(dir => {
+  document.getElementById(`dp2-${dir}`).addEventListener('click', () => {
+    if (gameMode !== 'pvp' || state !== 'playing') return;
+    const dMap = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
+    const d = dMap[dir];
+    if (d.x !== 0 && d.x === -G.dir2.x) return;
+    if (d.y !== 0 && d.y === -G.dir2.y) return;
+    G.nextDir2 = d;
+  });
+});
+
+// 滑动手势（单人模式）
 let touchStart = null;
 canvas.addEventListener('touchstart', e => {
+  if (gameMode === 'pvp') return; // 双人禁用滑动
   touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   e.preventDefault();
 }, { passive: false });
 canvas.addEventListener('touchend', e => {
-  if (!touchStart || state !== 'playing') return;
+  if (gameMode === 'pvp' || !touchStart || state !== 'playing') return;
   const dx = e.changedTouches[0].clientX - touchStart.x;
   const dy = e.changedTouches[0].clientY - touchStart.y;
   if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
@@ -1286,18 +1689,72 @@ canvas.addEventListener('touchend', e => {
 document.getElementById('btn-start').addEventListener('click', startGame);
 
 // ============================================================
+//  模式切换
+// ============================================================
+document.querySelectorAll('.mode-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    gameMode = tab.dataset.mode;
+    const isPVP = gameMode === 'pvp';
+
+    // HUD 切换
+    document.getElementById('hud').style.display      = isPVP ? 'none' : '';
+    document.getElementById('pvp-top').style.display = isPVP ? 'block' : 'none';
+    document.getElementById('pvp-bottom').style.display = isPVP ? 'block' : 'none';
+    document.getElementById('buff-bar').style.display = isPVP ? 'none' : '';
+    document.getElementById('controls-hint').style.display = isPVP ? 'none' : '';
+    document.getElementById('pvp-hint').style.display     = isPVP ? 'flex' : 'none';
+
+    // 移动端按钮切换（单人模式用dpad，双人用p1/p2独立按钮）
+    document.getElementById('dpad').style.display     = isPVP ? 'none' : '';
+    document.getElementById('dpad-p1').style.display = isPVP ? 'flex' : 'none';
+    document.getElementById('dpad-p2').style.display = isPVP ? 'flex' : 'none';
+
+    // 菜单文字
+    document.getElementById('overlay-title').textContent = '贪吃蛇';
+    document.getElementById('overlay-title').style.cssText = '';
+    document.getElementById('overlay-subtitle').style.display = '';
+    document.getElementById('overlay-subtitle').textContent = isPVP
+      ? '🔵 P1 用 WASD | 🔴 P2 用 ↑↓←→\n率先吃到 10 颗食物者获胜！'
+      : '吃食物变长，收集道具获得特效\n别撞墙，别咬自己！';
+    document.getElementById('overlay-subtitle').style.whiteSpace = 'pre-line';
+    document.getElementById('pvp-overlay-info').style.display = isPVP ? 'block' : 'none';
+    document.getElementById('item-legend').style.display = isPVP ? 'none' : '';
+    document.getElementById('result-box').style.display = 'none';
+    document.getElementById('btn-start').textContent = '开始游戏';
+    // 首次选择模式后显示开始按钮
+    if (!localStorage.getItem('snakeModeSelected')) {
+      document.getElementById('btn-start').style.display = '';
+    }
+    document.getElementById('btn-start').onclick = startGame;
+    state = 'idle';
+    overlay.style.display = 'flex';
+    // 重置蛇状态（清空画面）
+    G.snake = []; G.snake2 = []; G.items = [];
+    render();
+  });
+});
+
+// ============================================================
 //  初始化
 // ============================================================
 state = 'idle';
 document.getElementById('overlay-subtitle').style.display = '';
 document.getElementById('result-box').style.display = 'none';
-document.getElementById('btn-start').textContent = '开始游戏';
 document.getElementById('best-display').textContent = G.best;
+
+// 首次打开：必须先选择模式才能开始游戏
+const hasSelectedMode = localStorage.getItem('snakeModeSelected') === 'true';
+if (!hasSelectedMode) {
+  // 首次打开：隐藏开始按钮，提示选择模式
+  document.getElementById('btn-start').style.display = 'none';
+  document.getElementById('overlay-subtitle').textContent = '请先选择游戏模式';
+}
 
 // 画初始背景
 (function initRender() {
-  const C = CFG.CELL;
-  const W = CFG.GRID * C;
+  const C = CFG.CELL, W = CFG.GRID * C;
   ctx.fillStyle = '#0d0d1f';
   ctx.fillRect(0, 0, W, W);
   ctx.strokeStyle = 'rgba(255,255,255,0.03)';
@@ -1308,13 +1765,12 @@ document.getElementById('best-display').textContent = G.best;
   }
 })();
 
-// 静音按钮点击切换
+// 静音按钮
 const muteBtn = document.getElementById('mute-btn');
 if (muteBtn) {
   muteBtn.addEventListener('click', function() {
     window._snakeMuted = !window._snakeMuted;
     muteBtn.textContent = window._snakeMuted ? '🔇' : '🔊';
-    // 可选：改变颜色提示
     muteBtn.style.color = window._snakeMuted ? '#FF6B6B' : '#7DF9FF';
   });
 }

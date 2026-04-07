@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>赛博五子棋 v1.2</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --neon-cyan: #00ffff;
+    --neon-pink: #ff00ff;
+    --neon-yellow: #ffff00;
+    --neon-green: #00ff41;
+    --dark-bg: #0a0a0f;
+    --panel-bg: rgba(10, 10, 30, 0.9);
+    --glow-cyan: 0 0 8px #00ffff, 0 0 16px #00ffff, 0 0 32px #00ffff;
+    --glow-pink: 0 0 8px #ff00ff, 0 0 16px #ff00ff, 0 0 32px #ff00ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark-bg);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* 扫描线背景 */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,255,0.012) 2px,
+      rgba(0,255,255,0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* 网格背景 */
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-image:
+      linear-gradient(rgba(0,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ── 标题区（精简版）── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .title-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+    letter-spacing: 4px;
+    line-height: 1;
+    animation: titlePulse 3s ease-in-out infinite;
+  }
+
+  .title span {
+    color: var(--neon-pink);
+    text-shadow: var(--glow-pink);
+  }
+
+  .title-sub {
+    font-size: 0.5rem;
+    letter-spacing: 3px;
+    color: rgba(0,255,255,0.4);
+    margin-top: 3px;
+    white-space: nowrap;
+  }
+
+  .version-tag {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.55rem;
+    font-weight: 700;
+    color: var(--neon-yellow);
+    border: 1px solid var(--neon-yellow);
+    padding: 2px 6px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 6px var(--neon-yellow);
+    box-shadow: 0 0 6px rgba(255,255,0,0.2);
+    clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
+    align-self: center;
+  }
+
+  @keyframes titlePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+  }
+
+  /* ── 玩家信息面板 ── */
+  .info-panel {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .player-card {
+    background: var(--panel-bg);
+    border: 1px solid;
+    padding: 8px 16px;
+    min-width: 120px;
+    text-align: center;
+    position: relative;
+    transition: all 0.3s;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+
+  .player-card.black { border-color: var(--neon-cyan); box-shadow: inset 0 0 16px rgba(0,255,255,0.04); }
+  .player-card.white { border-color: var(--neon-pink);  box-shadow: inset 0 0 16px rgba(255,0,255,0.04); }
+
+  .player-card.active.black {
+    box-shadow: inset 0 0 16px rgba(0,255,255,0.12), 0 0 16px rgba(0,255,255,0.25);
+  }
+  .player-card.active.white {
+    box-shadow: inset 0 0 16px rgba(255,0,255,0.12), 0 0 16px rgba(255,0,255,0.25);
+  }
+
+  .player-label {
+    font-size: 0.52rem;
+    letter-spacing: 2px;
+    opacity: 0.55;
+    margin-bottom: 4px;
+  }
+
+  .player-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  .player-stone {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .player-card.black .player-stone {
+    background: radial-gradient(circle at 35% 35%, #4af, #00ffff 40%, #006);
+    box-shadow: 0 0 8px var(--neon-cyan);
+  }
+  .player-card.white .player-stone {
+    background: radial-gradient(circle at 35% 35%, #fdf, #ff00ff 40%, #606);
+    box-shadow: 0 0 8px var(--neon-pink);
+  }
+
+  .player-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .player-card.black .player-name { color: var(--neon-cyan); }
+  .player-card.white .player-name { color: var(--neon-pink); }
+
+  .move-count {
+    font-size: 0.52rem;
+    opacity: 0.45;
+    margin-top: 3px;
+  }
+
+  .vs-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 900;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 8px var(--neon-yellow);
+    animation: vsPulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes vsPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+  }
+
+  /* ── 棋盘容器 ── */
+  .board-wrapper {
+    position: relative;
+    background: var(--panel-bg);
+    border: 1px solid rgba(0,255,255,0.3);
+    padding: 16px;
+    clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+    box-shadow: 0 0 24px rgba(0,255,255,0.08), inset 0 0 40px rgba(0,0,30,0.5);
+  }
+
+  .board-corner {
+    position: absolute;
+    width: 16px; height: 16px;
+    border-color: var(--neon-cyan);
+    border-style: solid;
+  }
+  .board-corner.tl { top: 4px; left: 4px;   border-width: 2px 0 0 2px; }
+  .board-corner.tr { top: 4px; right: 4px;  border-width: 2px 2px 0 0; }
+  .board-corner.bl { bottom: 4px; left: 4px; border-width: 0 0 2px 2px; }
+  .board-corner.br { bottom: 4px; right: 4px;border-width: 0 2px 2px 0; }
+
+  canvas { display: block; cursor: crosshair; }
+
+  /* ── 状态栏 ── */
+  .status-bar {
+    background: var(--panel-bg);
+    border: 1px solid rgba(0,255,255,0.2);
+    padding: 7px 20px;
+    font-size: 0.72rem;
+    color: var(--neon-cyan);
+    letter-spacing: 2px;
+    min-width: 380px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .status-bar::before { content: '>> '; color: var(--neon-green); }
+  .blink { animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ── 底部操作区 ── */
+  .bottom-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-group { display: flex; gap: 8px; }
+
+  .cyber-btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    white-space: nowrap;
+  }
+  .cyber-btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0,255,255,0.18), transparent);
+    transition: left 0.3s;
+  }
+  .cyber-btn:hover::before { left: 100%; }
+  .cyber-btn:hover {
+    background: rgba(0,255,255,0.08);
+    box-shadow: var(--glow-cyan);
+    text-shadow: 0 0 6px var(--neon-cyan);
+  }
+  .cyber-btn:active { transform: scale(0.95); }
+
+  .cyber-btn.pink { border-color: var(--neon-pink); color: var(--neon-pink); }
+  .cyber-btn.pink::before { background: linear-gradient(90deg, transparent, rgba(255,0,255,0.18), transparent); }
+  .cyber-btn.pink:hover {
+    background: rgba(255,0,255,0.08);
+    box-shadow: var(--glow-pink);
+    text-shadow: 0 0 6px var(--neon-pink);
+  }
+
+  .mode-indicator {
+    font-size: 0.52rem;
+    letter-spacing: 2px;
+    color: rgba(0,255,255,0.4);
+    white-space: nowrap;
+  }
+
+  /* ── 胜利遮罩 ── */
+  .overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.82);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .overlay.show { display: flex; }
+
+  .win-box {
+    background: var(--panel-bg);
+    border: 2px solid var(--neon-cyan);
+    padding: 32px 52px;
+    text-align: center;
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+    animation: winAppear 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 0 50px rgba(0,255,255,0.25);
+  }
+  @keyframes winAppear {
+    from { transform: scale(0.5) rotate(-4deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  .win-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    margin-bottom: 8px;
+    animation: winGlow 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes winGlow {
+    from { text-shadow: 0 0 10px currentColor, 0 0 20px currentColor; }
+    to   { text-shadow: 0 0 20px currentColor, 0 0 50px currentColor, 0 0 80px currentColor; }
+  }
+
+  .win-subtitle {
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    opacity: 0.55;
+    margin-bottom: 18px;
+  }
+
+  /* 粒子层 */
+  .particle-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 5;
+  }
+</style>
+</head>
+<body>
+
+<canvas class="particle-canvas" id="particles"></canvas>
+
+<div class="container">
+
+  <!-- 顶部标题栏（精简） -->
+  <div class="header">
+    <div class="title-badge">
+      <div class="title">赛博<span>五子棋</span></div>
+      <div class="title-sub">// 神经网络对战 · 量子棋盘 //</div>
+    </div>
+    <div class="version-tag">v1.2</div>
+  </div>
+
+  <!-- 玩家信息面板 -->
+  <div class="info-panel">
+    <div class="player-card black active" id="card-black">
+      <div class="player-label">玩家一</div>
+      <div class="player-row">
+        <div class="player-stone"></div>
+        <div class="player-name">幽灵</div>
+      </div>
+      <div class="move-count" id="moves-black">落子：0</div>
+    </div>
+
+    <div class="vs-text">VS</div>
+
+    <div class="player-card white" id="card-white">
+      <div class="player-label">玩家二</div>
+      <div class="player-row">
+        <div class="player-stone"></div>
+        <div class="player-name">铬合金</div>
+      </div>
+      <div class="move-count" id="moves-white">落子：0</div>
+    </div>
+  </div>
+
+  <!-- 棋盘 -->
+  <div class="board-wrapper">
+    <div class="board-corner tl"></div>
+    <div class="board-corner tr"></div>
+    <div class="board-corner bl"></div>
+    <div class="board-corner br"></div>
+    <canvas id="board" width="480" height="480"></canvas>
+  </div>
+
+  <!-- 状态栏 -->
+  <div class="status-bar" id="status">
+    幽灵 的回合 &nbsp;<span class="blink">_</span>
+  </div>
+
+  <!-- 底部操作区 -->
+  <div class="bottom-row">
+    <div class="btn-group">
+      <button class="cyber-btn" onclick="undoMove()">◄ 悔棋</button>
+      <button class="cyber-btn pink" onclick="resetGame()">⟳ 重开</button>
+      <button class="cyber-btn" onclick="toggleMode()">⚙ 模式</button>
+      <button class="cyber-btn" id="sound-btn" onclick="toggleSound()" title="音效开关">♪ 开</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- 胜利遮罩 -->
+<div class="overlay" id="overlay">
+  <div class="win-box" id="win-box">
+    <div class="win-title" id="win-title">幽灵 获胜</div>
+    <div class="win-subtitle">// 神经链接已建立 · 对战结束 //</div>
+    <div style="color:rgba(0,255,255,0.55); font-size:0.7rem; letter-spacing:2px;" id="win-detail"></div>
+  </div>
+  <button class="cyber-btn pink" onclick="resetGame()" style="font-size:0.75rem; padding:10px 26px;">
+    ⟳ 再来一局
+  </button>
+</div>
+
+<script>
+const BOARD_SIZE = 15;
+const CELL = 32;
+const PADDING = 16;
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+
+let board = [];
+let currentPlayer = 1; // 1=黑(青色) 2=白(粉色)
+let gameOver = false;
+let moveHistory = [];
+let moveCountBlack = 0;
+let moveCountWhite = 0;
+let aiMode = false;
+let lastMove = null;
+let winCells = [];
+
+// 玩家名称（中文）
+const NAMES = { 1: '幽灵', 2: '铬合金' };
+
+/* ═══════════════════════════════════════════════════════
+   音效系统 — Web Audio API 合成引擎
+═══════════════════════════════════════════════════════ */
+let audioCtx = null;
+let soundEnabled = true;
+
+function getAudioCtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// 落子音效 — 赛博感"嗒"声，融合正弦+方波
+function playPlaceSound(player) {
+  if (!soundEnabled) return;
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  const freq = player === 1 ? 660 : 880; // 青色低频 / 粉色高频
+
+  // 主音 — 短促正弦音头
+  const osc1 = ctx.createOscillator();
+  const gain1 = ctx.createGain();
+  osc1.connect(gain1); gain1.connect(ctx.destination);
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(freq, now);
+  osc1.frequency.exponentialRampToValueAtTime(freq * 0.4, now + 0.15);
+  gain1.gain.setValueAtTime(0.35, now);
+  gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+  osc1.start(now); osc1.stop(now + 0.18);
+
+  // 泛音 — 方波点缀
+  const osc2 = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.connect(gain2); gain2.connect(ctx.destination);
+  osc2.type = 'square';
+  osc2.frequency.setValueAtTime(freq * 2, now);
+  gain2.gain.setValueAtTime(0.06, now);
+  gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+  osc2.start(now); osc2.stop(now + 0.06);
+
+  // 点击瞬态噪声
+  const bufLen = Math.floor(ctx.sampleRate * 0.04);
+  const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufLen);
+  const src = ctx.createBufferSource();
+  const noiseGain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass'; filter.frequency.value = 2000; filter.Q.value = 1;
+  src.buffer = buf; src.connect(filter); filter.connect(noiseGain); noiseGain.connect(ctx.destination);
+  noiseGain.gain.setValueAtTime(0.12, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+  src.start(now); src.stop(now + 0.04);
+}
+
+// 胜利音效 — 电子胜利音阶
+function playWinSound(player) {
+  if (!soundEnabled) return;
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  const baseFreq = player === 1 ? 523.25 : 659.25; // C5 / E5
+  const scale = [0, 4, 7, 12, 16, 19, 24]; // 大调音阶半音数
+  const beatDur = 0.11;
+
+  scale.forEach((semi, i) => {
+    const freq = baseFreq * Math.pow(2, semi / 12);
+    const t = now + i * beatDur;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = i < 4 ? 'square' : 'sawtooth';
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + beatDur * 1.5);
+    osc.start(t); osc.stop(t + beatDur * 1.5);
+  });
+
+  // 最后一个音持续更久并叠加一个低频
+  const lastT = now + 7 * beatDur;
+  const oscBass = ctx.createOscillator();
+  const gainBass = ctx.createGain();
+  oscBass.connect(gainBass); gainBass.connect(ctx.destination);
+  oscBass.type = 'sine';
+  oscBass.frequency.setValueAtTime(baseFreq * 2, lastT);
+  gainBass.gain.setValueAtTime(0.2, lastT);
+  gainBass.gain.exponentialRampToValueAtTime(0.001, lastT + 0.6);
+  oscBass.start(lastT); oscBass.stop(lastT + 0.6);
+}
+
+// 悔棋音效 — 快速下滑音
+function playUndoSound() {
+  if (!soundEnabled) return;
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(800, now);
+  osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+  gain.gain.setValueAtTime(0.2, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  osc.start(now); osc.stop(now + 0.15);
+}
+
+// 按钮音效 — 电子"滴"声
+function playBtnSound() {
+  if (!soundEnabled) return;
+  const ctx = getAudioCtx();
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1200, now);
+  osc.frequency.exponentialRampToValueAtTime(600, now + 0.05);
+  gain.gain.setValueAtTime(0.15, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+  osc.start(now); osc.stop(now + 0.06);
+}
+
+// 音效开关
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('sound-btn');
+  btn.textContent = soundEnabled ? '♪ 开' : '♪ 关';
+  btn.style.color = soundEnabled ? '' : 'rgba(0,255,255,0.3)';
+  if (soundEnabled) playBtnSound();
+}
+
+/* ── 粒子系统 ── */
+const pCanvas = document.getElementById('particles');
+const pCtx = pCanvas.getContext('2d');
+let particles = [];
+
+function resizeParticleCanvas() {
+  pCanvas.width = window.innerWidth;
+  pCanvas.height = window.innerHeight;
+}
+resizeParticleCanvas();
+window.addEventListener('resize', resizeParticleCanvas);
+
+class Particle {
+  constructor(x, y, color) {
+    this.x = x; this.y = y;
+    this.color = color;
+    this.vx = (Math.random() - 0.5) * 4;
+    this.vy = (Math.random() - 0.5) * 4 - 2;
+    this.life = 1;
+    this.decay = 0.022 + Math.random() * 0.03;
+    this.size = 2 + Math.random() * 3;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.06;
+    this.life -= this.decay;
+  }
+  draw() {
+    pCtx.save();
+    pCtx.globalAlpha = this.life;
+    pCtx.fillStyle = this.color;
+    pCtx.shadowBlur = 6;
+    pCtx.shadowColor = this.color;
+    pCtx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+    pCtx.restore();
+  }
+}
+
+function spawnParticles(canvasX, canvasY, color) {
+  const rect = canvas.getBoundingClientRect();
+  const x = rect.left + canvasX;
+  const y = rect.top + canvasY;
+  for (let i = 0; i < 20; i++) particles.push(new Particle(x, y, color));
+}
+
+function animateParticles() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => { p.update(); p.draw(); });
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+/* ── 初始化 ── */
+function initBoard() {
+  board = Array.from({length: BOARD_SIZE}, () => Array(BOARD_SIZE).fill(0));
+  currentPlayer = 1;
+  gameOver = false;
+  moveHistory = [];
+  moveCountBlack = 0;
+  moveCountWhite = 0;
+  lastMove = null;
+  winCells = [];
+  document.getElementById('moves-black').textContent = '落子：0';
+  document.getElementById('moves-white').textContent = '落子：0';
+  updateCardActive();
+  updateStatus(`${NAMES[1]} 的回合`);
+  drawBoard();
+}
+
+/* ── 绘制棋盘 ── */
+function drawBoard() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#06060f';
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    const x = PADDING + i * CELL;
+    const y = PADDING + i * CELL;
+
+    const gradV = ctx.createLinearGradient(x, PADDING, x, PADDING + (BOARD_SIZE-1)*CELL);
+    gradV.addColorStop(0, 'rgba(0,255,255,0.04)');
+    gradV.addColorStop(0.5, 'rgba(0,255,255,0.22)');
+    gradV.addColorStop(1, 'rgba(0,255,255,0.04)');
+    ctx.strokeStyle = gradV;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(x, PADDING); ctx.lineTo(x, PADDING + (BOARD_SIZE-1)*CELL); ctx.stroke();
+
+    const gradH = ctx.createLinearGradient(PADDING, y, PADDING + (BOARD_SIZE-1)*CELL, y);
+    gradH.addColorStop(0, 'rgba(0,255,255,0.04)');
+    gradH.addColorStop(0.5, 'rgba(0,255,255,0.22)');
+    gradH.addColorStop(1, 'rgba(0,255,255,0.04)');
+    ctx.strokeStyle = gradH;
+    ctx.beginPath(); ctx.moveTo(PADDING, y); ctx.lineTo(PADDING + (BOARD_SIZE-1)*CELL, y); ctx.stroke();
+  }
+
+  // 星位
+  [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]].forEach(([r,c]) => {
+    ctx.fillStyle = 'rgba(0,255,255,0.5)';
+    ctx.shadowBlur = 4; ctx.shadowColor = '#00ffff';
+    ctx.beginPath();
+    ctx.arc(PADDING + c*CELL, PADDING + r*CELL, 3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+
+  // 胜利高亮
+  if (winCells.length > 0) {
+    winCells.forEach(([r, c]) => {
+      ctx.strokeStyle = '#ffff00'; ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 12; ctx.shadowColor = '#ffff00';
+      ctx.beginPath();
+      ctx.arc(PADDING + c*CELL, PADDING + r*CELL, CELL/2 - 3, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    });
+  }
+
+  // 棋子
+  for (let r = 0; r < BOARD_SIZE; r++)
+    for (let c = 0; c < BOARD_SIZE; c++)
+      if (board[r][c] !== 0) drawStone(r, c, board[r][c]);
+
+  // 最后落点标记
+  if (lastMove) {
+    const { r, c, player } = lastMove;
+    const x = PADDING + c*CELL, y = PADDING + r*CELL;
+    const col = player === 1 ? '#00ffff' : '#ff00ff';
+    ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+    ctx.shadowBlur = 8; ctx.shadowColor = col;
+    const s = 5;
+    ctx.beginPath();
+    ctx.moveTo(x-s, y); ctx.lineTo(x+s, y);
+    ctx.moveTo(x, y-s); ctx.lineTo(x, y+s);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+}
+
+function drawStone(r, c, player) {
+  const x = PADDING + c*CELL, y = PADDING + r*CELL;
+  const radius = CELL/2 - 3;
+
+  if (player === 1) {
+    const g = ctx.createRadialGradient(x - radius*.3, y - radius*.3, 1, x, y, radius);
+    g.addColorStop(0, '#80ffff'); g.addColorStop(0.3, '#00ffff');
+    g.addColorStop(0.7, '#006688'); g.addColorStop(1, '#001122');
+    ctx.fillStyle = g;
+    ctx.shadowBlur = 12; ctx.shadowColor = '#00ffff';
+  } else {
+    const g = ctx.createRadialGradient(x - radius*.3, y - radius*.3, 1, x, y, radius);
+    g.addColorStop(0, '#ffaaff'); g.addColorStop(0.3, '#ff00ff');
+    g.addColorStop(0.7, '#880066'); g.addColorStop(1, '#220011');
+    ctx.fillStyle = g;
+    ctx.shadowBlur = 12; ctx.shadowColor = '#ff00ff';
+  }
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  const hl = ctx.createRadialGradient(x - radius*.4, y - radius*.4, 1, x, y, radius);
+  hl.addColorStop(0, player === 1 ? 'rgba(180,255,255,0.55)' : 'rgba(255,200,255,0.55)');
+  hl.addColorStop(0.4, 'transparent');
+  ctx.fillStyle = hl;
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI*2); ctx.fill();
+}
+
+/* ── 输入事件 ── */
+canvas.addEventListener('click', e => {
+  if (gameOver || (aiMode && currentPlayer === 2)) return;
+  const { r, c } = getCell(e);
+  if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE || board[r][c] !== 0) return;
+  placeStone(r, c);
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (gameOver || (aiMode && currentPlayer === 2)) return;
+  const { r, c } = getCell(e);
+  drawBoard();
+  if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === 0) {
+    const x = PADDING + c*CELL, y = PADDING + r*CELL;
+    ctx.fillStyle = currentPlayer === 1 ? 'rgba(0,255,255,0.25)' : 'rgba(255,0,255,0.25)';
+    ctx.shadowBlur = 8; ctx.shadowColor = currentPlayer === 1 ? '#00ffff' : '#ff00ff';
+    ctx.beginPath(); ctx.arc(x, y, CELL/2-3, 0, Math.PI*2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+});
+
+canvas.addEventListener('mouseleave', () => drawBoard());
+
+function getCell(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top)  * (canvas.height / rect.height);
+  return { r: Math.round((my - PADDING) / CELL), c: Math.round((mx - PADDING) / CELL) };
+}
+
+/* ── 落子逻辑 ── */
+function placeStone(r, c) {
+  board[r][c] = currentPlayer;
+  moveHistory.push({ r, c, player: currentPlayer });
+  lastMove = { r, c, player: currentPlayer };
+
+  if (currentPlayer === 1) {
+    moveCountBlack++;
+    document.getElementById('moves-black').textContent = `落子：${moveCountBlack}`;
+  } else {
+    moveCountWhite++;
+    document.getElementById('moves-white').textContent = `落子：${moveCountWhite}`;
+  }
+
+  spawnParticles(PADDING + c*CELL, PADDING + r*CELL, currentPlayer === 1 ? '#00ffff' : '#ff00ff');
+  playPlaceSound(currentPlayer); // 落子音效
+  drawBoard();
+
+  const won = checkWin(r, c, currentPlayer);
+  if (won) {
+    winCells = won; gameOver = true;
+    drawBoard();
+    playWinSound(currentPlayer); // 胜利音效
+    setTimeout(() => showWin(currentPlayer), 400);
+    return;
+  }
+
+  if (moveHistory.length === BOARD_SIZE * BOARD_SIZE) {
+    gameOver = true;
+    updateStatus('平局 // 势均力敌');
+    return;
+  }
+
+  currentPlayer = currentPlayer === 1 ? 2 : 1;
+  updateCardActive();
+  updateStatus(`${NAMES[currentPlayer]} 的回合`);
+  if (aiMode && currentPlayer === 2) setTimeout(aiMove, 300);
+}
+
+function checkWin(r, c, player) {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (const [dr, dc] of dirs) {
+    const cells = [[r, c]];
+    for (let d = 1; d <= 4; d++) {
+      const nr = r+dr*d, nc = c+dc*d;
+      if (nr<0||nr>=BOARD_SIZE||nc<0||nc>=BOARD_SIZE||board[nr][nc]!==player) break;
+      cells.push([nr, nc]);
+    }
+    for (let d = 1; d <= 4; d++) {
+      const nr = r-dr*d, nc = c-dc*d;
+      if (nr<0||nr>=BOARD_SIZE||nc<0||nc>=BOARD_SIZE||board[nr][nc]!==player) break;
+      cells.push([nr, nc]);
+    }
+    if (cells.length >= 5) return cells;
+  }
+  return null;
+}
+
+function showWin(player) {
+  const name = NAMES[player];
+  const color = player === 1 ? '#00ffff' : '#ff00ff';
+  document.getElementById('win-title').textContent = `${name} 获胜！`;
+  document.getElementById('win-title').style.color = color;
+  document.getElementById('win-box').style.borderColor = color;
+  document.getElementById('win-box').style.boxShadow = `0 0 50px ${color}40`;
+  document.getElementById('win-detail').textContent = `共 ${moveHistory.length} 手 · 本局结束`;
+  document.getElementById('overlay').classList.add('show');
+}
+
+function updateCardActive() {
+  document.getElementById('card-black').classList.toggle('active', currentPlayer === 1);
+  document.getElementById('card-white').classList.toggle('active', currentPlayer === 2);
+}
+
+function updateStatus(text) {
+  document.getElementById('status').innerHTML = `${text} &nbsp;<span class="blink">_</span>`;
+}
+
+/* ── 悔棋 ── */
+function undoMove() {
+  playBtnSound(); // 按钮音效
+  if (moveHistory.length === 0) return;
+  if (aiMode && moveHistory.length < 2) return;
+  const steps = aiMode ? 2 : 1;
+  for (let i = 0; i < steps && moveHistory.length > 0; i++) {
+    const last = moveHistory.pop();
+    board[last.r][last.c] = 0;
+    if (last.player === 1) { moveCountBlack = Math.max(0, moveCountBlack-1); document.getElementById('moves-black').textContent = `落子：${moveCountBlack}`; }
+    else { moveCountWhite = Math.max(0, moveCountWhite-1); document.getElementById('moves-white').textContent = `落子：${moveCountWhite}`; }
+  }
+  currentPlayer = moveHistory.length > 0 ? (moveHistory[moveHistory.length-1].player === 1 ? 2 : 1) : 1;
+  lastMove = moveHistory.length > 0 ? moveHistory[moveHistory.length-1] : null;
+  gameOver = false; winCells = [];
+  updateCardActive();
+  updateStatus(`${NAMES[currentPlayer]} 的回合`);
+  playUndoSound(); // 悔棋下滑音
+  drawBoard();
+}
+
+/* ── AI（贪心评分）── */
+function aiMove() {
+  if (gameOver) return;
+  let best = -Infinity, bestR = 7, bestC = 7;
+  for (let r = 0; r < BOARD_SIZE; r++)
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (board[r][c] !== 0) continue;
+      const score = evaluate(r, c, 2) * 1.1 + evaluate(r, c, 1);
+      if (score > best) { best = score; bestR = r; bestC = c; }
+    }
+  placeStone(bestR, bestC);
+}
+
+function evaluate(r, c, player) {
+  let score = 0;
+  board[r][c] = player;
+  for (const [dr, dc] of [[0,1],[1,0],[1,1],[1,-1]]) {
+    let count = 1, openEnds = 0;
+    for (let d = 1; d <= 4; d++) {
+      const nr=r+dr*d, nc=c+dc*d;
+      if (nr<0||nr>=BOARD_SIZE||nc<0||nc>=BOARD_SIZE) break;
+      if (board[nr][nc]===player) count++;
+      else { if (board[nr][nc]===0) openEnds++; break; }
+    }
+    for (let d = 1; d <= 4; d++) {
+      const nr=r-dr*d, nc=c-dc*d;
+      if (nr<0||nr>=BOARD_SIZE||nc<0||nc>=BOARD_SIZE) break;
+      if (board[nr][nc]===player) count++;
+      else { if (board[nr][nc]===0) openEnds++; break; }
+    }
+    score += ([0,1,10,100,1000,100000][Math.min(count,5)]||0) * (openEnds+1);
+  }
+  board[r][c] = 0;
+  return score;
+}
+
+/* ── 重置 / 切换模式 ── */
+function resetGame() {
+  playBtnSound();
+  document.getElementById('overlay').classList.remove('show');
+  initBoard();
+}
+
+function toggleMode() {
+  playBtnSound();
+  aiMode = !aiMode;
+  document.getElementById('mode-indicator').textContent = aiMode ? '当前：人机对战' : '当前：双人对战';
+  resetGame();
+}
+
+initBoard();
+</script>
+</body>
+</html>
