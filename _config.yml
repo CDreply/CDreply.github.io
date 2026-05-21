@@ -12,6 +12,8 @@ plugins:
 # 让 .html 文件也被 Jekyll 处理
 include:
   - games
+  - XGJ
+  - JDSH
 
 # 语言设置
 lang: zh-CN
