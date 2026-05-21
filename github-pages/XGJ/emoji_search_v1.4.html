@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emoji 表情搜索 v1.4</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 {
+      text-align: center;
+      color: white;
+      font-size: 2.2rem;
+      margin-bottom: 24px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    /* 搜索区域 */
+    .search-box {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .search-row {
+      display: flex;
+      gap: 20px;
+      align-items: stretch;
+    }
+    .input-side, .output-side {
+      flex: 1;
+      min-height: 140px;
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .input-side {
+      background: #f8f9fa;
+      border: 2px solid #e9ecef;
+      transition: border-color 0.3s;
+    }
+    .input-side:focus-within { border-color: #667eea; }
+    .output-side {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border: 2px solid #dee2e6;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .side-label {
+      font-size: 0.85rem;
+      color: #6c757d;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    .input-side textarea {
+      width: 100%;
+      height: 80px;
+      border: none;
+      background: transparent;
+      font-size: 1.1rem;
+      resize: none;
+      outline: none;
+      color: #333;
+    }
+    .input-side textarea::placeholder { color: #adb5bd; }
+    .emoji-result { font-size: 4.5rem; line-height: 1.2; text-align: center; }
+    .emoji-meaning { font-size: 0.95rem; color: #6c757d; margin-top: 8px; text-align: center; }
+    /* 分类标签 */
+    .category-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+    .tab-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.3);
+      color: white;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+    }
+    .tab-btn:hover { background: rgba(255,255,255,0.5); transform: translateY(-2px); }
+    .tab-btn.active { background: white; color: #667eea; font-weight: 600; }
+    /* emoji列表 */
+    .emoji-grid {
+      background: white;
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .emoji-section { margin-bottom: 25px; }
+    .emoji-section:last-child { margin-bottom: 0; }
+    .section-title {
+      font-size: 1.1rem;
+      color: #495057;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e9ecef;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .emoji-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; }
+    .emoji-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 8px;
+      background: #f8f9fa;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    .emoji-item:hover {
+      background: #e9ecef;
+      transform: scale(1.08);
+      border-color: #667eea;
+    }
+    .emoji-item .emoji { font-size: 2.2rem; margin-bottom: 4px; }
+    .emoji-item .text { font-size: 0.75rem; color: #6c757d; text-align: center; }
+    .no-result { text-align: center; padding: 40px; color: #6c757d; }
+    .no-result .icon { font-size: 3rem; margin-bottom: 10px; }
+    @media (max-width: 600px) {
+      .search-row { flex-direction: column; }
+      .emoji-list { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>😀 Emoji 表情搜索 · v1.4</h1>
+  
+  <!-- 搜索区域 -->
+  <div class="search-box">
+    <div class="search-row">
+      <div class="input-side">
+        <div class="side-label">输入描述...</div>
+        <textarea id="searchInput" placeholder="例如：开心、爱心、星星、食物... 或用空格隔开分别搜索"></textarea>
+      </div>
+      <div class="output-side">
+        <div class="side-label">匹配的表情</div>
+        <div class="emoji-result" id="emojiResult">❓</div>
+        <div class="emoji-meaning" id="emojiMeaning">输入描述获取表情</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 分类标签 -->
+  <div class="category-tabs">
+    <button class="tab-btn active" data-category="all">全部</button>
+    <button class="tab-btn" data-category="emotion">😊 情感</button>
+    <button class="tab-btn" data-category="people">👤 人物</button>
+    <button class="tab-btn" data-category="animals">🐱 动物</button>
+    <button class="tab-btn" data-category="food">🍔 食物</button>
+    <button class="tab-btn" data-category="nature">🌿 自然</button>
+    <button class="tab-btn" data-category="objects">📱 物品</button>
+    <button class="tab-btn" data-category="symbols">💝 符号</button>
+  </div>
+  
+  <!-- emoji列表 -->
+  <div class="emoji-grid" id="emojiGrid"></div>
+</div>
+
+<script>
+// 组合表情短语映射（支持泛化描述 → 多emoji组合）
+const phraseMap = [
+  // 生气/愤怒系
+  {phrases:["气","生气","愤怒","怒","angry","恼火","发火","大火","暴怒","盛怒","怒火","气愤"], result:"😤",desc:"哼！"},
+  {phrases:["气炸","气晕","气死","气到","气疯了","气死了","炸了","气炸了"], result:"🤯",desc:"气到爆炸"},
+  {phrases:["火","着火","火焰","热死了","发烧"], result:"🔥",desc:"着火"},
+  {phrases:["气得冒烟","火大","怒火中烧","怒火冲天","怒发冲冠"], result:"😤💢🔥",desc:"气得冒烟"},
+  {phrases:["骂人","脏话","fuck","去死","该死","混蛋"], result:"🤬",desc:"骂人"},
+  {phrases:["暴怒","暴跳如雷","气到发抖"], result:"🤬😡💥",desc:"暴怒"},
+  {phrases:["气到头炸","火冒三丈","气冲牛斗","怒不可遏"], result:"😤🤯🔥",desc:"气到头炸"},
+  {phrases:["爆炸","爆了","boom","炸裂","砰"], result:"💥",desc:"爆炸"},
+  {phrases:["原子弹","核弹","核爆","核辐射"], result:"☢️💥",desc:"核弹"},
+  {phrases:["雷","打雷","雷电","雷劈"], result:"⚡",desc:"雷电"},
+  {phrases:["龙卷风","旋风","刮风","大风"], result:"🌪️",desc:"龙卷风"},
+
+  // 开心/爱系
+  {phrases:["开心","快乐","高兴","happy","嗨","开心","快活","愉快","愉悦","欢乐","欢快","乐"], result:"😀",desc:"开心"},
+  {phrases:["大笑","哈哈","笑死","笑死我","狂笑","哈"], result:"😂",desc:"笑哭"},
+  {phrases:["傻笑","憨笑","嘻嘻"], result:"😁",desc:"傻笑"},
+  {phrases:["笑而不语","尴尬笑","苦笑","干笑"], result:"😅",desc:"尴尬笑"},
+  {phrases:["害羞","脸红","不好意思","脸红"], result:"😊",desc:"害羞"},
+  {phrases:["爱","喜欢","love","心","爱意","恋人","约会"], result:"❤️",desc:"爱心"},
+  {phrases:["热恋","恋爱","甜蜜","甜甜","撒狗粮"], result:"😍🥰",desc:"热恋"},
+  {phrases:["心动","小鹿乱撞","怦然心动"], result:"💓💗",desc:"心动"},
+  {phrases:["亲","亲吻","吻","亲亲","亲嘴","亲一下"], result:"😘",desc:"飞吻"},
+  {phrases:["拥抱","抱抱","抱住"], result:"🤗",desc:"拥抱"},
+  {phrases:["比心","爱你","love you","心心"], result:"🤟💕",desc:"比心"},
+  {phrases:["撒花","欢呼","祝贺","恭喜发财"], result:"🎉🎊",desc:"撒花庆祝"},
+  {phrases:["庆祝","派对","birthday","生日"], result:"🥳🎂",desc:"派对"},
+  {phrases:["耶","胜利","victory","赢","成功","夺冠","金牌"], result:"✌️🥇",desc:"胜利"},
+  {phrases:["哇","厉害","牛","太强","佩服","崇拜"], result:"🤩",desc:"星星眼"},
+  {phrases:["666","溜","牛逼","厉害"], result:"👍",desc:"点赞"},
+  {phrases:["鼓掌","拍手","clap","掌声"], result:"👏",desc:"鼓掌"},
+  {phrases:["棒","完美","厉害","优秀"], result:"👌",desc:"OK完美"},
+
+  // 难过/哭系
+  {phrases:["哭","流泪","cry","难过","伤心","sad"], result:"😭",desc:"大哭"},
+  {phrases:["默默流泪","偷偷哭","泪目"], result:"😢",desc:"哭泣"},
+  {phrases:["哭笑不得","笑中带泪"], result:"😂😢",desc:"笑中带泪"},
+  {phrases:["抑郁","心碎","心碎","心塞"], result:"💔",desc:"碎心"},
+  {phrases:["崩溃","绝望","绝望","完蛋","死机"], result:"😱💀",desc:"崩溃"},
+  {phrases:["死","死了","没命","挂了","去世"], result:"💀",desc:"骷髅"},
+  {phrases:["躺平","不想动","摆烂","咸鱼"], result:"🫠",desc:"躺平"},
+
+  // 害怕/惊恐系
+  {phrases:["怕","害怕","恐惧","scared","怕死","畏"], result:"😨",desc:"害怕"},
+  {phrases:["鬼","幽灵","恐怖","闹鬼","吓"], result:"👻",desc:"鬼"},
+  {phrases:["惊吓","吓一跳","震惊","震惊","shock"], result:"😱",desc:"惊恐"},
+  {phrases:["冷汗","紧张","nervous","焦虑","慌"], result:"😰",desc:"冷汗"},
+  {phrases:["无语","无话可说","无Fuck说"], result:"😐",desc:"无语"},
+  {phrases:["发呆","懵","懵了","蒙","daze"], result:"😑",desc:"发呆"},
+  {phrases:["晕","晕了","晕倒","晕眩","dizzy"], result:"😵",desc:"晕"},
+
+  // 思考/工作系
+  {phrases:["想","思考","思考","thinking","想不通"], result:"🤔",desc:"思考"},
+  {phrases:["睡觉","困","sleep","困了","想睡"], result:"😴",desc:"睡觉"},
+  {phrases:["做梦","梦","dream","梦想"], result:"💭😴",desc:"做梦"},
+  {phrases:["工作","加班","上班","搬砖","干活"], result:"💼😤",desc:"加班"},
+  {phrases:["摸鱼","划水","偷懒","摸鱼"], result:"🐟",desc:"摸鱼"},
+  {phrases:["学习","考试","复习","刷题","背书"], result:"📚🤯",desc:"学习"},
+  {phrases:["下班","下班了","收工","收工"], result:"✌️🏃",desc:"下班"},
+  {phrases:["放假","休息","vacation","度假"], result:"🏖️🥳",desc:"放假"},
+  {phrases:["上班","打卡","通勤"], result:"🏢",desc:"上班"},
+
+  // 食物/吃系
+  {phrases:["吃","吃饭","eating","干饭","用餐","开饭"], result:"🍽️",desc:"吃饭"},
+  {phrases:["饿了","饥饿","hungry","好饿","嘴馋"], result:"🤤😋",desc:"流口水"},
+  {phrases:["好喝","奶茶","喝","drink","饮品"], result:"🧋",desc:"奶茶"},
+  {phrases:["咖啡","困了","提神","coffee"], result:"☕",desc:"咖啡"},
+  {phrases:["喝酒","干杯","Cheers","cheers","酒"], result:"🍻",desc:"干杯"},
+  {phrases:["甜","甜食","蛋糕","candy","糖果"], result:"🍰🍬",desc:"甜食"},
+  {phrases:["辣","hot","麻辣","变态辣","辣椒"], result:"🌶️😵",desc:"辣到"},
+
+  // 钱/财系
+  {phrases:["钱","有钱","rich","富","发财","money"], result:"💰",desc:"钱袋"},
+  {phrases:["贫穷","穷","没钱","吃土","破产"], result:"💸",desc:"花钱"},
+  {phrases:["发工资","领钱","加薪","涨薪"], result:"💴💰",desc:"发工资"},
+  {phrases:["股票","涨停","牛市","赚钱"], result:"📈💰",desc:"股票涨"},
+  {phrases:["股票跌","亏钱","熊市","绿"], result:"📉💔",desc:"股票跌"},
+
+  // 天气/自然系
+  {phrases:["下雨","雨天","雨","rain"], result:"🌧️☔",desc:"下雨"},
+  {phrases:["晴天","晴","sun","太阳","大太阳"], result:"☀️😎",desc:"晴天"},
+  {phrases:["下雪","雪","snow","雪天"], result:"❄️☃️",desc:"下雪"},
+  {phrases:["彩虹","rainbow","彩虹"], result:"🌈",desc:"彩虹"},
+  {phrases:["星空","星星","star","夜空"], result:"🌌✨",desc:"星空"},
+  {phrases:["月亮","Moon","满月","月圆"], result:"🌙",desc:"月亮"},
+  {phrases:["日出","日出","晨曦","黎明"], result:"🌅",desc:"日出"},
+  {phrases:["日落","黄昏","夕阳","傍晚"], result:"🌇",desc:"日落"},
+
+  // 运动/游戏系
+  {phrases:["运动","健身","workout","锻炼","跑步"], result:"🏃💪",desc:"运动"},
+  {phrases:["游泳","游泳","swim","玩水"], result:"🏊",desc:"游泳"},
+  {phrases:["打游戏","游戏","game","玩游戏","开黑"], result:"🎮",desc:"游戏"},
+  {phrases:["赢","胜利","赢了","胜利","大吉"], result:"🏆🥇",desc:"胜利"},
+  {phrases:["输","失败","输了","GG","lose"], result:"😢💔",desc:"输了"},
+  {phrases:["旅游","旅行","travel","出游","旅行"], result:"✈️🧳",desc:"旅行"},
+  {phrases:["露营","野营","camping","帐篷"], result:"🏕️⛺",desc:"露营"},
+  {phrases:["开车","驾驶","drive","上路"], result:"🚗",desc:"开车"},
+
+  // 表情组合
+  {phrases:["OK","好","ok","好的","可以","行"], result:"👌",desc:"OK"},
+  {phrases:["NO","不","no","不行","不要","no"], result:"🚫",desc:"禁止"},
+  {phrases:["?","疑问","不懂","why","问号"], result:"❓",desc:"问号"},
+  {phrases:["!","感叹","厉害","注意","warning"], result:"❗",desc:"感叹"},
+  {phrases:["酷","cool","帅气","帅","拽"], result:"😎",desc:"墨镜酷"},
+  {phrases:["萌","可爱","cute","卡哇伊","萌"], result:"🥰",desc:"可爱"},
+  {phrases:["搞笑","幽默","有趣","funny","逗"], result:"🤣",desc:"笑死"},
+  {phrases:["尴尬","社死","脸红","不好意思"], result:"😬",desc:"尴尬"},
+  {phrases:["机智","聪明","聪明","clever","厉害"], result:"🤓",desc:"机智"},
+  {phrases:["沙雕","傻","笨","蠢","智商"], result:"🤡",desc:"沙雕"},
+  {phrases:["有毒","无语","无语了"], result:"🧪",desc:"有毒"},
+  {phrases:["666","厉害","牛啊","佩服"], result:"🤩✨",desc:"666"},
+  {phrases:["加油","努力","冲","fighting","奋进"], result:"💪🔥",desc:"加油"},
+  {phrases:["坚持","忍耐","忍","忍住"], result:"💪😤",desc:"坚持"},
+  {phrases:["放弃","躺平","摆烂","算了"], result:"🫠",desc:"放弃"},
+  {phrases:["失眠","睡不着","夜猫子","熬夜"], result:"😴🌙",desc:"失眠"},
+  {phrases:["生病","不舒服","病了","sick","感冒"], result:"😷",desc:"生病"},
+  {phrases:["痊愈","康复","好了","健康"], result:"💪✨",desc:"康复"},
+  {phrases:["约会","date","男女朋友"], result:"💕🌹",desc:"约会"},
+  {phrases:["分手","失恋","吹了","分了"], result:"💔😢",desc:"分手"},
+  {phrases:["单身","solo","solo","孤独"], result:"👤💔",desc:"单身"},
+  {phrases:["单身狗","单身快乐","solo快乐"], result:"🐕",desc:"单身狗"},
+  {phrases:["婚礼","结婚","wedding"," wedding"], result:"💒👰",desc:"婚礼"},
+  {phrases:["搬家","新家","搬家"], result:"📦🏠",desc:"搬家"},
+  {phrases:["租房","找房","买房"], result:"🏠💰",desc:"找房"},
+  {phrases:["装修","装潢","翻新"], result:"🔨🏠",desc:"装修"},
+  {phrases:["毕业","毕业","graduation"], result:"🎓👨‍🎓",desc:"毕业"},
+  {phrases:["开学","上学","学校","school"], result:"📚🏫",desc:"开学"},
+  {phrases:["论文","写论文","答辩"], result:"📄💀",desc:"论文"},
+  {phrases:["求职","面试","找工作"], result:"💼👔",desc:"求职"},
+  {phrases:["offer","入职","新工作"], result:"🎉💼",desc:"入职"},
+  {phrases:["离职","辞职","跳槽"], result:"🏃💨",desc:"离职"},
+  {phrases:["升职","晋升","加薪"], result:"📈💰",desc:"升职"},
+  {phrases:["表白","告白","表白"], result:"💌💕",desc:"表白"},
+  {phrases:["收到","好","yes","sure"], result:"✅",desc:"收到"},
+  {phrases:["送礼物","礼物","gift","送礼"], result:"🎁",desc:"礼物"},
+  {phrases:["红包","red packet","恭喜发财"], result:"🧧💰",desc:"红包"},
+  {phrases:["烟花","烟火","fireworks"], result:"🎆🎇",desc:"烟花"},
+  {phrases:["车祸","事故","撞车"], result:"💥🚗",desc:"车祸"},
+  {phrases:["生病了","阳了","发烧","中招"], result:"🤒😷",desc:"生病"},
+  {phrases:["疫苗","接种","打疫苗"], result:"💉",desc:"疫苗"},
+  {phrases:["核酸","检测","阳性"], result:"🧪",desc:"核酸"},
+  {phrases:["隔离","封控","居家"], result:"🏠🔒",desc:"隔离"},
+  {phrases:["减肥","健身","减脂","瘦身"], result:"🏃💪",desc:"减肥"},
+  {phrases:["长胖","胖了","发福"], result:"🍔😭",desc:"长胖"},
+  {phrases:["变美","美容","化妆","打扮"], result:"💄✨",desc:"变美"},
+  {phrases:["秃头","掉发","秃了","秃"], result:"😱💀",desc:"秃头"},
+  {phrases:["脱单","有对象","恋爱了"], result:"💕🥰",desc:"脱单"},
+  {phrases:["吃瓜","围观","八卦","瓜"], result:"🍉👀",desc:"吃瓜"},
+  {phrases:["内卷","卷","卷王","卷死"], result:"📚😤",desc:"内卷"},
+  {phrases:["躺平","佛系","无所谓"], result:"🧘🫠",desc:"躺平"},
+  {phrases:["摆烂","无所谓","算了","就这样"], result:"🫠",desc:"摆烂"},
+  {phrases:["emo","忧郁","抑郁","难过"], result:"😔💭",desc:"emo"},
+  {phrases:["YYDS","永远的神","太强了"], result:"🤩🏆",desc:"永远的神"},
+  {phrases:["绝绝子","绝了","太绝了"], result:"🤌✨",desc:"绝绝子"},
+  {phrases:["社恐","内向","害羞"], result:"😰👤",desc:"社恐"},
+  {phrases:["社牛","社牛","大胆"], result:"😎👥",desc:"社牛"},
+  {phrases:["破防","泪目","绷不住"], result:"😢💔",desc:"破防"},
+  {phrases:["怼","怼人","对骂"], result:"🤬💢",desc:"怼"},
+  {phrases:["服了","服","f服了"], result:"🙇",desc:"服了"},
+  {phrases:["救命","SOS","help","救"], result:"🆘",desc:"救命"},
+  {phrases:["无语了","无话可说"], result:"😐💢",desc:"无语了"},
+  {phrases:["醉了","酒醉","微醺"], result:"😵🍷",desc:"醉了"},
+  {phrases:["醒醒","清醒","冷静"], result:"🧠💦",desc:"清醒"},
+  {phrases:["发烧","体温","阳性"], result:"🤒🌡️",desc:"发烧"},
+  {phrases:["头疼","头痛","脑子疼"], result:"🤕",desc:"头疼"},
+  {phrases:["心累","心塞","心痛"], result:"💔😞",desc:"心累"},
+  {phrases:["激动","兴奋","鸡血","热血"], result:"🤩💥",desc:"激动"},
+  {phrases:["无聊","没事干","闲"], result:"😐💤",desc:"无聊"},
+  {phrases:["等","等待","waiting"], result:"⏳",desc:"等待"},
+  {phrases:["hot","热门","火了","热搜"], result:"🔥📈",desc:"热门"},
+  {phrases:["cold","冷门","凉了"], result:"❄️📉",desc:"冷门"},
+  {phrases:["限时","赶紧","快","赶"], result:"⏰💨",desc:"限时"},
+  {phrases:["VIP","会员","尊贵"], result:"👑💎",desc:"VIP"},
+  {phrases:["点赞","like","赞"], result:"👍",desc:"点赞"},
+  {phrases:["收藏","保存","save"], result:"🔖",desc:"收藏"},
+  {phrases:["转发","share","分享"], result:"🔄",desc:"转发"},
+  {phrases:["禁止","stop","ban"], result:"🚫",desc:"禁止"},
+  {phrases:["提醒","alarm","闹钟"], result:"⏰",desc:"提醒"},
+  {phrases:["开始","start","GO","冲"], result:"▶️",desc:"开始"},
+  {phrases:["暂停","pause","停"], result:"⏸️",desc:"暂停"},
+  {phrases:["结束","end","over","完了"], result:"⏹️",desc:"结束"},
+  {phrases:["刷新","reload","刷新页面"], result:"🔃",desc:"刷新"},
+];
+
+const emojiData = [
+  // 情感类
+  {emoji:"😀",text:"开心",keywords:["开心","高兴","快乐","笑","smile","happy"],category:"emotion"},
+  {emoji:"😃",text:"大笑",keywords:["开心","大笑","快乐","高兴"],category:"emotion"},
+  {emoji:"😄",text:"欢笑",keywords:["开心","欢笑","快乐","笑脸"],category:"emotion"},
+  {emoji:"😁",text:"傻笑",keywords:["开心","傻笑","高兴","smile"],category:"emotion"},
+  {emoji:"😆",text:"大笑",keywords:["大笑","笑","开心","哈哈"],category:"emotion"},
+  {emoji:"😅",text:"尴尬笑",keywords:["尴尬","笑","冷汗","nervous"],category:"emotion"},
+  {emoji:"🤣",text:"笑到哭",keywords:["笑","笑哭","搞笑","笑死"],category:"emotion"},
+  {emoji:"😂",text:"笑哭",keywords:["笑哭","笑","搞笑","流泪"],category:"emotion"},
+  {emoji:"🙂",text:"微笑",keywords:["微笑","笑","还好","勉强笑"],category:"emotion"},
+  {emoji:"🙃",text:"倒笑",keywords:["倒立","俏皮","调皮"],category:"emotion"},
+  {emoji:"😉",text:"眨眼",keywords:["眨眼","wink","调皮"],category:"emotion"},
+  {emoji:"😊",text:"害羞笑",keywords:["害羞","微笑","开心","脸红"],category:"emotion"},
+  {emoji:"😇",text:"天使",keywords:["天使","乖","善良"],category:"emotion"},
+  {emoji:"🥰",text:"笑脸爱心",keywords:["爱心","喜欢","爱","心"],category:"emotion"},
+  {emoji:"😍",text:"花痴",keywords:["喜欢","爱","心动","花痴"],category:"emotion"},
+  {emoji:"🤩",text:"星星眼",keywords:["兴奋","激动","崇拜","星星眼","哇"],category:"emotion"},
+  {emoji:"😘",text:"飞吻",keywords:["飞吻","亲"],category:"emotion"},
+  {emoji:"😗",text:"亲",keywords:["亲","吻","可爱","亲亲"],category:"emotion"},
+  {emoji:"😚",text:"闭眼亲",keywords:["闭眼","亲","害羞","亲亲"],category:"emotion"},
+  {emoji:"😋",text:"好吃",keywords:["好吃","食物","馋"],category:"emotion"},
+  {emoji:"😛",text:"吐舌",keywords:["调皮","吐舌","做鬼脸"],category:"emotion"},
+  {emoji:"😜",text:"调皮眨眼",keywords:["调皮","眨眼","作怪"],category:"emotion"},
+  {emoji:"🤪",text:"疯狂",keywords:["疯狂","调皮","搞笑","神经"],category:"emotion"},
+  {emoji:"😝",text:"鬼脸",keywords:["鬼脸","吐舌","调皮"],category:"emotion"},
+  {emoji:"🤑",text:"财迷",keywords:["钱","贪财","美金"],category:"emotion"},
+  {emoji:"🤗",text:"拥抱",keywords:["拥抱","抱抱"],category:"emotion"},
+  {emoji:"🤔",text:"思考",keywords:["思考","想","考虑"],category:"emotion"},
+  {emoji:"🤐",text:"闭嘴",keywords:["闭嘴","安静","保密"],category:"emotion"},
+  {emoji:"😐",text:"面无表情",keywords:["面无表情","冷漠"],category:"emotion"},
+  {emoji:"😑",text:"无语",keywords:["无语","冷漠","面无表情"],category:"emotion"},
+  {emoji:"😶",text:"沉默",keywords:["沉默","无语"],category:"emotion"},
+  {emoji:"😏",text:"得意",keywords:["得意","眨眼","狡猾"],category:"emotion"},
+  {emoji:"😒",text:"不爽",keywords:["不爽","郁闷","无聊"],category:"emotion"},
+  {emoji:"🙄",text:"翻白眼",keywords:["翻白眼","无语","白眼"],category:"emotion"},
+  {emoji:"😬",text:"尴尬",keywords:["尴尬"],category:"emotion"},
+  {emoji:"🤥",text:"说谎",keywords:["说谎","骗子"],category:"emotion"},
+  {emoji:"😌",text:"放松",keywords:["放松","轻松","舒适"],category:"emotion"},
+  {emoji:"😔",text:"沮丧",keywords:["沮丧","难过","悲伤","sad"],category:"emotion"},
+  {emoji:"😪",text:"困",keywords:["困","想睡","sleepy"],category:"emotion"},
+  {emoji:"🤤",text:"流口水",keywords:["流口水","馋","好吃"],category:"emotion"},
+  {emoji:"😴",text:"睡觉",keywords:["睡觉","睡","困","sleep"],category:"emotion"},
+  {emoji:"😷",text:"生病",keywords:["生病","感冒","病毒","sick"],category:"emotion"},
+  {emoji:"🤒",text:"发烧",keywords:["发烧","生病","感冒"],category:"emotion"},
+  {emoji:"🤕",text:"受伤",keywords:["受伤","头疼","头痛"],category:"emotion"},
+  {emoji:"😵",text:"晕",keywords:["晕","迷糊","头晕"],category:"emotion"},
+  {emoji:"🥳",text:"派对",keywords:["派对","庆祝"],category:"emotion"},
+  {emoji:"😎",text:"墨镜",keywords:["酷","墨镜","厉害"],category:"emotion"},
+  {emoji:"🤓",text:"书呆子",keywords:["书呆子"],category:"emotion"},
+  {emoji:"🧐",text:"研究",keywords:["研究","打量"],category:"emotion"},
+  {emoji:"🤠",text:"牛仔",keywords:["牛仔","西部"],category:"emotion"},
+  {emoji:"🥺",text:"可怜",keywords:["可怜","求","撒娇"],category:"emotion"},
+  {emoji:"😦",text:"担心",keywords:["担心","不安"],category:"emotion"},
+  {emoji:"😧",text:"惊恐",keywords:["惊恐","担心"],category:"emotion"},
+  {emoji:"😨",text:"害怕",keywords:["害怕","恐惧","scared"],category:"emotion"},
+  {emoji:"😰",text:"冷汗",keywords:["冷汗","紧张","焦虑"],category:"emotion"},
+  {emoji:"😥",text:"失落",keywords:["失落","可惜"],category:"emotion"},
+  {emoji:"😢",text:"哭泣",keywords:["哭","流泪","难过","cry"],category:"emotion"},
+  {emoji:"😭",text:"大哭",keywords:["哭","大哭","泪流","sob"],category:"emotion"},
+  {emoji:"😱",text:"惊恐",keywords:["惊恐","害怕","尖叫","scream"],category:"emotion"},
+  {emoji:"😖",text:"困惑",keywords:["困惑","郁闷"],category:"emotion"},
+  {emoji:"😣",text:"痛苦",keywords:["痛苦","难受"],category:"emotion"},
+  {emoji:"😞",text:"失望",keywords:["失望","难过","沮丧"],category:"emotion"},
+  {emoji:"😓",text:"疲惫",keywords:["疲惫","累"],category:"emotion"},
+  {emoji:"😩",text:"烦躁",keywords:["烦躁","焦虑"],category:"emotion"},
+  {emoji:"😫",text:"崩溃",keywords:["崩溃","累"],category:"emotion"},
+  {emoji:"🥱",text:"无聊",keywords:["无聊","困"],category:"emotion"},
+  {emoji:"😤",text:"生气",keywords:["生气","愤怒","怒","angry"],category:"emotion"},
+  {emoji:"😡",text:"愤怒",keywords:["愤怒","生气","怒"],category:"emotion"},
+  {emoji:"😠",text:"生气",keywords:["生气","愤怒"],category:"emotion"},
+  {emoji:"🤬",text:"骂人",keywords:["骂人","脏话"],category:"emotion"},
+  {emoji:"👍",text:"点赞",keywords:["点赞","好","赞","good"],category:"emotion"},
+  {emoji:"👎",text:"差评",keywords:["差评","不好","差"],category:"emotion"},
+  {emoji:"👏",text:"鼓掌",keywords:["鼓掌","厉害","clap"],category:"emotion"},
+  {emoji:"🙌",text:"庆祝",keywords:["庆祝","举手"],category:"emotion"},
+  {emoji:"🤝",text:"握手",keywords:["握手","合作"],category:"emotion"},
+  {emoji:"🙏",text:"祈祷",keywords:["祈祷","求","拜托"],category:"emotion"},
+  // 人物手势
+  {emoji:"👋",text:"挥手",keywords:["挥手","拜拜"],category:"people"},
+  {emoji:"🤚",text:"手背",keywords:["手","停止","手背"],category:"people"},
+  {emoji:"✋",text:"手掌",keywords:["手掌","停止","手"],category:"people"},
+  {emoji:"🖐️",text:"张开手",keywords:["手","张开"],category:"people"},
+  {emoji:"✌️",text:"胜利",keywords:["胜利","耶","v","victory"],category:"people"},
+  {emoji:"🤞",text:"交叉手指",keywords:["好运","祈祷"],category:"people"},
+  {emoji:"🤟",text:"爱你",keywords:["爱你"],category:"people"},
+  {emoji:"🤘",text:"摇滚",keywords:["摇滚"],category:"people"},
+  {emoji:"👌",text:"OK",keywords:["好","ok","OK","完美"],category:"people"},
+  {emoji:"👈",text:"指向左",keywords:["指向","左"],category:"people"},
+  {emoji:"👉",text:"指向右",keywords:["指向","右"],category:"people"},
+  {emoji:"👆",text:"指向上",keywords:["指向","上"],category:"people"},
+  {emoji:"👇",text:"指向下",keywords:["指向","下"],category:"people"},
+  {emoji:"☝️",text:"向上指",keywords:["指向","上"],category:"people"},
+  {emoji:"✍️",text:"写字",keywords:["写","写字"],category:"people"},
+  {emoji:"💪",text:"肌肉",keywords:["肌肉","力量"],category:"people"},
+  {emoji:"👀",text:"眼睛",keywords:["眼睛","看"],category:"people"},
+  {emoji:"👁️",text:"眼球",keywords:["眼睛","看"],category:"people"},
+  {emoji:"👅",text:"舌头",keywords:["舌头","调皮"],category:"people"},
+  {emoji:"👄",text:"嘴唇",keywords:["嘴唇","嘴","唇"],category:"people"},
+  {emoji:"👦",text:"男孩",keywords:["男孩","男","kid"],category:"people"},
+  {emoji:"👧",text:"女孩",keywords:["女孩","女"],category:"people"},
+  {emoji:"👨",text:"男人",keywords:["男人","男"],category:"people"},
+  {emoji:"👩",text:"女人",keywords:["女人","女"],category:"people"},
+  {emoji:"👴",text:"老人",keywords:["老人","老","爷爷"],category:"people"},
+  {emoji:"👵",text:"老妇",keywords:["老人","老","奶奶"],category:"people"},
+  {emoji:"🤴",text:"王子",keywords:["王子","公主"],category:"people"},
+  {emoji:"👸",text:"公主",keywords:["公主","女王"],category:"people"},
+  {emoji:"👶",text:"婴儿",keywords:["婴儿","宝宝","baby"],category:"people"},
+  {emoji:"🧑",text:"成人",keywords:["人","成人"],category:"people"},
+  {emoji:"👼",text:"天使宝宝",keywords:["天使","宝宝"],category:"people"},
+  {emoji:"🎅",text:"圣诞老人",keywords:["圣诞","老人"],category:"people"},
+  {emoji:"🤶",text:"圣诞妈妈",keywords:["圣诞"],category:"people"},
+  {emoji:"🦸",text:"超级英雄",keywords:["英雄","超级"],category:"people"},
+  {emoji:"🦹",text:"反派",keywords:["反派"],category:"people"},
+  {emoji:"🧙",text:"巫师",keywords:["巫师","魔法"],category:"people"},
+  {emoji:"🧚",text:"精灵",keywords:["精灵","fairy"],category:"people"},
+  {emoji:"🧛",text:"吸血鬼",keywords:["吸血鬼"],category:"people"},
+  {emoji:"🧜",text:"人鱼",keywords:["人鱼"],category:"people"},
+  {emoji:"🧝",text:"精灵人",keywords:["精灵"],category:"people"},
+  {emoji:"💂",text:"卫兵",keywords:["卫兵"],category:"people"},
+  {emoji:"👮",text:"警察",keywords:["警察","cop"],category:"people"},
+  {emoji:"🕵️",text:"侦探",keywords:["侦探","spy"],category:"people"},
+  {emoji:"👷",text:"工人",keywords:["工人"],category:"people"},
+  {emoji:"🚶",text:"走路",keywords:["走","走路","walk"],category:"people"},
+  {emoji:"🏃",text:"跑步",keywords:["跑","跑步","run"],category:"people"},
+  {emoji:"💃",text:"跳舞",keywords:["跳舞","舞","dance"],category:"people"},
+  {emoji:"🕺",text:"男舞",keywords:["跳舞","男舞"],category:"people"},
+  {emoji:"👯",text:"舞者",keywords:["跳舞"],category:"people"},
+  {emoji:"🏋️",text:"举重",keywords:["举重","健身"],category:"people"},
+  {emoji:"⛷️",text:"滑雪",keywords:["滑雪"],category:"people"},
+  {emoji:"🏂",text:"单板滑雪",keywords:["滑雪"],category:"people"},
+  {emoji:"🏄",text:"冲浪",keywords:["冲浪"],category:"people"},
+  {emoji:"🏊",text:"游泳",keywords:["游泳","swim"],category:"people"},
+  {emoji:"🚣",text:"划船",keywords:["划船"],category:"people"},
+  {emoji:"🧗",text:"攀岩",keywords:["攀岩"],category:"people"},
+  // 动物
+  {emoji:"🐱",text:"猫",keywords:["猫","cat","猫咪"],category:"animals"},
+  {emoji:"🐶",text:"狗",keywords:["狗","dog","小狗"],category:"animals"},
+  {emoji:"🐭",text:"老鼠",keywords:["老鼠","鼠"],category:"animals"},
+  {emoji:"🐹",text:"仓鼠",keywords:["仓鼠"],category:"animals"},
+  {emoji:"🐰",text:"兔子",keywords:["兔子","兔"],category:"animals"},
+  {emoji:"🦊",text:"狐狸",keywords:["狐狸"],category:"animals"},
+  {emoji:"🐻",text:"熊",keywords:["熊"],category:"animals"},
+  {emoji:"🐼",text:"熊猫",keywords:["熊猫"],category:"animals"},
+  {emoji:"🐨",text:"考拉",keywords:["考拉"],category:"animals"},
+  {emoji:"🐯",text:"老虎",keywords:["老虎","虎"],category:"animals"},
+  {emoji:"🦁",text:"狮子",keywords:["狮子"],category:"animals"},
+  {emoji:"🐮",text:"牛",keywords:["牛"],category:"animals"},
+  {emoji:"🐷",text:"猪",keywords:["猪"],category:"animals"},
+  {emoji:"🐸",text:"青蛙",keywords:["青蛙","蛙"],category:"animals"},
+  {emoji:"🐵",text:"猴子",keywords:["猴子","猴"],category:"animals"},
+  {emoji:"🙈",text:"猴NO",keywords:["猴子","不要看"],category:"animals"},
+  {emoji:"🙉",text:"猴听",keywords:["猴子","不要听"],category:"animals"},
+  {emoji:"🙊",text:"猴说",keywords:["猴子","不要说"],category:"animals"},
+  {emoji:"🐔",text:"鸡",keywords:["鸡"],category:"animals"},
+  {emoji:"🐧",text:"企鹅",keywords:["企鹅"],category:"animals"},
+  {emoji:"🐦",text:"鸟",keywords:["鸟"],category:"animals"},
+  {emoji:"🦆",text:"鸭子",keywords:["鸭子"],category:"animals"},
+  {emoji:"🦅",text:"鹰",keywords:["鹰"],category:"animals"},
+  {emoji:"🦉",text:"猫头鹰",keywords:["猫头鹰"],category:"animals"},
+  {emoji:"🦇",text:"蝙蝠",keywords:["蝙蝠"],category:"animals"},
+  {emoji:"🐺",text:"狼",keywords:["狼"],category:"animals"},
+  {emoji:"🐗",text:"野猪",keywords:["野猪"],category:"animals"},
+  {emoji:"🐴",text:"马",keywords:["马","horse"],category:"animals"},
+  {emoji:"🦄",text:"独角兽",keywords:["独角兽"],category:"animals"},
+  {emoji:"🐝",text:"蜜蜂",keywords:["蜜蜂"],category:"animals"},
+  {emoji:"🐛",text:"毛毛虫",keywords:["毛毛虫","虫"],category:"animals"},
+  {emoji:"🦋",text:"蝴蝶",keywords:["蝴蝶"],category:"animals"},
+  {emoji:"🐌",text:"蜗牛",keywords:["蜗牛"],category:"animals"},
+  {emoji:"🐞",text:"瓢虫",keywords:["瓢虫"],category:"animals"},
+  {emoji:"🐜",text:"蚂蚁",keywords:["蚂蚁"],category:"animals"},
+  {emoji:"🦟",text:"蚊子",keywords:["蚊子"],category:"animals"},
+  {emoji:"🐢",text:"乌龟",keywords:["乌龟"],category:"animals"},
+  {emoji:"🐍",text:"蛇",keywords:["蛇"],category:"animals"},
+  {emoji:"🦎",text:"蜥蜴",keywords:["蜥蜴"],category:"animals"},
+  {emoji:"🦖",text:"恐龙",keywords:["恐龙"],category:"animals"},
+  {emoji:"🦕",text:"蜥脚类",keywords:["恐龙"],category:"animals"},
+  {emoji:"🐙",text:"章鱼",keywords:["章鱼"],category:"animals"},
+  {emoji:"🦑",text:"鱿鱼",keywords:["鱿鱼"],category:"animals"},
+  {emoji:"🦐",text:"虾",keywords:["虾"],category:"animals"},
+  {emoji:"🦀",text:"螃蟹",keywords:["螃蟹","蟹"],category:"animals"},
+  {emoji:"🐠",text:"热带鱼",keywords:["鱼","热带"],category:"animals"},
+  {emoji:"🐟",text:"鱼",keywords:["鱼"],category:"animals"},
+  {emoji:"🐬",text:"海豚",keywords:["海豚"],category:"animals"},
+  {emoji:"🐳",text:"鲸鱼",keywords:["鲸鱼"],category:"animals"},
+  {emoji:"🦈",text:"鲨鱼",keywords:["鲨鱼"],category:"animals"},
+  {emoji:"🦭",text:"海豹",keywords:["海豹"],category:"animals"},
+  {emoji:"🐾",text:"猫爪",keywords:["爪","paw"],category:"animals"},
+  // 食物
+  {emoji:"🍎",text:"红苹果",keywords:["苹果","水果"],category:"food"},
+  {emoji:"🍐",text:"梨",keywords:["梨","水果"],category:"food"},
+  {emoji:"🍊",text:"橙子",keywords:["橙子","橘子"],category:"food"},
+  {emoji:"🍋",text:"柠檬",keywords:["柠檬"],category:"food"},
+  {emoji:"🍌",text:"香蕉",keywords:["香蕉"],category:"food"},
+  {emoji:"🍉",text:"西瓜",keywords:["西瓜"],category:"food"},
+  {emoji:"🍇",text:"葡萄",keywords:["葡萄"],category:"food"},
+  {emoji:"🍓",text:"草莓",keywords:["草莓"],category:"food"},
+  {emoji:"🫐",text:"蓝莓",keywords:["蓝莓"],category:"food"},
+  {emoji:"🍈",text:"哈密瓜",keywords:["哈密瓜","瓜"],category:"food"},
+  {emoji:"🍒",text:"樱桃",keywords:["樱桃"],category:"food"},
+  {emoji:"🍑",text:"桃子",keywords:["桃子"],category:"food"},
+  {emoji:"🥭",text:"芒果",keywords:["芒果"],category:"food"},
+  {emoji:"🍍",text:"菠萝",keywords:["菠萝"],category:"food"},
+  {emoji:"🥥",text:"椰子",keywords:["椰子"],category:"food"},
+  {emoji:"🥑",text:"牛油果",keywords:["牛油果"],category:"food"},
+  {emoji:"🍆",text:"茄子",keywords:["茄子"],category:"food"},
+  {emoji:"🥕",text:"胡萝卜",keywords:["胡萝卜","萝卜"],category:"food"},
+  {emoji:"🌽",text:"玉米",keywords:["玉米"],category:"food"},
+  {emoji:"🌶️",text:"辣椒",keywords:["辣椒","辣"],category:"food"},
+  {emoji:"🥒",text:"黄瓜",keywords:["黄瓜"],category:"food"},
+  {emoji:"🥬",text:"蔬菜",keywords:["蔬菜","菜"],category:"food"},
+  {emoji:"🥦",text:"西兰花",keywords:["西兰花"],category:"food"},
+  {emoji:"🧄",text:"大蒜",keywords:["大蒜"],category:"food"},
+  {emoji:"🧅",text:"洋葱",keywords:["洋葱"],category:"food"},
+  {emoji:"🍄",text:"蘑菇",keywords:["蘑菇"],category:"food"},
+  {emoji:"🥜",text:"花生",keywords:["花生"],category:"food"},
+  {emoji:"🍞",text:"面包",keywords:["面包"],category:"food"},
+  {emoji:"🥐",text:"牛角面包",keywords:["面包"],category:"food"},
+  {emoji:"🥖",text:"法棍",keywords:["面包","法棍"],category:"food"},
+  {emoji:"🧀",text:"奶酪",keywords:["奶酪"],category:"food"},
+  {emoji:"🥚",text:"鸡蛋",keywords:["鸡蛋","蛋"],category:"food"},
+  {emoji:"🍳",text:"煎蛋",keywords:["煎蛋","早餐"],category:"food"},
+  {emoji:"🧈",text:"黄油",keywords:["黄油"],category:"food"},
+  {emoji:"🥞",text:"煎饼",keywords:["煎饼"],category:"food"},
+  {emoji:"🥓",text:"培根",keywords:["培根"],category:"food"},
+  {emoji:"🥩",text:"肉排",keywords:["肉","牛排"],category:"food"},
+  {emoji:"🍗",text:"鸡腿",keywords:["鸡","肉"],category:"food"},
+  {emoji:"🍔",text:"汉堡",keywords:["汉堡"],category:"food"},
+  {emoji:"🍟",text:"薯条",keywords:["薯条"],category:"food"},
+  {emoji:"🍕",text:"披萨",keywords:["披萨","pizza"],category:"food"},
+  {emoji:"🌭",text:"热狗",keywords:["热狗"],category:"food"},
+  {emoji:"🥪",text:"三明治",keywords:["三明治"],category:"food"},
+  {emoji:"🌮",text:"墨西哥卷",keywords:["墨西哥","taco"],category:"food"},
+  {emoji:"🌯",text:"卷饼",keywords:["卷饼"],category:"food"},
+  {emoji:"🥙",text:"烤肉",keywords:["烤肉"],category:"food"},
+  {emoji:"🥗",text:"沙拉",keywords:["沙拉"],category:"food"},
+  {emoji:"🍝",text:"意面",keywords:["意面"],category:"food"},
+  {emoji:"🍜",text:"拉面",keywords:["拉面","面","noodles"],category:"food"},
+  {emoji:"🍲",text:"火锅",keywords:["火锅","汤"],category:"food"},
+  {emoji:"🍥",text:"鱼丸",keywords:["鱼丸"],category:"food"},
+  {emoji:"🍣",text:"寿司",keywords:["寿司","sushi"],category:"food"},
+  {emoji:"🍱",text:"便当",keywords:["便当"],category:"food"},
+  {emoji:"🍛",text:"咖喱饭",keywords:["咖喱"],category:"food"},
+  {emoji:"🍚",text:"米饭",keywords:["米饭","饭","rice"],category:"food"},
+  {emoji:"🍙",text:"饭团",keywords:["饭团"],category:"food"},
+  {emoji:"🍢",text:"串",keywords:["串","关东煮"],category:"food"},
+  {emoji:"🍡",text:"团子",keywords:["团子"],category:"food"},
+  {emoji:"🍧",text:"刨冰",keywords:["冰","冰激凌"],category:"food"},
+  {emoji:"🍨",text:"冰激凌",keywords:["冰激凌"],category:"food"},
+  {emoji:"🍦",text:"冰淇淋",keywords:["冰淇淋","蛋糕"],category:"food"},
+  {emoji:"🥧",text:"派",keywords:["派"],category:"food"},
+  {emoji:"🧁",text:"纸杯蛋糕",keywords:["蛋糕","cupcake"],category:"food"},
+  {emoji:"🍰",text:"蛋糕",keywords:["蛋糕","cake"],category:"food"},
+  {emoji:"🎂",text:"生日蛋糕",keywords:["蛋糕","生日"],category:"food"},
+  {emoji:"🍮",text:"布丁",keywords:["布丁"],category:"food"},
+  {emoji:"🍭",text:"棒棒糖",keywords:["糖果","棒棒糖"],category:"food"},
+  {emoji:"🍬",text:"糖果",keywords:["糖果"],category:"food"},
+  {emoji:"🍫",text:"巧克力",keywords:["巧克力"],category:"food"},
+  {emoji:"🍿",text:"爆米花",keywords:["爆米花"],category:"food"},
+  {emoji:"🍩",text:"甜甜圈",keywords:["甜甜圈"],category:"food"},
+  {emoji:"🍪",text:"饼干",keywords:["饼干"],category:"food"},
+  {emoji:"☕",text:"咖啡",keywords:["咖啡","coffee"],category:"food"},
+  {emoji:"🍵",text:"茶",keywords:["茶","tea"],category:"food"},
+  {emoji:"🧃",text:"果汁",keywords:["果汁","饮料"],category:"food"},
+  {emoji:"🥤",text:"饮料",keywords:["饮料","可乐"],category:"food"},
+  {emoji:"🧋",text:"奶茶",keywords:["奶茶"],category:"food"},
+  {emoji:"🍺",text:"啤酒",keywords:["啤酒","beer"],category:"food"},
+  {emoji:"🍻",text:"碰杯",keywords:["啤酒","干杯"],category:"food"},
+  {emoji:"🍷",text:"红酒",keywords:["酒","红酒"],category:"food"},
+  {emoji:"🥂",text:"香槟",keywords:["香槟","干杯"],category:"food"},
+  {emoji:"🍹",text:"鸡尾酒",keywords:["鸡尾酒","酒"],category:"food"},
+  {emoji:"🥃",text:"威士忌",keywords:["酒","威士忌"],category:"food"},
+  {emoji:"🍾",text:"开香槟",keywords:["香槟","庆祝"],category:"food"},
+  {emoji:"🧊",text:"冰块",keywords:["冰"],category:"food"},
+  {emoji:"🥄",text:"勺子",keywords:["勺子"],category:"food"},
+  {emoji:"🍴",text:"刀叉",keywords:["刀叉"],category:"food"},
+  {emoji:"🍽️",text:"餐具",keywords:["餐具"],category:"food"},
+  {emoji:"🥢",text:"筷子",keywords:["筷子"],category:"food"},
+  // 自然
+  {emoji:"🌸",text:"樱花",keywords:["花","樱花","flower"],category:"nature"},
+  {emoji:"🌺",text:"扶桑",keywords:["花","hibiscus"],category:"nature"},
+  {emoji:"🌻",text:"向日葵",keywords:["花","向日葵"],category:"nature"},
+  {emoji:"🌹",text:"玫瑰",keywords:["花","玫瑰","rose"],category:"nature"},
+  {emoji:"🥀",text:"枯萎",keywords:["花","枯萎"],category:"nature"},
+  {emoji:"🌷",text:"郁金香",keywords:["花","郁金香"],category:"nature"},
+  {emoji:"🌼",text:"小花",keywords:["花"],category:"nature"},
+  {emoji:"🌱",text:"种子",keywords:["植物","种子"],category:"nature"},
+  {emoji:"🌿",text:"草",keywords:["植物","草"],category:"nature"},
+  {emoji:"☘️",text:"三叶草",keywords:["草","clover"],category:"nature"},
+  {emoji:"🍀",text:"四叶草",keywords:["草","幸运"],category:"nature"},
+  {emoji:"🌾",text:"稻子",keywords:["稻子","麦子"],category:"nature"},
+  {emoji:"🌵",text:"仙人掌",keywords:["仙人掌","cactus"],category:"nature"},
+  {emoji:"🌴",text:"棕榈树",keywords:["树","palm"],category:"nature"},
+  {emoji:"🌲",text:"松树",keywords:["树"],category:"nature"},
+  {emoji:"🌳",text:"树",keywords:["树","tree"],category:"nature"},
+  {emoji:"🌍",text:"地球",keywords:["地球","world"],category:"nature"},
+  {emoji:"🌎",text:"地球",keywords:["地球","world"],category:"nature"},
+  {emoji:"🌏",text:"地球",keywords:["地球","world"],category:"nature"},
+  {emoji:"🌑",text:"新月",keywords:["月亮","新月"],category:"nature"},
+  {emoji:"🌓",text:"半月",keywords:["月亮","半月"],category:"nature"},
+  {emoji:"🌕",text:"满月",keywords:["月亮","满月"],category:"nature"},
+  {emoji:"🌙",text:"月亮",keywords:["月亮","moon"],category:"nature"},
+  {emoji:"🌚",text:"笑脸月亮",keywords:["月亮"],category:"nature"},
+  {emoji:"⭐",text:"星星",keywords:["星星","星","star"],category:"nature"},
+  {emoji:"🌟",text:"闪星",keywords:["星星","闪"],category:"nature"},
+  {emoji:"✨",text:"闪光",keywords:["闪","sparkle"],category:"nature"},
+  {emoji:"💫",text:"流星",keywords:["星星","流星"],category:"nature"},
+  {emoji:"🌠",text:"流星雨",keywords:["星星","流星"],category:"nature"},
+  {emoji:"🌌",text:"银河",keywords:["星星","银河"],category:"nature"},
+  {emoji:"☀️",text:"太阳",keywords:["太阳","sun"],category:"nature"},
+  {emoji:"🌤️",text:"多云太阳",keywords:["太阳"],category:"nature"},
+  {emoji:"⛅",text:"阴太阳",keywords:["太阳","云"],category:"nature"},
+  {emoji:"🌥️",text:"多云",keywords:["云"],category:"nature"},
+  {emoji:"☁️",text:"云",keywords:["云","cloud"],category:"nature"},
+  {emoji:"🌧️",text:"下雨",keywords:["雨","rain"],category:"nature"},
+  {emoji:"⛈️",text:"雷雨",keywords:["雨","雷"],category:"nature"},
+  {emoji:"🌩️",text:"闪电",keywords:["闪电","雷"],category:"nature"},
+  {emoji:"⚡",text:"闪电符号",keywords:["闪电","electric"],category:"nature"},
+  {emoji:"❄️",text:"雪花",keywords:["雪","snow"],category:"nature"},
+  {emoji:"🌨️",text:"小雪",keywords:["雪"],category:"nature"},
+  {emoji:"☃️",text:"雪人",keywords:["雪","雪人"],category:"nature"},
+  {emoji:"⛄",text:"雪人",keywords:["雪","雪人"],category:"nature"},
+  {emoji:"🌬️",text:"风",keywords:["风","wind"],category:"nature"},
+  {emoji:"💨",text:"快风",keywords:["风","跑"],category:"nature"},
+  {emoji:"🌪️",text:"龙卷风",keywords:["风","龙卷风"],category:"nature"},
+  {emoji:"🌫️",text:"雾",keywords:["雾"],category:"nature"},
+  {emoji:"🌈",text:"彩虹",keywords:["彩虹"],category:"nature"},
+  {emoji:"🌂",text:"伞",keywords:["伞","雨伞"],category:"nature"},
+  {emoji:"☂️",text:"伞",keywords:["伞","雨伞"],category:"nature"},
+  {emoji:"🔥",text:"火",keywords:["火","热","fire"],category:"nature"},
+  {emoji:"💧",text:"水滴",keywords:["水","滴"],category:"nature"},
+  {emoji:"💦",text:"汗",keywords:["汗"],category:"nature"},
+  {emoji:"🌊",text:"海浪",keywords:["海","浪"],category:"nature"},
+  {emoji:"🏔️",text:"雪山",keywords:["山","mountain"],category:"nature"},
+  {emoji:"⛰️",text:"山",keywords:["山"],category:"nature"},
+  {emoji:"🗻",text:"富士山",keywords:["山","富士山"],category:"nature"},
+  {emoji:"🏕️",text:"露营",keywords:["露营","camping"],category:"nature"},
+  {emoji:"🏖️",text:"沙滩",keywords:["沙滩","beach"],category:"nature"},
+  {emoji:"🏜️",text:"沙漠",keywords:["沙漠"],category:"nature"},
+  {emoji:"🏝️",text:"岛屿",keywords:["岛"],category:"nature"},
+  // 物品
+  {emoji:"⌚",text:"手表",keywords:["手表","表"],category:"objects"},
+  {emoji:"📱",text:"手机",keywords:["手机","phone"],category:"objects"},
+  {emoji:"📲",text:"手机响",keywords:["手机"],category:"objects"},
+  {emoji:"💻",text:"电脑",keywords:["电脑","computer"],category:"objects"},
+  {emoji:"⌨️",text:"键盘",keywords:["键盘"],category:"objects"},
+  {emoji:"🖥️",text:"显示器",keywords:["电脑","monitor"],category:"objects"},
+  {emoji:"🔋",text:"电池",keywords:["电池"],category:"objects"},
+  {emoji:"🔌",text:"插头",keywords:["插头"],category:"objects"},
+  {emoji:"💡",text:"灯泡",keywords:["灯泡","idea"],category:"objects"},
+  {emoji:"🔦",text:"手电筒",keywords:["手电筒"],category:"objects"},
+  {emoji:"🕯️",text:"蜡烛",keywords:["蜡烛"],category:"objects"},
+  {emoji:"🏮",text:"灯笼",keywords:["灯笼","灯"],category:"objects"},
+  {emoji:"📔",text:"笔记本",keywords:["本子","notebook"],category:"objects"},
+  {emoji:"📕",text:"书",keywords:["书","book"],category:"objects"},
+  {emoji:"📖",text:"翻书",keywords:["书"],category:"objects"},
+  {emoji:"📚",text:"书堆",keywords:["书","books"],category:"objects"},
+  {emoji:"📝",text:"便签",keywords:["便签","note"],category:"objects"},
+  {emoji:"✏️",text:"铅笔",keywords:["笔","铅笔"],category:"objects"},
+  {emoji:"✒️",text:"钢笔",keywords:["笔","钢笔"],category:"objects"},
+  {emoji:"🖋️",text:"钢笔",keywords:["笔"],category:"objects"},
+  {emoji:"🖊️",text:"笔",keywords:["笔"],category:"objects"},
+  {emoji:"🖌️",text:"画笔",keywords:["笔"],category:"objects"},
+  {emoji:"💼",text:"公文包",keywords:["包","公文包"],category:"objects"},
+  {emoji:"👝",text:"小包",keywords:["包"],category:"objects"},
+  {emoji:"👛",text:"钱包",keywords:["钱包","包"],category:"objects"},
+  {emoji:"👜",text:"手提包",keywords:["包","bag"],category:"objects"},
+  {emoji:"🎒",text:"背包",keywords:["包","backpack"],category:"objects"},
+  {emoji:"🎁",text:"礼物",keywords:["礼物","gift"],category:"objects"},
+  {emoji:"🎀",text:"蝴蝶结",keywords:["蝴蝶结","ribbon"],category:"objects"},
+  {emoji:"🎈",text:"气球",keywords:["气球","balloon"],category:"objects"},
+  {emoji:"🎉",text:"庆祝",keywords:["庆祝","party"],category:"objects"},
+  {emoji:"🎊",text:"彩带球",keywords:["庆祝"],category:"objects"},
+  {emoji:"🏆",text:"奖杯",keywords:["奖杯","trophy"],category:"objects"},
+  {emoji:"🏅",text:"奖牌",keywords:["奖牌"],category:"objects"},
+  {emoji:"🥇",text:"金牌",keywords:["奖牌","金牌"],category:"objects"},
+  {emoji:"🥈",text:"银牌",keywords:["奖牌","银牌"],category:"objects"},
+  {emoji:"🥉",text:"铜牌",keywords:["奖牌","铜牌"],category:"objects"},
+  {emoji:"🎯",text:"目标",keywords:["目标","靶"],category:"objects"},
+  {emoji:"🎱",text:"8号球",keywords:["台球"],category:"objects"},
+  {emoji:"🎮",text:"游戏",keywords:["游戏"],category:"objects"},
+  {emoji:"🕹️",text:"摇杆",keywords:["游戏"],category:"objects"},
+  {emoji:"🎰",text:"老虎机",keywords:["游戏"],category:"objects"},
+  {emoji:"🎲",text:"骰子",keywords:["骰子"],category:"objects"},
+  {emoji:"🧩",text:"拼图",keywords:["拼图"],category:"objects"},
+  {emoji:"🃏",text:"扑克",keywords:["扑克","牌"],category:"objects"},
+  {emoji:"🀄",text:"麻将",keywords:["麻将"],category:"objects"},
+  {emoji:"👑",text:"皇冠",keywords:["王冠","king"],category:"objects"},
+  {emoji:"💎",text:"钻石",keywords:["钻石","diamond"],category:"objects"},
+  {emoji:"💍",text:"戒指",keywords:["戒指","ring"],category:"objects"},
+  {emoji:"🎙️",text:"麦克风",keywords:["麦克风"],category:"objects"},
+  {emoji:"🎤",text:"麦克风",keywords:["麦克风"],category:"objects"},
+  {emoji:"🎧",text:"耳机",keywords:["耳机","headphones"],category:"objects"},
+  {emoji:"📻",text:"收音机",keywords:["收音机"],category:"objects"},
+  {emoji:"🎷",text:"萨克斯",keywords:["音乐","乐器"],category:"objects"},
+  {emoji:"🎸",text:"吉他",keywords:["音乐","乐器","吉他"],category:"objects"},
+  {emoji:"🎹",text:"钢琴",keywords:["音乐","乐器","钢琴"],category:"objects"},
+  {emoji:"🎺",text:"小号",keywords:["音乐","乐器"],category:"objects"},
+  {emoji:"🎻",text:"小提琴",keywords:["音乐","乐器"],category:"objects"},
+  {emoji:"🥁",text:"鼓",keywords:["音乐","乐器","鼓"],category:"objects"},
+  {emoji:"🎼",text:"乐谱",keywords:["音乐","score"],category:"objects"},
+  {emoji:"🎵",text:"音符",keywords:["音乐","note"],category:"objects"},
+  {emoji:"🎶",text:"音符",keywords:["音乐","notes"],category:"objects"},
+  {emoji:"🔔",text:"铃铛",keywords:["铃","bell"],category:"objects"},
+  {emoji:"🔕",text:"静音",keywords:["静音"],category:"objects"},
+  {emoji:"🔑",text:"钥匙",keywords:["钥匙","key"],category:"objects"},
+  {emoji:"🗝️",text:"老钥匙",keywords:["钥匙"],category:"objects"},
+  {emoji:"🔒",text:"锁",keywords:["锁","lock"],category:"objects"},
+  {emoji:"🔓",text:"开锁",keywords:["锁","unlock"],category:"objects"},
+  {emoji:"🔍",text:"放大镜",keywords:["搜索","放大镜"],category:"objects"},
+  {emoji:"🔎",text:"放大镜",keywords:["搜索","放大镜"],category:"objects"},
+  {emoji:"🧲",text:"磁铁",keywords:["磁铁"],category:"objects"},
+  {emoji:"🔧",text:"扳手",keywords:["工具","wrench"],category:"objects"},
+  {emoji:"🔨",text:"锤子",keywords:["工具","锤子"],category:"objects"},
+  {emoji:"🛠️",text:"工具",keywords:["工具"],category:"objects"},
+  {emoji:"⛏️",text:"镐",keywords:["工具"],category:"objects"},
+  {emoji:"⚙️",text:"齿轮",keywords:["工具","gear"],category:"objects"},
+  {emoji:"⚖️",text:"天平",keywords:["工具"],category:"objects"},
+  {emoji:"🔗",text:"链接",keywords:["链接","link"],category:"objects"},
+  {emoji:"⛓️",text:"铁链",keywords:["链"],category:"objects"},
+  {emoji:"🚪",text:"门",keywords:["门"],category:"objects"},
+  {emoji:"🛏️",text:"床",keywords:["床"],category:"objects"},
+  {emoji:"🛋️",text:"沙发",keywords:["沙发"],category:"objects"},
+  {emoji:"🪑",text:"椅子",keywords:["椅子"],category:"objects"},
+  {emoji:"🚽",text:"马桶",keywords:["马桶"],category:"objects"},
+  {emoji:"🚿",text:"淋浴",keywords:["淋浴"],category:"objects"},
+  {emoji:"🛁",text:"浴缸",keywords:["浴缸"],category:"objects"},
+  {emoji:"🧴",text:"瓶子",keywords:["瓶子"],category:"objects"},
+  {emoji:"🧹",text:"扫帚",keywords:["扫帚"],category:"objects"},
+  {emoji:"🧺",text:"篮子",keywords:["篮子"],category:"objects"},
+  {emoji:"🧻",text:"卫生纸",keywords:["纸"],category:"objects"},
+  {emoji:"🧼",text:"肥皂",keywords:["肥皂"],category:"objects"},
+  {emoji:"🧸",text:"玩具熊",keywords:["熊","玩具"],category:"objects"},
+  {emoji:"🎏",text:"鲤鱼旗",keywords:["旗"],category:"objects"},
+  {emoji:"🎐",text:"风铃",keywords:["风铃"],category:"objects"},
+  {emoji:"🧧",text:"红包",keywords:["红包"],category:"objects"},
+  {emoji:"✂️",text:"剪刀",keywords:["剪刀"],category:"objects"},
+  {emoji:"📌",text:"图钉",keywords:["图钉"],category:"objects"},
+  {emoji:"📍",text:"图钉",keywords:["图钉"],category:"objects"},
+  {emoji:"📎",text:"回形针",keywords:["回形针"],category:"objects"},
+  {emoji:"📏",text:"尺子",keywords:["尺子"],category:"objects"},
+  {emoji:"📐",text:"三角尺",keywords:["尺子"],category:"objects"},
+  {emoji:"🚗",text:"汽车",keywords:["车","汽车","car"],category:"objects"},
+  {emoji:"🚕",text:"出租车",keywords:["车","出租车"],category:"objects"},
+  {emoji:"🚙",text:"吉普车",keywords:["车","吉普"],category:"objects"},
+  {emoji:"🚌",text:"公交车",keywords:["车","公交"],category:"objects"},
+  {emoji:"🏎️",text:"赛车",keywords:["车","赛车"],category:"objects"},
+  {emoji:"🚓",text:"警车",keywords:["车","警车"],category:"objects"},
+  {emoji:"🚑",text:"救护车",keywords:["车","救护"],category:"objects"},
+  {emoji:"🚒",text:"消防车",keywords:["车","消防"],category:"objects"},
+  {emoji:"🚐",text:"面包车",keywords:["车","van"],category:"objects"},
+  {emoji:"🚚",text:"卡车",keywords:["车","卡车"],category:"objects"},
+  {emoji:"🚲",text:"自行车",keywords:["车","自行车","bike"],category:"objects"},
+  {emoji:"🛴",text:"滑板车",keywords:["车"],category:"objects"},
+  {emoji:"🛵",text:"摩托车",keywords:["车","摩托"],category:"objects"},
+  {emoji:"🚨",text:"警报",keywords:["警报"],category:"objects"},
+  {emoji:"🚡",text:"缆车",keywords:["车","缆车"],category:"objects"},
+  {emoji:"🚃",text:"火车",keywords:["车","火车"],category:"objects"},
+  {emoji:"🚄",text:"高铁",keywords:["车","高铁"],category:"objects"},
+  {emoji:"🚅",text:"子弹头",keywords:["车","火车"],category:"objects"},
+  {emoji:"🚇",text:"地铁",keywords:["车","地铁"],category:"objects"},
+  {emoji:"🚉",text:"火车站",keywords:["车","站"],category:"objects"},
+  {emoji:"✈️",text:"飞机",keywords:["飞机","plane"],category:"objects"},
+  {emoji:"🛫",text:"起飞",keywords:["飞机","起飞"],category:"objects"},
+  {emoji:"🛬",text:"降落",keywords:["飞机","降落"],category:"objects"},
+  {emoji:"💺",text:"座位",keywords:["飞机","座位"],category:"objects"},
+  {emoji:"🛰️",text:"卫星",keywords:["卫星"],category:"objects"},
+  {emoji:"🚀",text:"火箭",keywords:["火箭","rocket"],category:"objects"},
+  {emoji:"🛸",text:"飞碟",keywords:["飞船","飞碟"],category:"objects"},
+  {emoji:"🚁",text:"直升机",keywords:["飞机","直升机"],category:"objects"},
+  {emoji:"⛵",text:"帆船",keywords:["船","sailboat"],category:"objects"},
+  {emoji:"🚤",text:"快艇",keywords:["船"],category:"objects"},
+  {emoji:"🛳️",text:"客轮",keywords:["船"],category:"objects"},
+  {emoji:"🚢",text:"轮船",keywords:["船","ship"],category:"objects"},
+  {emoji:"⚓",text:"锚",keywords:["船","anchor"],category:"objects"},
+  {emoji:"⛽",text:"加油站",keywords:["油","gas"],category:"objects"},
+  {emoji:"🚧",text:"施工",keywords:["施工"],category:"objects"},
+  {emoji:"🚦",text:"红绿灯",keywords:["红绿灯"],category:"objects"},
+  {emoji:"🚥",text:"红绿灯",keywords:["红绿灯"],category:"objects"},
+  {emoji:"🗺️",text:"地图",keywords:["地图"],category:"objects"},
+  {emoji:"🗿",text:"巨石像",keywords:["雕像"],category:"objects"},
+  {emoji:"🗽",text:"自由女神",keywords:["雕像"],category:"objects"},
+  {emoji:"🗼",text:"东京塔",keywords:["塔","tower"],category:"objects"},
+  {emoji:"🏰",text:"城堡",keywords:["城堡"],category:"objects"},
+  {emoji:"🏯",text:"日式城堡",keywords:["城堡"],category:"objects"},
+  {emoji:"🏟️",text:"体育场",keywords:["体育场"],category:"objects"},
+  {emoji:"🎡",text:"摩天轮",keywords:["游乐场"],category:"objects"},
+  {emoji:"🎢",text:"过山车",keywords:["游乐场"],category:"objects"},
+  {emoji:"🎠",text:"旋转木马",keywords:["游乐场"],category:"objects"},
+  {emoji:"⛲",text:"喷泉",keywords:["喷泉"],category:"objects"},
+  // 符号
+  {emoji:"❤️",text:"红心",keywords:["爱心","心","love","heart"],category:"symbols"},
+  {emoji:"🧡",text:"橙心",keywords:["心","orange"],category:"symbols"},
+  {emoji:"💛",text:"黄心",keywords:["心","yellow"],category:"symbols"},
+  {emoji:"💚",text:"绿心",keywords:["心","green"],category:"symbols"},
+  {emoji:"💙",text:"蓝心",keywords:["心","blue"],category:"symbols"},
+  {emoji:"💜",text:"紫心",keywords:["心","purple"],category:"symbols"},
+  {emoji:"🖤",text:"黑心",keywords:["心","black"],category:"symbols"},
+  {emoji:"🤍",text:"白心",keywords:["心","white"],category:"symbols"},
+  {emoji:"🤎",text:"棕心",keywords:["心","brown"],category:"symbols"},
+  {emoji:"💔",text:"碎心",keywords:["心","伤心"],category:"symbols"},
+  {emoji:"❣️",text:"心感叹",keywords:["心"],category:"symbols"},
+  {emoji:"💕",text:"双心",keywords:["爱心","心"],category:"symbols"},
+  {emoji:"💞",text:"旋转心",keywords:["爱心","心"],category:"symbols"},
+  {emoji:"💓",text:"心跳",keywords:["心","心跳"],category:"symbols"},
+  {emoji:"💗",text:"心跳",keywords:["心"],category:"symbols"},
+  {emoji:"💖",text:"闪烁心",keywords:["心"],category:"symbols"},
+  {emoji:"💘",text:"丘比特心",keywords:["心"],category:"symbols"},
+  {emoji:"💝",text:"丝带心",keywords:["心","gift"],category:"symbols"},
+  {emoji:"💟",text:"装饰心",keywords:["心"],category:"symbols"},
+  {emoji:"☮️",text:"和平",keywords:["和平","peace"],category:"symbols"},
+  {emoji:"✝️",text:"十字架",keywords:["宗教","cross"],category:"symbols"},
+  {emoji:"☯️",text:"阴阳",keywords:["宗教","阴阳"],category:"symbols"},
+  {emoji:"♈",text:"白羊座",keywords:["星座","白羊"],category:"symbols"},
+  {emoji:"♉",text:"金牛座",keywords:["星座","金牛"],category:"symbols"},
+  {emoji:"♊",text:"双子座",keywords:["星座","双子"],category:"symbols"},
+  {emoji:"♋",text:"巨蟹座",keywords:["星座","巨蟹"],category:"symbols"},
+  {emoji:"♌",text:"狮子座",keywords:["星座","狮子"],category:"symbols"},
+  {emoji:"♍",text:"处女座",keywords:["星座","处女"],category:"symbols"},
+  {emoji:"♎",text:"天秤座",keywords:["星座","天秤"],category:"symbols"},
+  {emoji:"♏",text:"天蝎座",keywords:["星座","天蝎"],category:"symbols"},
+  {emoji:"♐",text:"射手座",keywords:["星座","射手"],category:"symbols"},
+  {emoji:"♑",text:"摩羯座",keywords:["星座","摩羯"],category:"symbols"},
+  {emoji:"♒",text:"水瓶座",keywords:["星座","水瓶"],category:"symbols"},
+  {emoji:"♓",text:"双鱼座",keywords:["星座","双鱼"],category:"symbols"},
+  {emoji:"⛎",text:"蛇夫座",keywords:["星座","蛇夫"],category:"symbols"},
+  {emoji:"🔮",text:"水晶球",keywords:["占卜","水晶"],category:"symbols"},
+  {emoji:"🔭",text:"望远镜",keywords:["天文","望远镜"],category:"symbols"},
+  {emoji:"🔬",text:"显微镜",keywords:["科学","显微镜"],category:"symbols"},
+  {emoji:"💊",text:"药丸",keywords:["药","medicine"],category:"symbols"},
+  {emoji:"💉",text:"注射",keywords:["药","针"],category:"symbols"},
+  {emoji:"🩸",text:"血",keywords:["血","blood"],category:"symbols"},
+  {emoji:"🩹",text:"创可贴",keywords:["医疗","贴"],category:"symbols"},
+  {emoji:"🩺",text:"听诊器",keywords:["医疗","听诊"],category:"symbols"},
+  {emoji:"⚠️",text:"警告",keywords:["警告","注意"],category:"symbols"},
+  {emoji:"🚸",text:"注意儿童",keywords:["警告","儿童"],category:"symbols"},
+  {emoji:"⛔",text:"禁止",keywords:["禁止","no"],category:"symbols"},
+  {emoji:"📵",text:"禁止手机",keywords:["禁止","手机"],category:"symbols"},
+  {emoji:"🔞",text:"18禁",keywords:["禁止","18禁"],category:"symbols"},
+  {emoji:"☢️",text:"放射性",keywords:["辐射","radioactive"],category:"symbols"},
+  {emoji:"☣️",text:"生物危险",keywords:["危险","病毒"],category:"symbols"},
+  {emoji:"⬆️",text:"向上",keywords:["上","箭头"],category:"symbols"},
+  {emoji:"⬇️",text:"向下",keywords:["下","箭头"],category:"symbols"},
+  {emoji:"⬅️",text:"向左",keywords:["左","箭头"],category:"symbols"},
+  {emoji:"➡️",text:"向右",keywords:["右","箭头"],category:"symbols"},
+  {emoji:"↗️",text:"右上",keywords:["箭头","右上"],category:"symbols"},
+  {emoji:"↘️",text:"右下",keywords:["箭头","右下"],category:"symbols"},
+  {emoji:"↙️",text:"左下",keywords:["箭头","左下"],category:"symbols"},
+  {emoji:"↖️",text:"左上",keywords:["箭头","左上"],category:"symbols"},
+  {emoji:"↕️",text:"上下",keywords:["箭头","上下"],category:"symbols"},
+  {emoji:"↔️",text:"左右",keywords:["箭头","左右"],category:"symbols"},
+  {emoji:"↩️",text:"回转",keywords:["箭头","返回"],category:"symbols"},
+  {emoji:"↪️",text:"弯箭头",keywords:["箭头"],category:"symbols"},
+  {emoji:"⤴️",text:"右上弯",keywords:["箭头"],category:"symbols"},
+  {emoji:"⤵️",text:"右下弯",keywords:["箭头"],category:"symbols"},
+  {emoji:"🔃",text:"刷新",keywords:["刷新","reload"],category:"symbols"},
+  {emoji:"🔄",text:"循环",keywords:["刷新","sync"],category:"symbols"},
+  {emoji:"🔙",text:"返回",keywords:["返回","back"],category:"symbols"},
+  {emoji:"🔚",text:"结束",keywords:["结束","end"],category:"symbols"},
+  {emoji:"🔛",text:"开启",keywords:["开启","on"],category:"symbols"},
+  {emoji:"🔜",text:"快步",keywords:["快","soon"],category:"symbols"},
+  {emoji:"🔝",text:"置顶",keywords:["上","top"],category:"symbols"},
+  {emoji:"✅",text:"勾选",keywords:["对","完成","ok"],category:"symbols"},
+  {emoji:"☑️",text:"勾选框",keywords:["对","勾"],category:"symbols"},
+  {emoji:"✔️",text:"打勾",keywords:["对","勾"],category:"symbols"},
+  {emoji:"❌",text:"叉",keywords:["错","no","x"],category:"symbols"},
+  {emoji:"❎",text:"叉号",keywords:["错","叉"],category:"symbols"},
+  {emoji:"➕",text:"加",keywords:["加","add"],category:"symbols"},
+  {emoji:"➖",text:"减",keywords:["减","minus"],category:"symbols"},
+  {emoji:"➗",text:"除",keywords:["除","divide"],category:"symbols"},
+  {emoji:"✖️",text:"乘",keywords:["乘","multiply"],category:"symbols"},
+  {emoji:"♾️",text:"无限",keywords:["无限"," infinity"],category:"symbols"},
+  {emoji:"💲",text:"美元符号",keywords:["钱","美元"],category:"symbols"},
+  {emoji:"©️",text:"版权",keywords:["版权"],category:"symbols"},
+  {emoji:"®️",text:"注册",keywords:["注册"],category:"symbols"},
+  {emoji:"™️",text:"商标",keywords:["商标","品牌"],category:"symbols"},
+  {emoji:"🔠",text:"大写",keywords:["文字","大写"],category:"symbols"},
+  {emoji:"🔡",text:"小写",keywords:["文字","小写"],category:"symbols"},
+  {emoji:"🔢",text:"数字",keywords:["数字","number"],category:"symbols"},
+  {emoji:"🔣",text:"符号",keywords:["符号","symbols"],category:"symbols"},
+  {emoji:"🔤",text:"字母",keywords:["字母","abc"],category:"symbols"},
+  {emoji:"ℹ️",text:"信息",keywords:["信息","info"],category:"symbols"},
+  {emoji:"ℹ️",text:"说明",keywords:["信息","说明"],category:"symbols"},
+  {emoji:"🆕",text:"新",keywords:["新","new"],category:"symbols"},
+  {emoji:"🆗",text:"OK",keywords:["好","ok"],category:"symbols"},
+  {emoji:"🆘",text:"求救",keywords:["求救","help"],category:"symbols"},
+  {emoji:"🆙",text:"升级",keywords:["升级","up"],category:"symbols"},
+  {emoji:"🆒",text:"酷",keywords:["酷","cool"],category:"symbols"},
+  {emoji:"🆓",text:"免费",keywords:["免费","free"],category:"symbols"},
+  {emoji:"🆔",text:"ID",keywords:["id","ID"],category:"symbols"},
+  {emoji:"🅰️",text:"A型",keywords:["a","A"],category:"symbols"},
+  {emoji:"🅱️",text:"B型",keywords:["b","B"],category:"symbols"},
+  {emoji:"🆎",text:"AB型",keywords:["ab","AB"],category:"symbols"},
+  {emoji:"🅾️",text:"O型",keywords:["o","O"],category:"symbols"},
+  {emoji:"🆑",text:"清空",keywords:["清空","clear"],category:"symbols"},
+  {emoji:"🆚",text:"VS",keywords:["vs","VS","对战"],category:"symbols"},
+  {emoji:"🈶",text:"有",keywords:["有","日文"],category:"symbols"},
+  {emoji:"🈚",text:"无",keywords:["无","日文"],category:"symbols"},
+  {emoji:"🈸",text:"申请",keywords:["申请","日文"],category:"symbols"},
+  {emoji:"🈺",text:"营业",keywords:["营业","日文"],category:"symbols"},
+  {emoji:"🈷️",text:"月",keywords:["月","日文"],category:"symbols"},
+  {emoji:"✴️",text:"八芒星",keywords:["星"],category:"symbols"},
+  {emoji:"🟢",text:"绿点",keywords:["绿","点"],category:"symbols"},
+  {emoji:"🔵",text:"蓝点",keywords:["蓝","点","circle"],category:"symbols"},
+  {emoji:"🔴",text:"红点",keywords:["红","点"],category:"symbols"},
+  {emoji:"🟡",text:"黄点",keywords:["黄","点"],category:"symbols"},
+  {emoji:"⚫",text:"黑点",keywords:["黑","点"],category:"symbols"},
+  {emoji:"⚪",text:"白点",keywords:["白","点"],category:"symbols"},
+  {emoji:"🔘",text:"单选",keywords:["按钮","radio"],category:"symbols"},
+  {emoji:"🔳",text:"白方块",keywords:["方块","square"],category:"symbols"},
+  {emoji:"🔲",text:"黑方块",keywords:["方块","square"],category:"symbols"},
+  {emoji:"▪️",text:"小黑点",keywords:["点"],category:"symbols"},
+  {emoji:"▫️",text:"小白点",keywords:["点"],category:"symbols"},
+  {emoji:"◾",text:"黑方",keywords:["方块"],category:"symbols"},
+  {emoji:"◽",text:"白方",keywords:["方块"],category:"symbols"},
+  {emoji:"◼️",text:"黑方块",keywords:["方块"],category:"symbols"},
+  {emoji:"◻️",text:"白方块",keywords:["方块"],category:"symbols"},
+  {emoji:"🔻",text:"红三角下",keywords:["三角形"],category:"symbols"},
+  {emoji:"🔺",text:"红三角上",keywords:["三角形"],category:"symbols"},
+  {emoji:"🔸",text:"小菱形",keywords:["菱形"],category:"symbols"},
+  {emoji:"🔹",text:"小菱形",keywords:["菱形"],category:"symbols"},
+  {emoji:"💮",text:"白花",keywords:["花"],category:"symbols"},
+  {emoji:"🉐",text:"得",keywords:["日文"],category:"symbols"},
+  {emoji:"㊙️",text:"秘密",keywords:["秘密","private"],category:"symbols"},
+  {emoji:"㊗️",text:"恭喜",keywords:["恭喜","祝贺"],category:"symbols"},
+  {emoji:"🈴",text:"合格",keywords:["合格","日文"],category:"symbols"},
+  {emoji:"🈵",text:"满",keywords:["满","日文"],category:"symbols"},
+  {emoji:"🈹",text:"割",keywords:["割","日文"],category:"symbols"},
+  {emoji:"🈲",text:"禁",keywords:["禁","日文"],category:"symbols"},
+  {emoji:"🈳",text:"空",keywords:["空","日文"],category:"symbols"},
+  {emoji:"🈂️",text:"费用",keywords:["费用","日文"],category:"symbols"},
+  {emoji:"🈚",text:"无",keywords:["无","日文"],category:"symbols"},
+  {emoji:"💱",text:"货币兑换",keywords:["钱","兑换"],category:"symbols"},
+  {emoji:"™️",text:"商标",keywords:["商标"],category:"symbols"},
+  {emoji:"🔱",text:"三叉戟",keywords:["武器","叉"],category:"symbols"},
+  {emoji:"📛",text:"名字牌",keywords:["名字"],category:"symbols"},
+  {emoji:"🔰",text:"初级",keywords:["日本","初级"],category:"symbols"},
+  {emoji:"🇨🇳",text:"中国",keywords:["中国","china"],category:"symbols"},
+  {emoji:"🇺🇸",text:"美国",keywords:["美国","usa"],category:"symbols"},
+  {emoji:"🇯🇵",text:"日本",keywords:["日本","japan"],category:"symbols"},
+  {emoji:"🇰🇷",text:"韩国",keywords:["韩国","korea"],category:"symbols"},
+  {emoji:"🇬🇧",text:"英国",keywords:["英国","uk"],category:"symbols"},
+  {emoji:"🇫🇷",text:"法国",keywords:["法国","france"],category:"symbols"},
+  {emoji:"🇩🇪",text:"德国",keywords:["德国","germany"],category:"symbols"},
+  {emoji:"🇮🇹",text:"意大利",keywords:["意大利","italy"],category:"symbols"},
+  {emoji:"🇪🇸",text:"西班牙",keywords:["西班牙","spain"],category:"symbols"},
+  {emoji:"🇵🇹",text:"葡萄牙",keywords:["葡萄牙","portugal"],category:"symbols"},
+  {emoji:"🇷🇺",text:"俄罗斯",keywords:["俄罗斯","russia"],category:"symbols"},
+  {emoji:"🇮🇳",text:"印度",keywords:["印度","india"],category:"symbols"},
+  {emoji:"🇧🇷",text:"巴西",keywords:["巴西","brazil"],category:"symbols"},
+  {emoji:"🇦🇺",text:"澳大利亚",keywords:["澳大利亚","australia"],category:"symbols"},
+  {emoji:"🇨🇦",text:"加拿大",keywords:["加拿大","canada"],category:"symbols"},
+  {emoji:"🇭🇰",text:"香港",keywords:["香港","hong kong"],category:"symbols"},
+  {emoji:"🇹🇼",text:"台湾",keywords:["台湾","taiwan"],category:"symbols"},
+  {emoji:"🇲🇴",text:"澳门",keywords:["澳门","macau"],category:"symbols"},
+];
+
+const categoryNames = {
+  all: {title: "全部 Emoji", icon: "📋"},
+  emotion: {title: "😊 情感表情", icon: "😊"},
+  people: {title: "👤 人物手势", icon: "👤"},
+  animals: {title: "🐱 动物", icon: "🐱"},
+  food: {title: "🍔 食物", icon: "🍔"},
+  nature: {title: "🌿 自然", icon: "🌿"},
+  objects: {title: "📱 物品工具", icon: "📱"},
+  symbols: {title: "💝 符号", icon: "💝"},
+};
+
+let currentCategory = "all";
+
+function renderEmojiList(filter = "") {
+  const grid = document.getElementById("emojiGrid");
+  let data = emojiData;
+  
+  if (currentCategory !== "all") {
+    data = data.filter(e => e.category === currentCategory);
+  }
+  
+  if (filter) {
+    const q = filter.toLowerCase().trim();
+    data = data.filter(e => 
+      e.text.toLowerCase().includes(q) ||
+      e.keywords.some(k => k.toLowerCase().includes(q))
+    );
+  }
+  
+  if (data.length === 0) {
+    grid.innerHTML = `
+      <div class="no-result">
+        <div class="icon">🔍</div>
+        <p>没有找到匹配的表情</p>
+        <p style="font-size:0.85rem;margin-top:8px;">试试其他关键词吧</p>
+      </div>
+    `;
+    return;
+  }
+  
+  let html = "";
+  if (!filter) {
+    // 按分类显示
+    const cats = currentCategory === "all" 
+      ? ["emotion","people","animals","food","nature","objects","symbols"]
+      : [currentCategory];
+    
+    cats.forEach(cat => {
+      const catData = emojiData.filter(e => e.category === cat);
+      if (catData.length === 0) return;
+      const catInfo = categoryNames[cat];
+      html += `
+        <div class="emoji-section">
+          <div class="section-title">${catInfo.icon} ${catInfo.title}</div>
+          <div class="emoji-list">
+            ${catData.map(e => `
+              <div class="emoji-item" data-emoji="${e.emoji}" data-text="${e.text}" title="${e.text}">
+                <span class="emoji">${e.emoji}</span>
+                <span class="text">${e.text}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    });
+  } else {
+    // 搜索结果不分组
+    html = `
+      <div class="emoji-section">
+        <div class="section-title">🔍 搜索结果 (${data.length}个)</div>
+        <div class="emoji-list">
+          ${data.map(e => `
+            <div class="emoji-item" data-emoji="${e.emoji}" data-text="${e.text}" title="${e.text}">
+              <span class="emoji">${e.emoji}</span>
+              <span class="text">${e.text}</span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+  
+  grid.innerHTML = html;
+  
+  // 点击复制
+  document.querySelectorAll(".emoji-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const emoji = item.dataset.emoji;
+      navigator.clipboard.writeText(emoji).then(() => {
+        const orig = item.querySelector(".emoji").textContent;
+        item.querySelector(".emoji").textContent = "✅";
+        item.style.borderColor = "#28a745";
+        setTimeout(() => {
+          item.querySelector(".emoji").textContent = orig;
+          item.style.borderColor = "transparent";
+        }, 600);
+      });
+    });
+  });
+}
+
+// 单个关键词匹配（phraseMap优先泛化组合 → emojiData）
+function matchKeyword(q) {
+  let bestScore = 0;
+  let bestResult = null;
+
+  // phraseMap 优先泛化组合emoji
+  for (const p of phraseMap) {
+    for (const pf of p.phrases) {
+      const pfLower = pf.toLowerCase();
+      let score = 0;
+      if (q === pfLower) {
+        score = 900 + (p.result.length > 1 ? 100 : 0);
+      } else if (q.includes(pfLower)) {
+        score = pfLower.length;
+      } else if (pfLower.includes(q)) {
+        score = q.length;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestResult = { emoji: p.result, text: p.desc };
+      }
+    }
+  }
+  if (bestResult) return bestResult;
+
+  // emojiData 精确 → 模糊
+  let match = emojiData.find(e =>
+    e.text.toLowerCase() === q ||
+    e.keywords.some(k => k.toLowerCase() === q)
+  );
+  if (!match) {
+    match = emojiData.find(e =>
+      e.text.toLowerCase().includes(q) ||
+      e.keywords.some(k => k.toLowerCase().includes(q))
+    );
+  }
+  if (match) return { emoji: match.emoji, text: match.text };
+
+  return { emoji: q, text: q };
+}
+
+// 多关键词搜索（空格分隔，各匹配后横向拼接）
+function search(query) {
+  const resultEl = document.getElementById("emojiResult");
+  const meaningEl = document.getElementById("emojiMeaning");
+
+  if (!query.trim()) {
+    resultEl.textContent = "❓";
+    meaningEl.textContent = "输入描述获取表情";
+    return;
+  }
+
+  const parts = query.trim().split(/\s+/);
+
+  if (parts.length === 1) {
+    const result = matchKeyword(parts[0].toLowerCase());
+    resultEl.textContent = result.emoji;
+    meaningEl.textContent = result.text;
+  } else {
+    const emojis = parts.map(p => matchKeyword(p.toLowerCase()).emoji);
+    resultEl.textContent = emojis.join(" ");
+    meaningEl.textContent = "";
+  }
+}
+
+// 输入监听
+const searchInput = document.getElementById("searchInput");
+let searchTimeout;
+searchInput.addEventListener("input", (e) => {
+  clearTimeout(searchTimeout);
+  const q = e.target.value;
+  searchTimeout = setTimeout(() => {
+    search(q);
+    renderEmojiList(q);
+  }, 150);
+});
+
+// 分类标签
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentCategory = btn.dataset.category;
+    searchInput.value = "";
+    document.getElementById("emojiResult").textContent = "❓";
+    document.getElementById("emojiMeaning").textContent = "输入描述获取表情";
+    renderEmojiList();
+  });
+});
+
+// 初始渲染
+renderEmojiList();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{{ page.description | default: site.description }}">
+  <title>{{ page.title | default: site.title }}</title>
+  <!-- 禁止浏览器缓存旧样式 -->
+  <style>
+    /* 硬重置，防止 GitHub Pages 默认样式污染 */
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #0a0a1a !important;
+    }
+    /* 隐藏 Jekyll minima 默认 header/footer */
+    .site-nav, .site-header > .wrapper, footer.site-footer { display: none !important; }
+  </style>
+</head>
+<body>
+  {{ content }}
+</body>
+</html>
