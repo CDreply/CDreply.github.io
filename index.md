@@ -424,6 +424,67 @@ title: 🎮 沉答Ai小游戏乐园
     </div>
   </a>
 
+  <!-- ===== 战术突击 ===== -->
+  <a class="game-card" href="games/cs2_action_v1.8.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #0a0a0a, #1a1a1a);">
+      <span class="card-cover-emoji">🔫</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">战术突击</div>
+      <div class="card-desc">CS2风格FPS射击！多种武器切换、HUD血量弹药、小地图、波次防守，v1.8爽快射击体验！</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(255,80,60,0.15);color:#ff503c;">射击</span>
+        <span class="tag" style="background:rgba(241,196,15,0.15);color:#f1c40f;">FPS</span>
+        <span class="tag" style="background:rgba(74,222,128,0.15);color:#4ADE80;">v1.8</span>
+        <span class="tag" style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.35);">💻 桌面端</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#ff503c,#c0392b);color:#fff;">▶ 开始游戏 (v1.8)</span>
+    </div>
+  </a>
+
+  <!-- ===== 3D 战术突击 ===== -->
+  <a class="game-card" href="games/cs3d_v1.7.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #0a0e14, #142234);">
+      <span class="card-cover-emoji">🎯</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">3D 战术突击</div>
+      <div class="card-desc">3D第一人称射击！迷彩风格开始界面、多武器系统、血量弹药HUD、开镜瞄准，沉浸式战术体验！</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(74,222,128,0.15);color:#4ADE80;">射击</span>
+        <span class="tag" style="background:rgba(0,100,255,0.15);color:#06f;">3D</span>
+        <span class="tag" style="background:rgba(255,170,0,0.15);color:#fa0;">战术</span>
+        <span class="tag" style="background:rgba(74,222,128,0.15);color:#4ADE80;">v1.7</span>
+        <span class="tag" style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.35);">💻 桌面端</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#4ADE80,#22c55e);color:#0a0a1a;">▶ 开始游戏 (v1.7)</span>
+    </div>
+  </a>
+
+  <!-- ===== 台球大师 ===== -->
+  <a class="game-card" href="games/%E5%8F%B0%E7%90%83%E5%A4%A7%E5%B8%88%20v4.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #0d1117, #1c2733);">
+      <span class="card-cover-emoji">🎱</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">台球大师</div>
+      <div class="card-desc">双人对战台球模拟！击球力度控制、计分系统、犯规检测、回合日志，v4版精美物理引擎！</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(47,129,247,0.15);color:#2f81f7;">体育</span>
+        <span class="tag" style="background:rgba(255,255,255,0.15);color:#fff;">双人对战</span>
+        <span class="tag" style="background:rgba(74,222,128,0.15);color:#4ADE80;">v4</span>
+        <span class="tag" style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.35);">💻 桌面端</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#2f81f7,#1a5cb5);color:#fff;">▶ 开始游戏 (v4)</span>
+    </div>
+  </a>
+
   <div class="game-card coming-soon">
     <div class="card-cover" style="background: linear-gradient(135deg, #1a1a1a, #2a2a2a);">
       <span class="card-cover-emoji">💣</span>
