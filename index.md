@@ -485,6 +485,27 @@ title: 🎮 沉答Ai小游戏乐园
     </div>
   </a>
 
+  <!-- ===== 地图生成模拟器 ===== -->
+  <a class="game-card" href="games/map_gen_v1.7.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #1a1208, #3a2a18);">
+      <span class="card-cover-emoji">🍪</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">地图生成模拟器</div>
+      <div class="card-desc">砸碎一块饼干，裂纹化作山脉河流，碎块变成大陆与群岛！捶击／摇晃／陨落三种生成方式，一键导出可喂给 AI 的世界观设定。v1.7 大陨石降临！</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(232,160,74,0.15);color:#e8a04a;">创意生成</span>
+        <span class="tag" style="background:rgba(200,168,96,0.15);color:#c8a860;">世界观</span>
+        <span class="tag" style="background:rgba(167,139,250,0.15);color:#A78BFA;">三种玩法</span>
+        <span class="tag" style="background:rgba(255,107,157,0.15);color:#FF6B9D;">v1.7</span>
+        <span class="tag" style="background:rgba(34,211,238,0.12);color:#22d3ee;">📱 移动适配</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#e8a04a,#a86a20);color:#1a1208;">▶ 开始生成 (v1.7)</span>
+    </div>
+  </a>
+
   <div class="game-card coming-soon">
     <div class="card-cover" style="background: linear-gradient(135deg, #1a1a1a, #2a2a2a);">
       <span class="card-cover-emoji">💣</span>

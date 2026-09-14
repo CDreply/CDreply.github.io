@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>地图生成模拟器 · v1.7 / 余风清韵 & WorkBuddy</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; overflow:hidden; background:#14100b; color:#e8dcc0;
+    font-family:"Microsoft YaHei","微软雅黑",sans-serif; }
+  #app { display:flex; flex-direction:column; height:100%; }
+  header { display:flex; align-items:center; gap:10px; padding:8px 14px;
+    background:#1e170f; border-bottom:1px solid #4a3a24; flex-shrink:0; flex-wrap:wrap; }
+  header h1 { font-size:17px; color:#e0c890; font-family:KaiTi,STKaiti,"楷体",serif; letter-spacing:2px; }
+  header .ver { font-size:11px; color:#8a7a5a; }
+  .tabs { display:flex; gap:6px; margin-left:auto; }
+  .tab { padding:4px 12px; font-size:12px; border:1px solid #5a4630; border-radius:4px;
+    background:#2a2015; color:#c8b490; cursor:pointer; }
+  .tab.on { background:#5a4630; color:#ffe9b0; }
+  .tab:disabled { opacity:.4; cursor:not-allowed; }
+  #main { flex:1; display:flex; min-height:0; }
+  #canvasWrap { flex:1; position:relative; min-width:0; background:#181209; }
+  canvas { display:block; touch-action:none; }
+  #sidebar { width:320px; flex-shrink:0; background:#1e170f; border-left:1px solid #4a3a24;
+    display:flex; flex-direction:column; padding:10px; gap:10px; overflow-y:auto; }
+  .panel { background:#251c12; border:1px solid #4a3a24; border-radius:6px; padding:8px 10px; }
+  .panel h3 { font-size:12px; color:#c8a860; margin-bottom:6px; font-weight:normal; letter-spacing:1px; }
+  #forceBarWrap { height:14px; background:#14100b; border:1px solid #5a4630; border-radius:7px; overflow:hidden; }
+  #forceBar { height:100%; width:0%; background:linear-gradient(90deg,#6a9a4a,#d0a838,#c04a28); transition:width .05s linear; }
+  #forceVal { font-size:11px; color:#a89468; text-align:right; margin-top:2px; }
+  #logBox { font-size:11px; line-height:1.7; color:#b0a078; max-height:110px; overflow-y:auto; }
+  #logBox div:last-child { color:#e8d8a8; }
+  #regionList { font-size:12px; max-height:130px; overflow-y:auto; }
+  #regionList .rg { padding:3px 6px; border-radius:4px; cursor:pointer; display:flex; justify-content:space-between; }
+  #regionList .rg:hover { background:#3a2c1a; }
+  #regionList .rg small { color:#8a7a5a; }
+  #descText { width:100%; flex:1; min-height:140px; resize:none; background:#14100b; color:#d8c8a0;
+    border:1px solid #4a3a24; border-radius:6px; padding:8px; font-size:11px; line-height:1.6;
+    font-family:"Microsoft YaHei",sans-serif; }
+  .btnRow { display:flex; gap:8px; }
+  button.act { flex:1; padding:7px 0; background:#3a2c1a; color:#e8d0a0; border:1px solid #6a5638;
+    border-radius:5px; cursor:pointer; font-size:13px; }
+  button.act:hover { background:#4a3a24; }
+  button.act:disabled { opacity:.4; cursor:not-allowed; }
+  footer { display:flex; align-items:center; gap:8px; padding:8px 14px; background:#1e170f;
+    border-top:1px solid #4a3a24; flex-shrink:0; flex-wrap:wrap; }
+  footer button { padding:6px 12px; background:#3a2c1a; color:#e8d0a0; border:1px solid #6a5638;
+    border-radius:5px; cursor:pointer; font-size:13px; }
+  footer button:hover { background:#4a3a24; }
+  footer button:disabled { opacity:.4; cursor:not-allowed; }
+  footer .grp { display:flex; align-items:center; gap:6px; font-size:12px; color:#b0a078; }
+  footer input[type=range] { width:90px; accent-color:#c8a860; }
+  footer input[type=text] { width:90px; background:#14100b; border:1px solid #5a4630; color:#e8d0a0;
+    border-radius:4px; padding:4px 6px; font-size:12px; }
+  #credits { margin-left:auto; font-size:11px; color:#6a5a40; }
+  .shapeOpt { padding:7px 10px; border-radius:6px; cursor:pointer; font-size:13px; color:#d8c8a0; white-space:nowrap; }
+  .shapeOpt:hover { background:#4a3a24; }
+  .shapeOpt.on { background:#5a4630; color:#ffe9b0; }
+  #newCookieGrp button:first-child { border-radius:7px 0 0 7px; }
+  @media (max-width:860px) {
+    #main { flex-direction:column; }
+    #canvasWrap { flex:none; height:52vh; }
+    #sidebar { width:100%; border-left:none; border-top:1px solid #4a3a24; flex:1; }
+    #credits { display:none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🍪 地图生成模拟器</h1><span class="ver">v1.7 · ☄ 大陨石</span>
+    <div class="tabs">
+      <button class="tab on" data-method="smash">✊ 捶击法</button>
+      <button class="tab" data-method="shake">📦 摇晃法</button>
+      <button class="tab" data-method="meteor">🌠 陨落法</button>
+      <button class="tab" disabled title="敬请期待">🌊 噪声法</button>
+    </div>
+  </header>
+  <div id="main">
+    <div id="canvasWrap"><canvas id="cv"></canvas></div>
+    <div id="sidebar">
+      <div class="panel">
+        <h3>🔨 捶击力度</h3>
+        <div id="forceBarWrap"><div id="forceBar"></div></div>
+        <div id="forceVal">按住饼干蓄力，松开落锤</div>
+      </div>
+      <div class="panel"><h3>📜 操作日志</h3><div id="logBox"></div></div>
+      <div class="panel"><h3>🗺 区域列表（点击可改名）</h3><div id="regionList"><small style="color:#6a5a40">完成生成后显示</small></div></div>
+      <div class="panel" style="flex:1;display:flex;flex-direction:column;">
+        <h3>🌍 世界观描述（可复制给 AI）</h3>
+        <textarea id="descText" readonly placeholder="点击「✨ 完成生成」后，这里会生成完整的世界观描述文本。"></textarea>
+        <div class="btnRow" style="margin-top:8px;">
+          <button class="act" id="btnCopy" disabled>📋 复制描述</button>
+          <button class="act" id="btnPng">🖼 导出 PNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <footer>
+    <div class="grp" id="newCookieGrp" style="position:relative;">
+      <button id="btnNew">🍪 新饼干</button><button id="btnNewDrop" title="选择饼干形状" style="margin-left:-4px;padding:7px 8px;border-radius:0 7px 7px 0;border-left:1px solid #1a130c;">▾</button>
+      <div id="shapeMenu" style="display:none;position:absolute;bottom:46px;left:0;z-index:40;background:#2e2418;border:1px solid #8a6f4d;border-radius:9px;padding:5px;min-width:148px;box-shadow:0 6px 18px rgba(0,0,0,0.5);">
+        <div class="shapeOpt on" data-shape="round">🍪 圆形饼干</div>
+        <div class="shapeOpt" data-shape="square">🍞 方形饼干</div>
+      </div>
+    </div>
+    <button id="btnUndo" disabled>↩ 撤销</button>
+    <div class="grp">🌊 板块漂移 <input type="range" id="drift" min="0" max="60" value="0"><span id="driftVal">关</span></div>
+    <div class="grp"><label style="cursor:pointer;user-select:none;"><input type="checkbox" id="brutal" style="accent-color:#c04a28;"> 🔥 暴力模式</label></div>
+    <div class="grp"><label style="cursor:pointer;user-select:none;" title="单击吃掉整块，拖拽框选吃一片（生成后锁定）"><input type="checkbox" id="eatMode" style="accent-color:#c04a28;"> 🍽 吃板块</label></div>
+    <div class="grp"><label style="cursor:pointer;user-select:none;" title="仅陨落法：蓄力召唤单颗大陨石，力度=陨石大小与撞击力"><input type="checkbox" id="bigMeteor" disabled style="accent-color:#c04a28;"> ☄ 大陨石</label></div>
+    <div class="grp">🎲 种子 <input type="text" id="seedIn"><button id="btnSeed">应用</button></div>
+    <button id="btnFin" style="background:#5a4630;border-color:#c8a860;">✨ 完成生成</button>
+    <span id="credits">地图生成模拟器 · v1.7 / 余风清韵 &amp; WorkBuddy</span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ================= 基础工具 ================= */
+const DW = 1100, DH = 760;                 // 设计坐标系
+const canvas = document.getElementById('cv');
+const ctx = canvas.getContext('2d');
+let scale = 1, ox = 0, oy = 0, dpr = 1;
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+let seed = (Math.random()*1e9)|0;
+let rng = mulberry32(seed);
+function rand(a,b){ return a + (b-a)*rng(); }
+function pick(arr){ return arr[(rng()*arr.length)|0]; }
+
+const cross=(v,w)=>v[0]*w[1]-v[1]*w[0];
+function dist(a,b){ return Math.hypot(a[0]-b[0], a[1]-b[1]); }
+function signedArea(poly){ let s=0; for(let i=0;i<poly.length;i++){ const a=poly[i],b=poly[(i+1)%poly.length]; s+=a[0]*b[1]-b[0]*a[1]; } return s/2; }
+function centroid(poly){ let x=0,y=0; for(const p of poly){ x+=p[0]; y+=p[1]; } return [x/poly.length, y/poly.length]; }
+function pointInPoly(p,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const a=poly[i],b=poly[j];
+    if(((a[1]>p[1])!==(b[1]>p[1])) && (p[0] < (b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])) inside=!inside;
+  }
+  return inside;
+}
+function rayExit(p,d,poly){
+  let best=null,bt=Infinity;
+  for(let i=0;i<poly.length;i++){
+    const a=poly[i],b=poly[(i+1)%poly.length];
+    const e=[b[0]-a[0],b[1]-a[1]];
+    const den=cross(d,e);
+    if(Math.abs(den)<1e-12) continue;
+    const ap=[a[0]-p[0],a[1]-p[1]];
+    const t=cross(ap,e)/den, u=cross(ap,d)/den;
+    if(t>1e-6 && u>=-1e-6 && u<=1+1e-6 && t<bt){ bt=t; best=[p[0]+d[0]*t,p[1]+d[1]*t]; }
+  }
+  return best;
+}
+function segInt(p,p2,a,b){
+  const r=[p2[0]-p[0],p2[1]-p[1]], s=[b[0]-a[0],b[1]-a[1]];
+  const den=cross(r,s);
+  if(Math.abs(den)<1e-12) return null;
+  const t=cross([a[0]-p[0],a[1]-p[1]],s)/den;
+  return [p[0]+r[0]*t, p[1]+r[1]*t];
+}
+function clipPoly(subject, clip){          // Sutherland-Hodgman, clip 需为凸多边形
+  let out = subject.slice();
+  const dir = Math.sign(signedArea(clip)) || 1;
+  for(let i=0;i<clip.length;i++){
+    const a=clip[i], b=clip[(i+1)%clip.length];
+    const e=[b[0]-a[0], b[1]-a[1]];
+    const inp=out; out=[];
+    for(let j=0;j<inp.length;j++){
+      const s=inp[j], en=inp[(j+1)%inp.length];
+      const sIn = cross(e,[s[0]-a[0],s[1]-a[1]])*dir >= -1e-9;
+      const eIn = cross(e,[en[0]-a[0],en[1]-a[1]])*dir >= -1e-9;
+      if(sIn) out.push(s);
+      if(sIn!==eIn){ const p=segInt(s,en,a,b); if(p) out.push(p); }
+    }
+    if(!out.length) break;
+  }
+  return out;
+}
+function clipHalf(poly, p, n){             // 半平面裁剪：保留 dot(x-p, n) <= 0 一侧
+  const out=[];
+  for(let i=0;i<poly.length;i++){
+    const a=poly[i], b=poly[(i+1)%poly.length];
+    const da=(a[0]-p[0])*n[0]+(a[1]-p[1])*n[1];
+    const db=(b[0]-p[0])*n[0]+(b[1]-p[1])*n[1];
+    if(da<=1e-9) out.push(a);
+    if((da<=1e-9)!==(db<=1e-9)){
+      const t=da/(da-db);
+      out.push([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]);
+    }
+  }
+  return out;
+}
+function voronoiCells(boundPoly, sites){   // 半平面交法求每个站点的 Voronoi 细胞
+  const cells=[];
+  for(let i=0;i<sites.length;i++){
+    let cell = boundPoly;
+    for(let j=0;j<sites.length;j++){
+      if(i===j) continue;
+      const si=sites[i], sj=sites[j];
+      const mid=[(si[0]+sj[0])/2,(si[1]+sj[1])/2];
+      const d=[sj[0]-si[0], sj[1]-si[1]];
+      cell = clipHalf(cell, mid, d);
+      if(!cell.length) break;
+    }
+    if(cell.length>=3) cells.push(cell);
+  }
+  return cells;
+}
+function buildPieces(cells){               // 提取共享棱 -> 统一锯齿化 -> 重建碎块
+  const edgeMap = new Map();
+  const key = p=>p[0].toFixed(1)+','+p[1].toFixed(1);
+  cells.forEach((cell,ci)=>{
+    for(let i=0;i<cell.length;i++){
+      const a=cell[i], b=cell[(i+1)%cell.length];
+      const ka=key(a), kb=key(b);
+      const ek = ka<kb ? ka+'|'+kb : kb+'|'+ka;
+      let e = edgeMap.get(ek);
+      if(!e){ e={ a: ka<kb?a:b, b: ka<kb?b:a, cells:[], pts:null, interior:false }; edgeMap.set(ek,e); }
+      e.cells.push(ci);
+    }
+  });
+  for(const e of edgeMap.values()){
+    e.interior = e.cells.length===2;
+    // 内部棱（裂纹）剧烈锯齿化；外轮廓棱保持原样（避免与相邻旧碎块错位）
+    e.pts = e.interior ? midDisplace(e.a, e.b, 4, 0.13) : [e.a, e.b];
+  }
+  const polys = cells.map(cell=>{
+    const poly=[];
+    for(let i=0;i<cell.length;i++){
+      const a=cell[i], b=cell[(i+1)%cell.length];
+      const ka=key(a), kb=key(b);
+      const ek = ka<kb ? ka+'|'+kb : kb+'|'+ka;
+      const e = edgeMap.get(ek);
+      const pts = ka<kb ? e.pts : e.pts.slice().reverse();
+      for(let k=0;k<pts.length-1;k++) poly.push(pts[k]);
+    }
+    return poly;
+  });
+  return { polys, edgeMap };
+}
+function midDisplace(p0,p1,depth,rough){
+  let pts=[p0,p1];
+  for(let d=0;d<depth;d++){
+    const np=[pts[0]];
+    for(let i=0;i<pts.length-1;i++){
+      const a=pts[i], b=pts[i+1];
+      const dx=b[0]-a[0], dy=b[1]-a[1];
+      const len=Math.hypot(dx,dy)||1;
+      const off=(rng()-0.5)*len*rough;
+      np.push([(a[0]+b[0])/2 - dy/len*off, (a[1]+b[1])/2 + dx/len*off], b);
+    }
+    pts=np;
+  }
+  return pts;
+}
+
+/* ================= 游戏状态 ================= */
+const cookieC = [DW/2, 400];
+const R = 280;
+let fragId = 0;
+const S = {
+  phase:'cookie',            // cookie | map
+  fragments:[], cracks:[], dots:[],
+  smashCount:0, epicenter:null,
+  driftAmp:0, worldName:'',
+  mountains:[], rivers:[], lakes:[], pois:[], archipelagos:[],
+  seaMarks:[], flash:0,
+  shape:'round', cookieArea:Math.PI*R*R,
+  method:'smash',            // smash 捶击法 | shake 摇晃法 | meteor 陨落法
+  eatMode:false, eatCount:0, // 🍽 吃板块模式与已吃数量
+  bigMeteor:false            // ☄ 大陨石模式（仅陨落法）
+};
+const undoStack = [];
+
+function makeFragment(poly){
+  return { id:++fragId, poly, area:Math.abs(signedArea(poly)), centroid:centroid(poly),
+    name:null, biome:null, offset:[0,0], jitter:rand(0.7,1.3), adj:new Set(), isLake:false,
+    animT0:null, animFrom:null, animDur:600 };
+}
+function currentOffset(fr, now){
+  if(fr.animT0!=null && fr.animFrom){
+    const t=(now-fr.animT0)/fr.animDur;
+    if(t>=1){ fr.animT0=null; return fr.offset; }
+    const e=1-Math.pow(1-Math.max(0,t),3);
+    return [fr.animFrom[0]+(fr.offset[0]-fr.animFrom[0])*e, fr.animFrom[1]+(fr.offset[1]-fr.animFrom[1])*e];
+  }
+  return fr.offset;
+}
+function discPoly(cx,cy,r,n){
+  const pts=[];
+  for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; pts.push([cx+Math.cos(a)*r, cy+Math.sin(a)*r]); }
+  return pts;
+}
+function squarePoly(cx,cy,r){          // 圆角方形饼干，边缘带轻微烘焙起伏
+  const a = r*0.9, cr = r*0.3, pts = [];
+  const arc = 7, edgeSegs = 5;
+  // 顺序（屏幕坐标顺时针）：右上角弧 -> 右边 -> 右下角弧 -> 底边 -> 左下角弧 -> 左边 -> 左上角弧 -> 顶边
+  const corners = [
+    { c:[a-cr, -a+cr], a0:-Math.PI/2, a1:0 },            // 右上
+    { c:[a-cr,  a-cr], a0:0,          a1:Math.PI/2 },    // 右下
+    { c:[-a+cr, a-cr], a0:Math.PI/2,  a1:Math.PI },      // 左下
+    { c:[-a+cr,-a+cr], a0:Math.PI,    a1:Math.PI*1.5 }   // 左上
+  ];
+  const edges = [
+    [[a, -a+cr],[a, a-cr]],   // 右
+    [[a-cr, a],[-a+cr, a]],   // 底
+    [[-a, a-cr],[-a, -a+cr]], // 左
+    [[-a+cr, -a],[a-cr, -a]]  // 顶
+  ];
+  for(let k=0;k<4;k++){
+    const co = corners[k];
+    for(let i=0;i<arc;i++){
+      const t = co.a0 + (co.a1-co.a0)*(i/arc);
+      pts.push([cx + co.c[0] + Math.cos(t)*cr, cy + co.c[1] + Math.sin(t)*cr]);
+    }
+    const e = edges[k];
+    for(let i=0;i<edgeSegs;i++){
+      const t = i/edgeSegs;
+      const jx = e[0][0]===e[1][0] ? rand(-3,3) : 0;   // 竖边在 x 上抖
+      const jy = e[0][1]===e[1][1] ? rand(-3,3) : 0;   // 横边在 y 上抖
+      pts.push([cx + e[0][0]+(e[1][0]-e[0][0])*t + jx, cy + e[0][1]+(e[1][1]-e[0][1])*t + jy]);
+    }
+  }
+  return pts;
+}
+function newCookie(newSeed){
+  if(newSeed!==undefined){ seed=newSeed; }
+  rng = mulberry32(seed);
+  S.phase='cookie'; S.fragments=[]; S.cracks=[]; S.dots=[];
+  S.smashCount=0; S.epicenter=null; S.driftAmp=0; S.worldName='';
+  S.mountains=[]; S.rivers=[]; S.lakes=[]; S.pois=[]; S.seaMarks=[]; S.flash=0; S.archipelagos=[];
+  shaking=false; shakeInt=0; shakeOff=[0,0]; charging=false; charge=0;
+  undoStack.length = 0;
+  const poly = S.shape==='square' ? squarePoly(cookieC[0],cookieC[1],R) : discPoly(cookieC[0],cookieC[1],R,72);
+  S.cookieArea = Math.abs(signedArea(poly));
+  S.fragments.push(makeFragment(poly));
+  // 巧克力豆/烤斑：在饼干范围内均匀散布（任意形状通用，拒绝采样）
+  let placed = 0, tries = 0;
+  while(placed<170 && tries<3000){
+    tries++;
+    const x = cookieC[0] + rand(-R,R), y = cookieC[1] + rand(-R,R);
+    if(!pointInPoly([x,y], poly)) continue;
+    S.dots.push({ x, y, r:rand(1,2.6), c: rng()<0.5 ? 'rgba(90,55,20,0.35)' : 'rgba(255,220,160,0.25)', frag:0 });
+    placed++;
+  }
+  assignDots();
+  document.getElementById('drift').value = 0;
+  document.getElementById('drift').disabled = false;
+  document.getElementById('driftVal').textContent = '关';
+  S.eatMode = false; S.eatCount = 0;
+  const eatBox = document.getElementById('eatMode');
+  eatBox.checked = false; eatBox.disabled = false;
+  eatSel = null; eatPid = null; eatHover = null; canvas.style.cursor = '';
+  document.getElementById('seedIn').value = seed;
+  document.getElementById('descText').value = '';
+  document.getElementById('btnCopy').disabled = true;
+  document.getElementById('regionList').innerHTML = '<small style="color:#6a5a40">完成生成后显示</small>';
+  addLog((S.shape==='square'?'方形':'圆形') + '饼干已上桌，种子 #' + seed);
+  updateButtons();
+}
+function assignDots(){
+  for(const d of S.dots){
+    d.frag = -1;
+    for(const f of S.fragments){ if(pointInPoly([d.x,d.y], f.poly)){ d.frag = f.id; break; } }
+  }
+}
+
+/* ================= 捶击与碎裂 ================= */
+function smash(px, py, f){
+  if(S.phase!=='cookie') return;
+  const now = performance.now();
+  const brutal = !!document.getElementById('brutal').checked;
+  if(brutal) f = Math.max(f, 0.45);
+  // 先用显示坐标选目标（碎块可能正处于漂移/飞散状态）
+  const idx = S.fragments.findIndex(fr=>{
+    const off = currentOffset(fr, now);
+    return pointInPoly([px-off[0], py-off[1]], fr.poly);
+  });
+  if(idx<0) return;
+  if(S.driftAmp>0){
+    applyDrift(0);
+    document.getElementById('drift').value=0; document.getElementById('driftVal').textContent='关';
+    if(!brutal) addLog('漂移已复位，重新开砸');
+  }
+  undoStack.push(structuredClone({fragments:S.fragments.map(fr=>({...fr,adj:[...fr.adj]})), cracks:S.cracks, smashCount:S.smashCount, epicenter:S.epicenter}));
+  if(undoStack.length>20) undoStack.shift();
+
+  S.smashCount++;
+  if(!S.epicenter) S.epicenter=[px,py];
+  const frag = S.fragments[idx];
+  const fragR = Math.sqrt(frag.area/Math.PI);
+
+  let splitN = 0;
+  const decoOnly = !brutal && f<0.25 && rng()<0.5;   // 轻敲有时只留裂纹不分裂
+  if(decoOnly){
+    const n = f<0.12 ? 1 : 2;
+    for(let i=0;i<n;i++){
+      const a = rand(0, Math.PI*2);
+      const exit = rayExit([px,py], [Math.cos(a),Math.sin(a)], frag.poly);
+      if(!exit) continue;
+      const t = Math.max(0.3, f/0.25*0.8);
+      const end = [px+(exit[0]-px)*t, py+(exit[1]-py)*t];
+      S.cracks.push({ pts:midDisplace([px,py], end, 4, 0.2), width:1+f*3, birth:now, through:false, deco:true, kind:'', fragId:frag.id });
+    }
+  } else {
+    /* ---- 拟真碎裂：冲击区密站点（碎屑）+ 外围疏站点（大块）Voronoi 切分 ---- */
+    let K_in  = f<0.25 ? 1+((rng()*2)|0) : Math.round(1+f*8);
+    let K_out = f<0.25 ? 1+((rng()*2)|0) : Math.round(2+f*7);
+    if(brutal){ K_in = Math.round(K_in*1.4)+1; K_out = Math.round(K_out*1.4); }
+    const r_in = fragR*(0.12 + f*0.3);
+    const sites = [];
+    for(let i=0;i<K_in*3 && sites.length<K_in && sites.length<34;i++){
+      const a = rand(0,Math.PI*2), rr = r_in*Math.sqrt(rng());
+      const p = [px+Math.cos(a)*rr, py+Math.sin(a)*rr];
+      if(pointInPoly(p, frag.poly)) sites.push(p);
+    }
+    let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+    for(const p of frag.poly){ minx=Math.min(minx,p[0]); maxx=Math.max(maxx,p[0]); miny=Math.min(miny,p[1]); maxy=Math.max(maxy,p[1]); }
+    let tries = 0;
+    while(sites.length < K_in+K_out && sites.length<34 && tries<400){
+      tries++;
+      const p = [rand(minx,maxx), rand(miny,maxy)];
+      if(!pointInPoly(p, frag.poly)) continue;
+      if(dist(p,[px,py]) < r_in*0.7) continue;
+      let ok = true;
+      for(const s of sites){ if(dist(p,s) < fragR*0.16){ ok=false; break; } }
+      if(ok) sites.push(p);
+    }
+    if(sites.length>=2){
+      const cells = voronoiCells(frag.poly, sites);
+      const built = buildPieces(cells);
+      const childOf = [];   // cells 索引 -> 新碎块（过小过滤为 null）
+      built.polys.forEach(poly=>{
+        if(poly.length<3 || Math.abs(signedArea(poly))<15){ childOf.push(null); return; }
+        childOf.push(makeFragment(poly));
+      });
+      const children = childOf.filter(Boolean);
+      if(children.length>=2){
+        built.edgeMap.forEach(e=>{
+          if(!e.interior) return;
+          const c1 = childOf[e.cells[0]], c2 = childOf[e.cells[1]];
+          if(c1 && c2){ c1.adj.add(c2.id); c2.adj.add(c1.id); }
+          const mid = e.pts[(e.pts.length/2)|0];
+          const dP = dist(mid, [px,py]);
+          S.cracks.push({
+            pts: e.pts,
+            width: 0.8 + f*2.4 * (dP < r_in*1.6 ? 1.5 : 1),
+            birth: now + Math.min(420, dP*1.2),   // 裂纹从震中向外蔓延
+            through: true, kind:''
+          });
+        });
+        S.fragments.splice(idx, 1, ...children);
+        splitN = children.length;
+        assignDots();
+      } else {
+        const a0 = rand(0, Math.PI*2);
+        const ex0 = rayExit([px,py], [Math.cos(a0),Math.sin(a0)], frag.poly);
+        if(ex0) S.cracks.push({ pts:midDisplace([px,py], ex0, 4, 0.2), width:1+f*3, birth:now, through:false, deco:true, kind:'', fragId:frag.id });
+      }
+    }
+  }
+
+  if(brutal && splitN>0){                 // 暴力模式：全块炸开漂移
+    const amp = Math.min(60, 10 + f*44);
+    const t0 = performance.now();
+    for(const fr of S.fragments){ fr.animFrom = currentOffset(fr, t0).slice(); }
+    applyDrift(amp);
+    for(const fr of S.fragments){ fr.animT0 = t0; fr.animDur = 520 + rand(0,260); }
+    document.getElementById('drift').value = Math.round(amp);
+    document.getElementById('driftVal').textContent = Math.round(amp);
+    S.flash = 1;
+    shake = 8 + f*20;
+  } else {
+    shake = 4 + f*14;
+  }
+  crackSound(brutal ? Math.min(1, f*1.25+0.1) : f);
+  addLog('第' + S.smashCount + '锤 · 力度 ' + Math.round(f*100) + (brutal?'% · 🔥暴力' : '%') + ' · ' +
+    (splitN ? '碎成 ' + splitN + ' 块' : (decoOnly ? '留下浅痕' : '砸出裂纹')) +
+    '（共 ' + S.fragments.length + ' 块）');
+  updateButtons();
+}
+function undo(){
+  if(S.phase!=='cookie' || !undoStack.length) return;
+  const st = undoStack.pop();
+  S.fragments = st.fragments.map(fr=>({...fr, adj:new Set(fr.adj), animT0:null, animFrom:null}));
+  S.cracks = st.cracks; S.smashCount = st.smashCount; S.epicenter = st.epicenter;
+  assignDots();
+  addLog('撤销上一锤');
+  updateButtons();
+}
+function applyDrift(amp){
+  S.driftAmp = amp;
+  const c = S.epicenter || cookieC;
+  for(const fr of S.fragments){
+    const dx = fr.centroid[0]-c[0], dy = fr.centroid[1]-c[1];
+    const len = Math.hypot(dx,dy) || 1;
+    fr.offset = [dx/len*amp*fr.jitter, dy/len*amp*fr.jitter];
+  }
+}
+/* 完成生成前把漂移"烘焙"进坐标：碎块多边形/质心平移、offset 归零，
+   裂纹与烤斑按所属碎块同步平移 —— 之后山脉河流与板块严丝合缝，漂移锁定 */
+function bakeDrift(){
+  const now = performance.now();
+  const offs = {};
+  for(const fr of S.fragments) offs[fr.id] = currentOffset(fr, now);
+  // 先平移碎块
+  for(const fr of S.fragments){
+    const o = offs[fr.id];
+    if(o[0] || o[1]){
+      fr.poly = fr.poly.map(p=>[p[0]+o[0], p[1]+o[1]]);
+      fr.centroid = [fr.centroid[0]+o[0], fr.centroid[1]+o[1]];
+    }
+    fr.offset = [0,0]; fr.animT0 = null; fr.animFrom = null;
+  }
+  // 裂纹：找烘焙前显示位置包含它的碎块，随其平移；缝隙中的裂纹归最近碎块
+  for(const c of S.cracks){
+    const cc = centroid(c.pts);
+    let best = null, bd = 1e18;
+    for(const fr of S.fragments){
+      const o = offs[fr.id];
+      if(pointInPoly([cc[0]-o[0], cc[1]-o[1]], fr.poly)){ best = o; break; }
+      const d2 = (cc[0]-o[0]-fr.centroid[0])*(cc[0]-o[0]-fr.centroid[0]) + (cc[1]-o[1]-fr.centroid[1])*(cc[1]-o[1]-fr.centroid[1]);
+      if(d2 < bd){ bd = d2; best = o; }
+    }
+    if(best && (best[0] || best[1])) c.pts = c.pts.map(p=>[p[0]+best[0], p[1]+best[1]]);
+  }
+  // 烤斑同步
+  for(const d of S.dots){
+    const o = offs[d.frag];
+    if(o){ d.x += o[0]; d.y += o[1]; }
+  }
+}
+
+/* ================= 地形解读与命名 ================= */
+const BIOME_COLORS = { 雪原:'#cdc7b8', 沙漠:'#d3ac6d', 草原:'#a3a06b', 森林:'#77895a', 平原:'#b8a878', 丘陵:'#a08a62' };
+const NAME_A = '苍烬澜朔曜绯青玄赤霜星雾铁银沧烈幽碧岚瑶霁泠湛岫汀蘅霄韶溟渟昉璧'.split('');
+const NAME_B = '澜渊川岳泽洲岚峰原漠海崖霄溟汀岫皋隰渚湄涘'.split('');
+const CITY_A = ['白堤','铁闸','雾津','赤岩','青梧','霜叶','碎星','鸣沙','沧浪','云垒','石冠','鹭沼',
+  '栖霞','枕流','听澜','望舒','衔青','临渊','疏影','拂云','拾翠','闻笛','栖鹭','浣月','兰陵','琅琊','锦官','永嘉','即墨','彭蠡'];
+const CITY_B = ['城','都','堡','港','镇','寨','关','驿','墟'];
+const MNT_A = ['断脊','苍牙','碎星','铁脊','雾锁','雷殛','沉雪','怒涛','凌云','卧云','衔月','青冥','太华','天柱','栖霞','叠翠','屏翳','万仞'];
+const RIV_A = ['银鳞','黑汐','蜜语','灰烬','晨星','低语','碧玉','流沙','浣月','流霞','鸣玉','漱玉','涵星','映雪','栖云','织锦','回澜','饮马'];
+const WORLD_A = ['苍澜','烬羽','朔风','星坠','雾霭','赤砂','霜烬','沧曜','云梦','琅嬛','沧溟','九霄','青冥','瑶池','太虚','归墟','长离','玄圃'];
+const WORLD_B = ['大陆','世界','诸岛','之境','列国','山海','之野','大荒','四洲','寰宇'];
+const METEOR_A = ['陨星原','天坠地','星核洲','坠日之野','烬石原','落星半岛','天外来陆'];
+const ARCH_A = ['落星','飞琼','碎月','沉璧','流花','衔珠','白鹭','青螺','云外','海眼','蓬莱','瀛洲','拾贝','望潮','栖鸥','琅玕'];
+// 兴趣点描述词库（按类型）
+const POI_DESC = {
+  '首都': ['临水而筑的王城，商队与阴谋在此交汇。','九衢通达的帝都，晨钟一响万户开。','宫城依势而建，城中夜市灯火相传三百年不熄。','王庭高踞台地，四方使节在此觐见，也在此密谋。'],
+  '城镇': ['以物产闻名的集镇，旅人歇脚之地。','酒香远飘十里的酿酒小镇，客栈永远满员。','铁匠铺比民居还多的边镇，马蹄铁声昼夜不绝。','每逢集日，山民与船商在此以物易物，人声鼎沸。'],
+  '遗迹': ['上古文明的残垣，传说埋着失落的秘宝。','半截没入土中的石像群，面孔已被风雨磨平。','碑文无人能识的环形石阵，月圆之夜据说会低鸣。','废弃的矿道深处，拾荒者声称听见过机关转动声。','坍塌的观星台，穹顶星图与今夜星空竟无一重合。'],
+  '港口': ['千帆云集之地，异域货物与流言一同上岸。','灯塔彻夜不熄的深水良港，水手的天堂与坟场。','潮间带上的浮动市集，涨潮开市、退潮散场。','走私者与税吏斗智斗勇的自由港，规矩就是没有规矩。'],
+  '关隘': ['两山夹峙的一线天，一夫当关，万夫莫开。','峡谷间唯一的栈道咽喉，商队过境必交买路钱。','雪线上唯一的隘口，每年只有四个月可以通行。'],
+  '奇观': ['夜半泛光的浅湖，渔民视作龙宫灯火。','风蚀千百年形成的石笋林，风吹过时如万笛齐鸣。','间歇喷涌的热泉谷，雾气中常有虹影浮现。','孤峰拔地千仞，峰顶终年云雾，无人登顶而还。']
+};
+const usedNames = new Set();
+function uniqName(gen){ let n='', k=0; do{ n=gen(); k++; }while(usedNames.has(n) && k<30); usedNames.add(n); return n; }
+
+function assignBiome(fr){
+  const lat = (cookieC[1] - fr.centroid[1]) / R;
+  const r = rng();
+  if(lat > 0.55) return '雪原';
+  if(lat < -0.55) return r<0.6 ? '沙漠' : '草原';
+  if(lat > 0.25) return r<0.35 ? '雪原' : (r<0.75 ? '森林' : '平原');
+  if(lat < -0.25) return r<0.4 ? '沙漠' : (r<0.75 ? '草原' : '平原');
+  return pick(['平原','草原','森林','丘陵']);
+}
+function randPointIn(fr){
+  let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  for(const p of fr.poly){ minx=Math.min(minx,p[0]); maxx=Math.max(maxx,p[0]); miny=Math.min(miny,p[1]); maxy=Math.max(maxy,p[1]); }
+  for(let i=0;i<60;i++){
+    const p=[rand(minx,maxx), rand(miny,maxy)];
+    if(pointInPoly(p, fr.poly)) return p;
+  }
+  return fr.centroid;
+}
+function finalize(){
+  if(S.phase==='map') return;
+  S.phase = 'map';
+  bakeDrift();                 // 先把漂移烘焙进坐标，山河与板块对齐
+  document.getElementById('drift').disabled = true;   // 锁定漂移
+  S.eatMode = false;                                    // 锁定吃模式
+  const eatBox = document.getElementById('eatMode');
+  eatBox.checked = false; eatBox.disabled = true;
+  eatSel = null; eatPid = null; eatHover = null; canvas.style.cursor = '';
+  usedNames.clear();
+  const cookieArea = S.cookieArea;
+  // 裂纹定性：按宽度排序，最宽的 40% -> 山脉，其余 -> 河流（避免清一色）
+  S.mountains = []; S.rivers = [];
+  const cand = S.cracks.slice().sort((a,b)=>b.width-a.width);
+  cand.forEach((c,i)=>{ if(!c.kind) c.kind = i < Math.ceil(cand.length*0.4) ? 'mountain' : 'river'; });
+  for(const c of S.cracks){
+    if(c.kind==='river' && c.deco) c.pts = midDisplace(c.pts[0], c.pts[c.pts.length-1], 5, 0.26);
+    (c.kind==='mountain' ? S.mountains : S.rivers).push(c);
+  }
+  // 只保留主要山河（其余视作小地貌，不绘制不命名，避免画面与描述爆炸）
+  S.mountains.sort((a,b)=>b.width-a.width);
+  S.mountains.forEach((m,i)=>{ m.major = m.ring || i<8; });
+  S.rivers.sort((a,b)=>b.pts.length-a.pts.length);
+  S.rivers.forEach((r,i)=>{ r.major = i<10; });
+  for(const m of S.mountains){
+    if(m.ring) m.name = uniqName(()=>pick(['陨落','天坠','星殒','炽烬','环日','坠辉']) + '环山');
+    else if(m.major) m.name = uniqName(()=>pick(MNT_A) + pick(['山脉','岭','山脊']));
+  }
+  for(const r of S.rivers) if(r.major) r.name = uniqName(()=>pick(RIV_A) + pick(['河','江','溪']));
+  // 碎块分类与命名
+  S.lakes = [];
+  S.archipelagos = [];
+  const frags = S.fragments.slice().sort((a,b)=>b.area-a.area);
+  for(const fr of S.fragments){
+    const interior = fr.poly.every(p => Math.hypot(p[0]-cookieC[0], p[1]-cookieC[1]) < R*0.97);
+    fr.isLake = interior && fr.area < cookieArea*0.01 && S.driftAmp === 0;
+    fr.arch = null; fr.name = null;
+    if(fr.isLake){ fr.name = uniqName(()=>pick(RIV_A)+'湖'); S.lakes.push(fr); continue; }
+    fr.biome = assignBiome(fr);
+  }
+  // 群岛归并：面积 <1% 的小碎块，凡彼此相邻（2 座及以上）即统称「xx群岛」，不再逐个命名
+  const islets = S.fragments.filter(f=>!f.isLake && f.area < cookieArea*0.01);
+  const compOf = new Map();
+  const comps = [];
+  for(const f of islets){
+    if(compOf.has(f.id)) continue;
+    const members = [f]; compOf.set(f.id, comps.length);
+    const stack = [f];
+    while(stack.length){
+      const cur = stack.pop();
+      for(const oid of cur.adj){
+        if(compOf.has(oid)) continue;
+        const o = islets.find(x=>x.id===oid);
+        if(o){ compOf.set(oid, comps.length); members.push(o); stack.push(o); }
+      }
+    }
+    comps.push(members);
+  }
+  for(const members of comps){
+    if(members.length < 2) continue;
+    const aName = uniqName(()=>pick(ARCH_A)+pick(['群岛','列岛','诸屿']));
+    let area = 0, cx = 0, cy = 0, big = members[0];
+    for(const m of members){
+      m.arch = aName;
+      area += m.area; cx += m.centroid[0]*m.area; cy += m.centroid[1]*m.area;
+      if(m.area > big.area) big = m;
+    }
+    S.archipelagos.push({ name:aName, members:members.map(m=>m.id), area,
+      cx:cx/area, cy:cy/area, biome:big.biome });
+  }
+  // 陆地命名（群岛成员跳过，由群岛统称）
+  for(const fr of S.fragments){
+    if(fr.isLake || fr.arch) continue;
+    if(fr.isMeteor){ fr.name = uniqName(()=>pick(METEOR_A)); continue; }
+    const ratio = fr.area / cookieArea;
+    if(ratio >= 0.08) fr.name = uniqName(()=>pick(NAME_A)+pick(NAME_B)+pick(['洲','大陆','之地','高原']));
+    else if(ratio >= 0.02) fr.name = uniqName(()=>pick(NAME_A)+pick(NAME_B)+pick(['半岛','岛','之地']));
+    else if(ratio >= 0.004) fr.name = uniqName(()=>pick(NAME_A)+pick(NAME_B)+'岛');
+  }
+  // POI
+  S.pois = [];
+  const big = frags.filter(f=>!f.isLake && f.area > cookieArea*0.05).slice(0,6);
+  big.forEach((fr,i)=>{
+    if(i===0) S.pois.push({ type:'首都', pos:randPointIn(fr), frag:fr.id,
+      name:uniqName(()=>pick(CITY_A)+pick(['城','都'])), desc:pick(POI_DESC['首都']) });
+    else S.pois.push({ type:'城镇', pos:randPointIn(fr), frag:fr.id,
+      name:uniqName(()=>pick(CITY_A)+pick(CITY_B)), desc:pick(POI_DESC['城镇']) });
+    if(rng()<0.6) S.pois.push({ type:'遗迹', pos:randPointIn(fr), frag:fr.id,
+      name:uniqName(()=>pick(NAME_A)+pick(['废墟','古冢','石阵','皇陵'])), desc:pick(POI_DESC['遗迹']) });
+    if(rng()<0.4) S.pois.push({ type:'关隘', pos:randPointIn(fr), frag:fr.id,
+      name:uniqName(()=>pick(MNT_A)+pick(['关','隘','口'])), desc:pick(POI_DESC['关隘']) });
+    if(rng()<0.4) S.pois.push({ type:'奇观', pos:randPointIn(fr), frag:fr.id,
+      name:uniqName(()=>pick(NAME_A)+pick(NAME_B)), desc:pick(POI_DESC['奇观']) });
+    if(S.driftAmp>0 && rng()<0.5) S.pois.push({ type:'港口', pos:randPointIn(fr), frag:fr.id,
+      name:uniqName(()=>pick(CITY_A)+'港'), desc:pick(POI_DESC['港口']) });
+  });
+  S.pois = S.pois.slice(0,14);
+  S.worldName = uniqName(()=>pick(WORLD_A)+pick(WORLD_B));
+  // 海面装饰
+  S.seaMarks = [];
+  for(let i=0;i<40;i++){
+    const p=[rand(60,DW-60), rand(90,DH-60)];
+    if(!S.fragments.some(f=>!f.isLake && pointInPoly(p, f.poly))) S.seaMarks.push(p);
+  }
+  buildDesc();
+  renderRegionList();
+  addLog('✨ 生成完成！世界「' + S.worldName + '」诞生，共 ' + frags.filter(f=>!f.isLake && f.name).length + ' 块有名大陆/岛屿');
+  if(S.driftAmp>0) addLog('🔒 板块漂移已锁定（幅度 ' + Math.round(S.driftAmp) + '）');
+  updateButtons();
+}
+
+/* ================= 描述文本 ================= */
+function buildDesc(){
+  const cookieArea = S.cookieArea;
+  const named = S.fragments.filter(f=>f.name && !f.isLake).sort((a,b)=>b.area-a.area);
+  // 陆地占比：陆地总面积 / 漂移后世界版图（全体陆地块包围盒，缝隙即海洋）
+  const landArea = S.fragments.filter(f=>!f.isLake).reduce((s,f)=>s+f.area,0);
+  let bx0=1e9, by0=1e9, bx1=-1e9, by1=-1e9;
+  for(const f of S.fragments){ if(f.isLake) continue;
+    for(const p of f.poly){ bx0=Math.min(bx0,p[0]); by0=Math.min(by0,p[1]); bx1=Math.max(bx1,p[0]); by1=Math.max(by1,p[1]); } }
+  const worldArea = Math.max(1, (bx1-bx0)*(by1-by0));
+  const landRatio = Math.min(1, landArea / worldArea);
+  const mntN = S.mountains.filter(m=>m.name), rivN = S.rivers.filter(r=>r.name);
+  let t = '';
+  t += '# 世界名称：' + S.worldName + '（种子 #' + seed + '）\n\n';
+  t += '> 本地图由「地图生成模拟器 v1.7 · 饼干生成法」生成：' + (S.shape==='square'?'方形':'圆形') + '饼干，' + (S.method==='shake' ? '摇箱撞击 ' : S.method==='meteor' ? (S.bigMeteor ? '大陨石轰击 ' : '陨石轰击 ') : '共捶击 ') + S.smashCount + ' 次' + (S.eatCount ? '，吃掉 ' + S.eatCount + ' 块' : '') + '，';
+  t += S.driftAmp>0 ? '板块已漂移分离（漂移幅度 ' + Math.round(S.driftAmp) + '）。\n\n' : '板块未漂移，为完整大陆。\n\n';
+  t += '## 总览\n';
+  t += '- 陆地占世界版图约 ' + Math.round(landRatio*100) + '%，其余为海洋，共 ' + named.length + ' 块有名陆地';
+  if(S.lakes.length) t += '、' + S.lakes.length + ' 处内陆湖泊';
+  if(S.archipelagos.length){
+    const an = S.archipelagos.reduce((s,a)=>s+a.members.length,0);
+    t += '、' + S.archipelagos.length + ' 处群岛（共 ' + an + ' 座小岛）';
+  }
+  t += '\n- 主要山脉 ' + mntN.length + ' 条，主要河流 ' + rivN.length + ' 条\n';
+  const isles = named.filter(f=>f.area < cookieArea*0.02);
+  if(isles.length) t += '- 小型岛屿 ' + isles.length + ' 座，适合安排航线与隐秘势力\n';
+  t += '\n## 大陆与岛屿详情\n';
+  named.forEach((f,i)=>{
+    t += (i+1) + '. **' + f.name + '**（面积约 ' + (f.area/cookieArea*100).toFixed(1) + '%，' + (f.biome||'—') + '）';
+    if(f.isMeteor) t += '。☄ 天外陨石之躯，铁镍铸就、含异星矿藏，环山为其坠落的疤痕';
+    const myPois = S.pois.filter(p=>p.frag===f.id);
+    if(myPois.length) t += '：' + myPois.map(p=>p.type + '「' + p.name + '」').join('、');
+    const adjNames = S.fragments.filter(o=>f.adj.has(o.id) && o.name).map(o=>o.name);
+    if(adjNames.length) t += '；邻接：' + adjNames.join('、');
+    t += '\n';
+  });
+  if(S.archipelagos.length){
+    t += '\n## 群岛\n';
+    S.archipelagos.forEach(a=>{
+      t += '- **' + a.name + '**：由 ' + a.members.length + ' 座小岛组成，合计面积约 ' + (a.area/cookieArea*100).toFixed(1) + '%（' + (a.biome||'—') + '）。岛礁密布、航道曲折，适合安排渔村、海盗巢穴或隐世秘境\n';
+    });
+  }
+  if(mntN.length){
+    t += '\n## 山脉\n';
+    mntN.forEach(m=>{ t += '- ' + m.name + '：沿主裂纹隆起，是天然的疆界与防线\n'; });
+  }
+  if(rivN.length){
+    t += '\n## 河流\n';
+    rivN.forEach(r=>{ t += '- ' + r.name + '：蜿蜒于裂谷之间，滋养沿岸文明\n'; });
+  }
+  if(S.lakes.length){
+    t += '\n## 湖泊\n';
+    S.lakes.forEach(l=>{ t += '- ' + l.name + '：内陆洼地积水成湖\n'; });
+  }
+  if(S.pois.length){
+    t += '\n## 兴趣点\n';
+    S.pois.forEach(p=>{ t += '- ' + p.type + '「' + p.name + '」：' + p.desc + '\n'; });
+  }
+  t += '\n## 地缘与势力建议\n';
+  if(named.length>=2){
+    t += '- ' + named[0].name + ' 与 ' + named[1].name + ' 体量相近，';
+    t += S.mountains.length ? '以' + S.mountains[0].name + '为界易形成对峙文明\n' : '之间无险可守，易爆发长期争霸\n';
+  }
+  if(S.rivers.length && named.length) t += '- ' + S.rivers[0].name + '下游适合布局农耕大城，控制河道即控制粮道\n';
+  if(isles.length) t += '- ' + isles[0].name + '等外岛远离大陆，适合安排海盗、流放者或隐世宗门\n';
+  t += '\n## 给 AI 的续写提示\n';
+  t += '以上是一份由饼干生成法制作的幻想世界地图设定（种子 #' + seed + '）。请基于这份地理框架帮我完善：1) 各大陆的历史脉络与文明风格；2) 主要势力间的关系、冲突与贸易路线；3) 3-5 个可作为故事钩子的地点传说；4) 一份适合跑团或小说开篇的大事件年表。请用中文，风格偏奇幻史诗。\n';
+  document.getElementById('descText').value = t;
+  document.getElementById('btnCopy').disabled = false;
+}
+function renderRegionList(){
+  const box = document.getElementById('regionList');
+  const cookieArea = S.cookieArea;
+  const named = S.fragments.filter(f=>f.name).sort((a,b)=>b.area-a.area);
+  box.innerHTML = '';
+  if(!named.length && !S.archipelagos.length){ box.innerHTML = '<small style="color:#6a5a40">无命名区域</small>'; return; }
+  for(const a of S.archipelagos){
+    const div = document.createElement('div');
+    div.className = 'rg';
+    div.innerHTML = '<span>🏝 ' + a.name + '</span><small>' + a.members.length + ' 岛</small>';
+    div.onclick = ()=>{
+      const n = prompt('输入新名称：', a.name);
+      if(n && n.trim()){
+        a.name = n.trim();
+        const ids = new Set(a.members);
+        for(const f of S.fragments) if(ids.has(f.id)) f.arch = a.name;
+        renderRegionList(); buildDesc();
+      }
+    };
+    box.appendChild(div);
+  }
+  for(const f of named){
+    const div = document.createElement('div');
+    div.className = 'rg';
+    div.innerHTML = '<span>' + (f.isLake?'💧 ':'🗺 ') + f.name + '</span><small>' + (f.area/cookieArea*100).toFixed(1) + '%</small>';
+    div.onclick = ()=>{
+      const n = prompt('输入新名称：', f.name);
+      if(n && n.trim()){ f.name = n.trim(); renderRegionList(); buildDesc(); }
+    };
+    box.appendChild(div);
+  }
+}
+
+/* ================= 音效 ================= */
+let actx = null;
+function ensureAudio(){ if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(actx && actx.state==='suspended') actx.resume(); }
+function crackSound(f){
+  ensureAudio(); if(!actx) return;
+  const dur = 0.22 + f*0.25;
+  const buf = actx.createBuffer(1, actx.sampleRate*dur|0, actx.sampleRate);
+  const data = buf.getChannelData(0);
+  for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/data.length, 2.2);
+  const src = actx.createBufferSource(); src.buffer = buf;
+  const bp = actx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value = 900 + f*2400; bp.Q.value = 0.8;
+  const g = actx.createGain(); g.gain.value = 0.22 + f*0.5;
+  src.connect(bp); bp.connect(g); g.connect(actx.destination); src.start();
+  const o = actx.createOscillator(); o.type='sine';
+  o.frequency.setValueAtTime(140, actx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(45, actx.currentTime+0.18);
+  const g2 = actx.createGain(); g2.gain.setValueAtTime(0.25+f*0.4, actx.currentTime);
+  g2.gain.exponentialRampToValueAtTime(0.001, actx.currentTime+0.22);
+  o.connect(g2); g2.connect(actx.destination); o.start(); o.stop(actx.currentTime+0.25);
+}
+function eatSound(n){                       // 咀嚼脆响：连续几声短促碎裂
+  ensureAudio(); if(!actx) return;
+  const bursts = Math.min(4, 1 + n);
+  for(let b=0;b<bursts;b++){
+    const t0 = actx.currentTime + b*0.07;
+    const dur = 0.09;
+    const buf = actx.createBuffer(1, actx.sampleRate*dur|0, actx.sampleRate);
+    const data = buf.getChannelData(0);
+    for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/data.length, 1.6);
+    const src = actx.createBufferSource(); src.buffer = buf;
+    const bp = actx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value = 1400 + b*500; bp.Q.value = 1.1;
+    const g = actx.createGain();
+    g.gain.setValueAtTime(0.4, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    src.connect(bp); bp.connect(g); g.connect(actx.destination);
+    src.start(t0); src.stop(t0+dur);
+  }
+}
+
+/* ================= 吃板块 ================= */
+function eatFragments(ids){                 // 按 id 集删除碎块及其裂纹，返回吃掉数量
+  if(S.phase!=='cookie' || !ids.size) return 0;
+  undoStack.push(structuredClone({fragments:S.fragments.map(fr=>({...fr,adj:[...fr.adj]})), cracks:S.cracks, smashCount:S.smashCount, epicenter:S.epicenter}));
+  if(undoStack.length>20) undoStack.shift();
+  const before = S.fragments.length;
+  S.fragments = S.fragments.filter(fr=>!ids.has(fr.id));
+  S.cracks = S.cracks.filter(c=>!c.fragId || !ids.has(c.fragId));
+  const eaten = before - S.fragments.length;
+  if(eaten>0){
+    S.eatCount += eaten;
+    shake = 3 + Math.min(9, eaten*2);
+    eatSound(eaten);
+    addLog('🍽 吃掉 ' + eaten + ' 块（剩 ' + S.fragments.length + ' 块）');
+    updateButtons();
+  }
+  return eaten;
+}
+function eatAt(px, py){                     // 单击：吃掉光标下的整块（按显示坐标命中）
+  const now = performance.now();
+  const fr = S.fragments.find(f=>{
+    const off = currentOffset(f, now);
+    return pointInPoly([px-off[0], py-off[1]], f.poly);
+  });
+  if(!fr) return 0;
+  return eatFragments(new Set([fr.id]));
+}
+function eatRect(x0, y0, x1, y1){           // 框选：吃掉质心落入框内的所有碎块（按显示坐标）
+  const now = performance.now();
+  const xa = Math.min(x0,x1), xb = Math.max(x0,x1), ya = Math.min(y0,y1), yb = Math.max(y0,y1);
+  const ids = new Set();
+  for(const fr of S.fragments){
+    const off = currentOffset(fr, now);
+    const cx = fr.centroid[0]+off[0], cy = fr.centroid[1]+off[1];
+    if(cx>=xa && cx<=xb && cy>=ya && cy<=yb) ids.add(fr.id);
+  }
+  return eatFragments(ids);
+}
+
+/* ================= 交互 ================= */
+let charging = false, chargeStart = 0, charge = 0, chargePos = null, chargePid = null;
+let shake = 0;
+/* 摇晃法状态 */
+let shaking = false, shakeStart = 0, shakeInt = 0, shakeOff = [0,0], nextImpact = 0, shakePid = null;
+/* 吃板块状态 */
+let eatSel = null, eatPid = null, eatHover = null;   // eatSel: 框选矩形 {x0,y0,x1,y1}
+
+function shakeImpact(ts){
+  // 模拟撞箱壁：面积加权随机选碎块，在它某条边上取撞击点
+  const frags = S.fragments;
+  if(!frags.length) return;
+  let total = 0;
+  for(const f of frags) total += f.area;
+  let r = rng()*total, frag = frags[0];
+  for(const f of frags){ r -= f.area; if(r<=0){ frag = f; break; } }
+  const poly = frag.poly, i = (rng()*poly.length)|0;
+  const a = poly[i], b = poly[(i+1)%poly.length];
+  const t = rand(0.25, 0.75);
+  let px = a[0]+(b[0]-a[0])*t, py = a[1]+(b[1]-a[1])*t;
+  // 向质心内缩，确保命中碎块内部
+  px += (frag.centroid[0]-px)*rand(0.05,0.2);
+  py += (frag.centroid[1]-py)*rand(0.05,0.2);
+  const f = Math.min(1, Math.max(0.28, 0.3 + shakeInt*0.5 + rand(-0.08,0.14)));
+  smash(px, py, f);
+  nextImpact = ts + (300 - shakeInt*190) * rand(0.7, 1.25);
+}
+
+/* ================= 陨落法 ================= */
+let meteoring = false, meteorStart = 0, meteorNext = 0, meteorPid = null;
+const meteors = [];      // 飞行中的陨石 {sx,sy,tx,ty,t0,dur,f}
+const impacts = [];      // 落地冲击环 {x,y,t0}
+function meteorSpawn(ts){
+  const frags = S.fragments;
+  if(!frags.length) return;
+  // 面积加权随机选目标碎块
+  let total = 0;
+  for(const fr of frags) total += fr.area;
+  let r = rng()*total, tgt = frags[0];
+  for(const fr of frags){ r -= fr.area; if(r<=0){ tgt = fr; break; } }
+  const spread = Math.sqrt(tgt.area)*0.35;
+  const tx = tgt.centroid[0] + rand(-1,1)*spread, ty = tgt.centroid[1] + rand(-1,1)*spread;
+  // 从画面上方斜落下来
+  const sx = tx + rand(-260, 260), sy = -60 - rand(0, 80);
+  const dur = rand(420, 680);
+  const f = Math.min(1, Math.max(0.3, 0.4 + Math.min(1,(ts-meteorStart)/2000)*0.4 + rand(-0.08, 0.15)));
+  meteors.push({ sx, sy, tx, ty, t0: ts, dur, f });
+}
+function meteorStep(ts){
+  if(S.phase!=='cookie'){ meteoring = false; meteors.length = 0; return; }
+  const intense = Math.min(1, (ts - meteorStart)/2000);
+  if(meteoring && ts >= meteorNext){
+    meteorSpawn(ts);
+    meteorNext = ts + (560 - intense*400) * rand(0.7, 1.3);
+  }
+  for(let i=meteors.length-1; i>=0; i--){
+    const m = meteors[i];
+    if(ts >= m.t0 + m.dur){
+      meteors.splice(i, 1);
+      impacts.push({ x:m.tx, y:m.ty, t0:ts });
+      if(m.big){ bigImpact(m.tx, m.ty, m.f); }
+      else{
+        shake = Math.max(shake, 5 + m.f*10);
+        crackSound(m.f);
+        smash(m.tx, m.ty, m.f);
+      }
+    }
+  }
+}
+function bigImpact(px, py, f){                 // ☄ 大陨石落地：碎裂 + 环形山脉 +（特大时）本体成板块
+  const now = performance.now();
+  impacts.push({ x:px, y:py, t0:now, big:true });
+  shake = Math.max(shake, 8 + f*18);
+  S.flash = Math.max(S.flash||0, f*0.6);
+  crackSound(Math.min(1, f*1.25));
+  smash(px, py, f);
+  // 撞击坑外缘隆起一圈山脉
+  const ringR = 30 + f*62;
+  const ring = [];
+  for(let i=0;i<26;i++){
+    const a = i/26*Math.PI*2;
+    const rr = ringR * (0.85 + rng()*0.3);
+    ring.push([px+Math.cos(a)*rr, py+Math.sin(a)*rr]);
+  }
+  S.cracks.push({ pts:ring, width:2.6 + f*2.2, birth:now, through:true, kind:'mountain', ring:true });
+  // 特大陨石：坑内碎屑被吞并，本体化作一块新板块
+  if(f >= 0.82){
+    const r = 26 + f*54;
+    S.fragments = S.fragments.filter(fr => !fr.poly.every(p => Math.hypot(p[0]-px, p[1]-py) < r*0.9));
+    const body = [];
+    for(let i=0;i<22;i++){
+      const a = i/22*Math.PI*2;
+      const rr = r*(0.82 + rng()*0.28);
+      body.push([px+Math.cos(a)*rr, py+Math.sin(a)*rr]);
+    }
+    const mf = makeFragment(body);
+    mf.isMeteor = true;
+    for(const fr of S.fragments){
+      if(fr !== mf && dist(fr.centroid, mf.centroid) < r + Math.sqrt(fr.area/Math.PI)*1.2){
+        fr.adj.add(mf.id); mf.adj.add(fr.id);
+      }
+    }
+    S.fragments.push(mf);
+    addLog('☄ 特大陨石坠落，本体化作一块新板块（共 ' + S.fragments.length + ' 块）');
+  }
+}
+
+function toDesign(e){
+  const rect = canvas.getBoundingClientRect();
+  return [(e.clientX-rect.left-ox)/scale, (e.clientY-rect.top-oy)/scale];
+}
+function resetForceUI(){
+  document.getElementById('forceBar').style.width = '0%';
+  document.getElementById('forceVal').textContent = S.method==='shake' ? '按住画布摇晃，松开停止' : (S.method==='meteor' && S.bigMeteor) ? '按住蓄力召唤大陨石，松开陨落' : S.method==='meteor' ? '按住画布召来陨石雨，松开停止' : '按住饼干蓄力，松开出拳';
+}
+canvas.addEventListener('pointerdown', e=>{
+  e.preventDefault(); ensureAudio();
+  if(S.phase!=='cookie') return;
+  if(S.eatMode){
+    const p = toDesign(e);
+    eatSel = { x0:p[0], y0:p[1], x1:p[0], y1:p[1] };
+    eatPid = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+    return;
+  }
+  if(S.method==='meteor'){
+    if(S.bigMeteor){                        // ☄ 大陨石：按住蓄力（力度=陨石大小）
+      const p = toDesign(e);
+      charging = true; chargeStart = performance.now(); charge = 0; chargePos = p; chargePid = e.pointerId;
+      canvas.setPointerCapture(e.pointerId);
+    } else {                                // 普通陨石雨
+      meteoring = true; meteorStart = performance.now(); meteorNext = 0; meteorPid = e.pointerId;
+      canvas.setPointerCapture(e.pointerId);
+    }
+    return;
+  }
+  if(S.method==='shake'){
+    shaking = true; shakeStart = performance.now(); shakeInt = 0; nextImpact = 0; shakePid = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+    return;
+  }
+  const p = toDesign(e);
+  const nowp = performance.now();
+  const hit = S.fragments.some(f=>{
+    const off = currentOffset(f, nowp);
+    return pointInPoly([p[0]-off[0], p[1]-off[1]], f.poly);
+  });
+  if(!hit) return;
+  charging = true; chargeStart = performance.now(); charge = 0; chargePos = p; chargePid = e.pointerId;
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e=>{
+  if(S.phase!=='cookie'){ eatHover = null; return; }
+  const p = toDesign(e);
+  if(eatSel && e.pointerId===eatPid){ eatSel.x1 = p[0]; eatSel.y1 = p[1]; return; }
+  eatHover = S.eatMode ? p : null;
+});
+function releaseSmash(e){
+  if(eatSel && (!e || e.pointerId===eatPid)){
+    const r = eatSel; eatSel = null; eatPid = null;
+    if(Math.hypot(r.x1-r.x0, r.y1-r.y0) < 10) eatAt(r.x1, r.y1);
+    else eatRect(r.x0, r.y0, r.x1, r.y1);
+    return;
+  }
+  if(meteoring){ meteoring = false; meteorPid = null; resetForceUI(); return; }
+  if(shaking){ shaking = false; shakeInt = 0; shakePid = null; resetForceUI(); return; }
+  if(!charging) return;
+  charging = false;
+  const f = Math.max(0.08, charge);
+  charge = 0;
+  document.getElementById('forceBar').style.width = '0%';
+  if(S.method==='meteor' && S.bigMeteor && chargePos){   // ☄ 召唤大陨石
+    const now = performance.now();
+    meteors.push({ sx: chargePos[0] + rand(-220,220), sy: -90 - rand(0,60),
+      tx: chargePos[0], ty: chargePos[1], t0: now, dur: 650 + f*450, f, big:true });
+    chargePos = null;
+    return;
+  }
+  if(chargePos) smash(chargePos[0], chargePos[1], f);
+  chargePos = null;
+}
+canvas.addEventListener('pointerup', releaseSmash);
+canvas.addEventListener('pointercancel', ()=>{ eatSel=null; eatPid=null; meteoring=false; meteorPid=null; shaking=false; shakeInt=0; charging=false; charge=0; resetForceUI(); });
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
+
+document.getElementById('btnNew').onclick = ()=>newCookie((Math.random()*1e9)|0);
+// 新饼干形状下拉
+const shapeMenu = document.getElementById('shapeMenu');
+document.getElementById('btnNewDrop').onclick = e=>{
+  e.stopPropagation();
+  shapeMenu.style.display = shapeMenu.style.display==='none' ? 'block' : 'none';
+};
+document.querySelectorAll('.shapeOpt').forEach(el=>{
+  el.onclick = ()=>{
+    S.shape = el.dataset.shape;
+    document.querySelectorAll('.shapeOpt').forEach(o=>o.classList.toggle('on', o===el));
+    shapeMenu.style.display = 'none';
+    newCookie((Math.random()*1e9)|0);
+  };
+});
+document.addEventListener('click', e=>{
+  if(!document.getElementById('newCookieGrp').contains(e.target)) shapeMenu.style.display = 'none';
+});
+// 生成方式选项卡（捶击法 / 摇晃法）
+document.querySelectorAll('.tab[data-method]').forEach(el=>{
+  el.onclick = ()=>{
+    if(S.method === el.dataset.method) return;
+    S.method = el.dataset.method;
+    document.querySelectorAll('.tab[data-method]').forEach(o=>o.classList.toggle('on', o===el));
+    document.getElementById('bigMeteor').disabled = S.method!=='meteor';
+    addLog(S.method==='shake' ? '📦 切换为摇晃法：饼干装入摇箱，按住画布开摇' : S.method==='meteor' ? (S.bigMeteor ? '🌠 切换为陨落法·大陨石：按住蓄力召唤天外巨石' : '🌠 切换为陨落法：按住画布召来陨石雨') : '✊ 切换为捶击法：按住饼干蓄力出拳');
+    resetForceUI();
+    newCookie();
+  };
+});
+document.getElementById('btnUndo').onclick = undo;
+document.getElementById('btnFin').onclick = finalize;
+// 🍽 吃板块开关
+document.getElementById('eatMode').onchange = e=>{
+  S.eatMode = e.target.checked;
+  eatSel = null; eatPid = null; eatHover = null;
+  canvas.style.cursor = S.eatMode ? 'crosshair' : '';
+  addLog(S.eatMode ? '🍽 吃模式开启：单击吃掉整块，拖拽框选吃一片' : '🍽 吃模式关闭');
+};
+// ☄ 大陨石开关（仅陨落法）
+document.getElementById('bigMeteor').onchange = e=>{
+  S.bigMeteor = e.target.checked;
+  addLog(S.bigMeteor ? '☄ 大陨石模式：按住蓄力召唤，力度即陨石大小与撞击力' : '🌠 恢复陨石雨模式：按住画布召来流星群');
+  resetForceUI();
+};
+document.getElementById('btnSeed').onclick = ()=>{
+  const v = parseInt(document.getElementById('seedIn').value, 10);
+  if(!isNaN(v)) newCookie(v>>>0); else addLog('种子需为数字');
+};
+document.getElementById('drift').oninput = e=>{
+  const v = +e.target.value;
+  document.getElementById('driftVal').textContent = v===0 ? '关' : v;
+  applyDrift(v);
+  if(S.phase==='map'){ /* 漂移后湖泊/港口判定不追溯，仅视觉 */ }
+};
+document.getElementById('btnCopy').onclick = ()=>{
+  const t = document.getElementById('descText').value;
+  if(!t) return;
+  const done = ()=>{ addLog('📋 描述已复制到剪贴板'); };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(()=>fallbackCopy(t, done));
+  else fallbackCopy(t, done);
+};
+function fallbackCopy(t, done){
+  const ta = document.createElement('textarea');
+  ta.value = t; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); done(); }catch(e){}
+  document.body.removeChild(ta);
+}
+document.getElementById('btnPng').onclick = ()=>{
+  canvas.toBlob(b=>{
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = '地图_' + (S.worldName||'饼干') + '_' + seed + '.png';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+  });
+};
+function updateButtons(){
+  document.getElementById('btnUndo').disabled = S.phase!=='cookie' || !undoStack.length;
+  document.getElementById('btnFin').disabled = S.phase==='map';
+  document.getElementById('btnFin').textContent = S.phase==='map' ? '✅ 已生成' : '✨ 完成生成';
+}
+function addLog(msg){
+  const box = document.getElementById('logBox');
+  const div = document.createElement('div');
+  div.textContent = msg;
+  box.appendChild(div);
+  while(box.children.length>9) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ================= 绘制 ================= */
+function drawPoly(poly, off){
+  ctx.beginPath();
+  ctx.moveTo(poly[0][0]+off[0], poly[0][1]+off[1]);
+  for(let i=1;i<poly.length;i++) ctx.lineTo(poly[i][0]+off[0], poly[i][1]+off[1]);
+  ctx.closePath();
+}
+function drawCrack(c, now){
+  const prog = Math.min(1, (now - c.birth)/350);
+  const n = Math.max(2, Math.floor(c.pts.length * prog));
+  ctx.beginPath();
+  ctx.moveTo(c.pts[0][0], c.pts[0][1]);
+  for(let i=1;i<n;i++) ctx.lineTo(c.pts[i][0], c.pts[i][1]);
+  ctx.stroke();
+}
+function drawFrame(){
+  ctx.strokeStyle = '#8a6f4d'; ctx.lineWidth = 3; ctx.strokeRect(28, 28, DW-56, DH-56);
+  ctx.strokeStyle = '#5a4630'; ctx.lineWidth = 1; ctx.strokeRect(38, 38, DW-76, DH-76);
+}
+function draw(now){
+  ctx.setTransform(dpr*scale, 0, 0, dpr*scale, dpr*ox, dpr*oy);
+  const sx = (Math.random()-0.5)*shake, sy = (Math.random()-0.5)*shake;
+  ctx.translate(sx, sy);
+
+  if(S.phase==='cookie'){
+    // 木桌
+    const g = ctx.createRadialGradient(cookieC[0],cookieC[1],R*0.3, cookieC[0],cookieC[1],R*2.2);
+    g.addColorStop(0, '#241a10'); g.addColorStop(1, '#120d07');
+    ctx.fillStyle = g; ctx.fillRect(-20,-20, DW+40, DH+40);
+    // 摇箱（摇晃法）
+    if(S.method==='shake'){
+      const bx = cookieC[0]-R-44, by = cookieC[1]-R-44, bs = (R+44)*2, br = 26;
+      ctx.beginPath();
+      ctx.moveTo(bx+br, by);
+      ctx.lineTo(bx+bs-br, by); ctx.quadraticCurveTo(bx+bs, by, bx+bs, by+br);
+      ctx.lineTo(bx+bs, by+bs-br); ctx.quadraticCurveTo(bx+bs, by+bs, bx+bs-br, by+bs);
+      ctx.lineTo(bx+br, by+bs); ctx.quadraticCurveTo(bx, by+bs, bx, by+bs-br);
+      ctx.lineTo(bx, by+br); ctx.quadraticCurveTo(bx, by, bx+br, by);
+      ctx.setLineDash([16, 11]);
+      ctx.strokeStyle = 'rgba(200,168,96,' + (0.35 + shakeInt*0.45) + ')';
+      ctx.lineWidth = 3 + shakeInt*2; ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '13px "Microsoft YaHei"'; ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(200,168,96,0.6)';
+      ctx.fillText('📦 摇 箱', cookieC[0], by - 12);
+    }
+    // 饼干碎块（摇晃时整体抖动）
+    ctx.save();
+    if(S.method==='shake') ctx.translate(shakeOff[0], shakeOff[1]);
+    for(const fr of S.fragments){
+      const off = currentOffset(fr, now);
+      const gg = ctx.createRadialGradient(cookieC[0],cookieC[1],R*0.1, cookieC[0],cookieC[1],R*1.15);
+      gg.addColorStop(0, '#cfa66a'); gg.addColorStop(0.75, '#a97a42'); gg.addColorStop(1, '#7a542a');
+      drawPoly(fr.poly, off);
+      ctx.fillStyle = gg; ctx.fill();
+      // ☄ 陨石本体板块：岩石质感
+      if(fr.isMeteor){
+        ctx.fillStyle = 'rgba(96,82,92,0.45)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(fr.centroid[0]+off[0], fr.centroid[1]+off[1], Math.sqrt(fr.area)*0.16, 0, 7);
+        ctx.fillStyle = 'rgba(140,120,110,0.5)'; ctx.fill();
+      }
+      // 碎屑压暗
+      if(fr.area < S.cookieArea*0.004){ ctx.fillStyle = 'rgba(60,35,12,0.28)'; ctx.fill(); }
+      ctx.strokeStyle = '#54351a'; ctx.lineWidth = 2.5; ctx.stroke();
+      for(const d of S.dots){
+        if(d.frag===fr.id){ ctx.beginPath(); ctx.arc(d.x+off[0], d.y+off[1], d.r, 0, 7); ctx.fillStyle = d.c; ctx.fill(); }
+      }
+    }
+    // 裂纹
+    ctx.lineCap = 'round';
+    for(const c of S.cracks){
+      ctx.strokeStyle = 'rgba(40,22,8,0.9)'; ctx.lineWidth = c.width;
+      drawCrack(c, now);
+    }
+    ctx.restore();
+    // 蓄力环
+    if(charging && chargePos){
+      const r = 26 + charge*30 + Math.sin(now/90)*3;
+      ctx.beginPath(); ctx.arc(chargePos[0], chargePos[1], r, 0, 7);
+      ctx.strokeStyle = charge<0.3 ? '#8ac86a' : (charge<0.7 ? '#e8c84a' : '#e05a38');
+      ctx.lineWidth = 3; ctx.stroke();
+      ctx.beginPath(); ctx.arc(chargePos[0], chargePos[1], 5, 0, 7); ctx.fillStyle = '#fff'; ctx.fill();
+    }
+    // 暴力模式白闪
+    if(S.flash>0){ ctx.fillStyle = 'rgba(255,240,210,'+(S.flash*0.28)+')'; ctx.fillRect(-20,-20, DW+40, DH+40); }
+    // 🍽 吃模式：悬停高亮 + 框选预览
+    if(S.eatMode){
+      const tint = fr=>{
+        const off = currentOffset(fr, now);
+        drawPoly(fr.poly, off);
+        ctx.fillStyle = 'rgba(224,90,56,0.3)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(224,90,56,0.9)'; ctx.lineWidth = 2; ctx.stroke();
+      };
+      if(eatSel && Math.hypot(eatSel.x1-eatSel.x0, eatSel.y1-eatSel.y0) >= 10){
+        // 框选中：高亮将被吃掉的碎块 + 虚线选框
+        const xa=Math.min(eatSel.x0,eatSel.x1), xb=Math.max(eatSel.x0,eatSel.x1);
+        const ya=Math.min(eatSel.y0,eatSel.y1), yb=Math.max(eatSel.y0,eatSel.y1);
+        for(const fr of S.fragments){
+          const off = currentOffset(fr, now);
+          const cx=fr.centroid[0]+off[0], cy=fr.centroid[1]+off[1];
+          if(cx>=xa && cx<=xb && cy>=ya && cy<=yb) tint(fr);
+        }
+        ctx.save();
+        ctx.setLineDash([7,5]);
+        ctx.strokeStyle = '#e05a38'; ctx.lineWidth = 2;
+        ctx.strokeRect(xa, ya, xb-xa, yb-ya);
+        ctx.fillStyle = 'rgba(224,90,56,0.08)'; ctx.fillRect(xa, ya, xb-xa, yb-ya);
+        ctx.restore();
+      } else if(eatHover){
+        const fr = S.fragments.find(f=>{
+          const off = currentOffset(f, now);
+          return pointInPoly([eatHover[0]-off[0], eatHover[1]-off[1]], f.poly);
+        });
+        if(fr) tint(fr);
+      }
+    }
+    // 🌠 陨落法：飞行陨石拖尾 + 落地冲击环
+    for(const m of meteors){
+      const t = Math.min(1, (now - m.t0)/m.dur);
+      const x = m.sx + (m.tx-m.sx)*t, y = m.sy + (m.ty-m.sy)*t;
+      const vx = (m.tx-m.sx)/m.dur, vy = (m.ty-m.sy)/m.dur;
+      const tail = 100;
+      const ex = x - vx*tail, ey = y - vy*tail;
+      const gr = ctx.createLinearGradient(ex, ey, x, y);
+      gr.addColorStop(0, 'rgba(255,120,40,0)');
+      gr.addColorStop(0.6, 'rgba(255,150,60,0.55)');
+      gr.addColorStop(1, 'rgba(255,225,160,0.95)');
+      ctx.strokeStyle = gr; ctx.lineWidth = m.big ? 5 + m.f*9 : 3 + m.f*3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(x, y); ctx.stroke();
+      if(m.big){                               // ☄ 大陨石：炽热岩体 + 光晕
+        const rr = 6 + m.f*16;
+        const glow = ctx.createRadialGradient(x, y, rr*0.3, x, y, rr*2.6);
+        glow.addColorStop(0, 'rgba(255,200,120,0.5)');
+        glow.addColorStop(1, 'rgba(255,120,40,0)');
+        ctx.beginPath(); ctx.arc(x, y, rr*2.6, 0, 7); ctx.fillStyle = glow; ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, rr, 0, 7); ctx.fillStyle = '#5a4a52'; ctx.fill();
+        ctx.beginPath(); ctx.arc(x - rr*0.25, y - rr*0.25, rr*0.35, 0, 7); ctx.fillStyle = 'rgba(255,190,110,0.75)'; ctx.fill();
+      } else {
+        ctx.beginPath(); ctx.arc(x, y, 2.5 + m.f*3, 0, 7);
+        ctx.fillStyle = '#fff2d8'; ctx.fill();
+      }
+    }
+    for(let i=impacts.length-1; i>=0; i--){
+      const p = impacts[i];
+      const t = (now - p.t0)/450;
+      if(t>=1){ impacts.splice(i, 1); continue; }
+      const rr = (p.big ? 10 + t*90 : 6 + t*46);
+      ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, 7);
+      ctx.strokeStyle = 'rgba(255,160,70,' + (0.7*(1-t)).toFixed(3) + ')';
+      ctx.lineWidth = (p.big ? 5 : 3)*(1-t) + 1; ctx.stroke();
+    }
+    // 提示
+    ctx.font = '15px "Microsoft YaHei"'; ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(232,216,168,0.75)';
+    ctx.fillText(
+      S.eatMode ? '🍽 吃模式：单击吃掉整块，拖拽框选吃一片（已吃 ' + S.eatCount + ' 块）'
+      : S.method==='shake' ? (S.smashCount===0 ? '📦 按住画布摇晃饼干，松开停止' : '📦 可继续摇晃，满意后点右下角「✨ 完成生成」')
+      : S.method==='meteor' ? (S.bigMeteor
+          ? (S.smashCount===0 ? '☄ 按住蓄力召唤大陨石，松开即陨落（力度=陨石大小与撞击力）' : '☄ 大陨石已坠落成板块，可继续召唤，满意后点「✨ 完成生成」')
+          : (S.smashCount===0 ? '🌠 按住画布召来陨石雨，轰击饼干生成板块' : '🌠 陨石仍在坠落，松开停止，满意后点「✨ 完成生成」'))
+      : S.smashCount===0 ? '🍪 按住饼干任意位置蓄力，松开出拳（可多次捶击）' : '✊ 可继续点选碎块补拳，满意后点右下角「✨ 完成生成」', 30, 40);
+  } else {
+    /* ---------- 地图模式 ---------- */
+    const g = ctx.createLinearGradient(0, 0, 0, DH);
+    g.addColorStop(0, '#16222e'); g.addColorStop(1, '#0e1822');
+    ctx.fillStyle = g; ctx.fillRect(-20,-20, DW+40, DH+40);
+    drawFrame();
+    // 海面波纹
+    ctx.strokeStyle = 'rgba(120,160,190,0.28)'; ctx.lineWidth = 1.5;
+    for(const p of S.seaMarks){
+      ctx.beginPath();
+      ctx.moveTo(p[0]-9, p[1]); ctx.quadraticCurveTo(p[0]-4.5, p[1]-5, p[0], p[1]);
+      ctx.quadraticCurveTo(p[0]+4.5, p[1]+5, p[0]+9, p[1]); ctx.stroke();
+    }
+    // 陆地
+    for(const fr of S.fragments){
+      const off = currentOffset(fr, now);
+      drawPoly(fr.poly, off);
+      if(fr.isLake){ ctx.fillStyle = '#27506a'; ctx.fill(); ctx.strokeStyle = '#3a6a88'; ctx.lineWidth = 1.5; ctx.stroke(); continue; }
+      ctx.fillStyle = BIOME_COLORS[fr.biome] || '#b8a878';
+      ctx.fill();
+      // 羊皮纸做旧
+      ctx.save(); ctx.clip();
+      ctx.fillStyle = 'rgba(60,40,20,0.12)';
+      for(let i=0;i<4;i++) ctx.fillRect(fr.centroid[0]-60+fr.offset[0]+i*7, fr.centroid[1]-60+fr.offset[1], 3, 120);
+      ctx.restore();
+      ctx.strokeStyle = '#2e2115'; ctx.lineWidth = 2.2; ctx.stroke();
+    }
+    // 河流（仅主要）
+    ctx.lineCap = 'round';
+    for(const r of S.rivers){
+      if(!r.major) continue;
+      ctx.strokeStyle = 'rgba(70,120,160,0.95)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(r.pts[0][0], r.pts[0][1]);
+      for(let i=1;i<r.pts.length;i++) ctx.lineTo(r.pts[i][0], r.pts[i][1]);
+      ctx.stroke();
+    }
+    // 山脉（仅主要）
+    for(const m of S.mountains){
+      if(!m.major) continue;
+      const step = 17;
+      let acc = 0;
+      for(let i=0;i<m.pts.length-1;i++){
+        const a = m.pts[i], b = m.pts[i+1];
+        const segLen = dist(a,b);
+        acc += segLen;
+        if(acc >= step){
+          acc = 0;
+          const dx = b[0]-a[0], dy = b[1]-a[1];
+          const ang = Math.atan2(dy, dx);
+          const s = 5 + m.width*1.6;
+          ctx.save(); ctx.translate(a[0], a[1]); ctx.rotate(ang);
+          ctx.beginPath(); ctx.moveTo(-s, s*0.7); ctx.lineTo(0, -s); ctx.lineTo(s, s*0.7); ctx.closePath();
+          ctx.fillStyle = '#4a3a28'; ctx.fill();
+          ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s, s*0.7); ctx.lineTo(s*0.3, s*0.7); ctx.closePath();
+          ctx.fillStyle = '#6a563c'; ctx.fill();
+          ctx.restore();
+        }
+      }
+    }
+    // POI
+    ctx.textAlign = 'left';
+    for(const p of S.pois){
+      const fr = S.fragments.find(f=>f.id===p.frag);
+      const off = fr ? fr.offset : [0,0];
+      const x = p.pos[0]+off[0], y = p.pos[1]+off[1];
+      if(p.type==='首都'){
+        ctx.fillStyle = '#e8c84a';
+        ctx.beginPath();
+        for(let i=0;i<10;i++){ const a=-Math.PI/2 + i*Math.PI/5, rr=i%2?4:9; ctx.lineTo(x+Math.cos(a)*rr, y+Math.sin(a)*rr); }
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#6a5210'; ctx.lineWidth = 1; ctx.stroke();
+      } else if(p.type==='城镇'){
+        ctx.fillStyle = '#d8d0b8'; ctx.fillRect(x-4, y-4, 8, 8);
+        ctx.strokeStyle = '#3a2c1a'; ctx.strokeRect(x-4, y-4, 8, 8);
+      } else if(p.type==='遗迹'){
+        ctx.beginPath(); ctx.moveTo(x, y-6); ctx.lineTo(x+6, y+5); ctx.lineTo(x-6, y+5); ctx.closePath();
+        ctx.strokeStyle = '#c8b890'; ctx.lineWidth = 2; ctx.stroke();
+      } else {
+        ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 7); ctx.strokeStyle = '#9ac8e0'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, y-7); ctx.lineTo(x, y+7); ctx.stroke();
+      }
+      ctx.font = '11px "Microsoft YaHei"';
+      ctx.strokeStyle = 'rgba(240,230,200,0.8)'; ctx.lineWidth = 3;
+      ctx.strokeText(p.name, x+9, y+4);
+      ctx.fillStyle = '#241a10'; ctx.fillText(p.name, x+9, y+4);
+    }
+    // 区域名
+    ctx.textAlign = 'center';
+    for(const fr of S.fragments){
+      if(!fr.name) continue;
+      const x = fr.centroid[0]+fr.offset[0], y = fr.centroid[1]+fr.offset[1];
+      ctx.font = (fr.area > S.cookieArea*0.08 ? 'bold 19px' : 'bold 14px') + ' KaiTi,STKaiti,"楷体",serif';
+      ctx.strokeStyle = fr.isLake ? 'rgba(20,40,55,0.85)' : 'rgba(240,230,200,0.85)';
+      ctx.lineWidth = 4; ctx.strokeText(fr.name, x, y);
+      ctx.fillStyle = fr.isLake ? '#cfe4f0' : '#241a10';
+      ctx.fillText(fr.name, x, y);
+    }
+    // 群岛名（海上，用湖名同款浅色）
+    ctx.font = 'bold 13px KaiTi,STKaiti,"楷体",serif';
+    for(const a of S.archipelagos){
+      ctx.strokeStyle = 'rgba(20,40,55,0.85)'; ctx.lineWidth = 3;
+      ctx.strokeText(a.name, a.cx, a.cy);
+      ctx.fillStyle = '#cfe4f0';
+      ctx.fillText(a.name, a.cx, a.cy);
+    }
+    // 标题横幅
+    ctx.fillStyle = 'rgba(37,28,18,0.92)';
+    ctx.fillRect(DW/2-170, 46, 340, 46);
+    ctx.strokeStyle = '#c8a860'; ctx.lineWidth = 2; ctx.strokeRect(DW/2-170, 46, 340, 46);
+    ctx.font = 'bold 25px KaiTi,STKaiti,"楷体",serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#e8d0a0';
+    ctx.fillText(S.worldName, DW/2, 78);
+    // 罗盘
+    const cxp = DW-95, cyp = 120;
+    ctx.beginPath(); ctx.arc(cxp, cyp, 22, 0, 7); ctx.strokeStyle = '#8a6f4d'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cxp, cyp+14); ctx.lineTo(cxp, cyp-16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cxp, cyp-16); ctx.lineTo(cxp-5, cyp-6); ctx.lineTo(cxp+5, cyp-6); ctx.closePath();
+    ctx.fillStyle = '#c8a860'; ctx.fill();
+    ctx.font = '12px KaiTi,serif'; ctx.fillStyle = '#c8a860'; ctx.fillText('北', cxp, cyp+32);
+    // 落款
+    ctx.textAlign = 'left'; ctx.font = '11px "Microsoft YaHei"'; ctx.fillStyle = 'rgba(200,168,96,0.6)';
+    ctx.fillText('饼干生成法 · 种子 #' + seed + ' · ' + (S.method==='shake' ? '撞击' : S.method==='meteor' ? '轰击' : '捶击') + ' ' + S.smashCount + ' 次', 46, DH-46);
+  }
+}
+
+/* ================= 主循环 ================= */
+let lastTs = 0;
+function loop(ts){
+  const dt = Math.min(0.05, (ts-lastTs)/1000 || 0);
+  lastTs = ts;
+  if(charging){
+    charge = Math.min(1, (ts - chargeStart)/1500);
+    document.getElementById('forceBar').style.width = (charge*100)+'%';
+    document.getElementById('forceVal').textContent = (S.method==='meteor' && S.bigMeteor) ?
+      ('陨石质量 ' + Math.round(charge*100) + '% · ' +
+        (charge<0.35 ? '小陨石（砸出坑洼）' : charge<0.65 ? '中型陨石（环形山隆起）' : charge<0.82 ? '巨陨石（山脉成环！）' : '天体级（本体化作板块！）'))
+      : ('力度 ' + Math.round(charge*100) + '% · ' +
+      (charge<0.3 ? '轻敲（局部裂纹）' : charge<0.6 ? '中击（裂成数块）' : charge<0.9 ? '重击（大量碎块）' : '暴击（粉碎！）'));
+  }
+  if(meteoring && S.phase!=='cookie'){ meteoring = false; resetForceUI(); }
+  if(meteoring){
+    const mInt = Math.min(1, (ts - meteorStart)/2000);
+    document.getElementById('forceBar').style.width = (mInt*100)+'%';
+    document.getElementById('forceVal').textContent = '陨石雨强度 ' + Math.round(mInt*100) + '% · ' +
+      (mInt<0.35 ? '零星流星（偶有陨落）' : mInt<0.7 ? '流星群（密集轰击）' : '陨石风暴（天塌了！）');
+  }
+  meteorStep(ts);
+  if(shaking && S.phase!=='cookie'){ shaking = false; shakeInt = 0; resetForceUI(); }
+  if(shaking){
+    shakeInt = Math.min(1, (ts - shakeStart)/2000);
+    document.getElementById('forceBar').style.width = (shakeInt*100)+'%';
+    document.getElementById('forceVal').textContent = '摇晃强度 ' + Math.round(shakeInt*100) + '% · ' +
+      (shakeInt<0.35 ? '轻摇（偶有磕碰）' : shakeInt<0.7 ? '猛摇（频繁撞击）' : '狂摇（撞箱粉碎！）');
+    const amp = 3 + shakeInt*16;
+    shakeOff = [(Math.random()*2-1)*amp, (Math.random()*2-1)*amp];   // 纯视觉抖动，不耗种子序列
+    shake = Math.max(shake, 2 + shakeInt*6);
+    if(ts >= nextImpact) shakeImpact(ts);
+  } else {
+    shakeOff[0] *= 0.85; shakeOff[1] *= 0.85;
+    if(Math.abs(shakeOff[0])<0.2) shakeOff[0] = 0;
+    if(Math.abs(shakeOff[1])<0.2) shakeOff[1] = 0;
+  }
+  shake = Math.max(0, shake - dt*30);
+  S.flash = Math.max(0, (S.flash||0) - dt*2.2);
+  draw(ts);
+  requestAnimationFrame(loop);
+}
+
+/* ================= 启动 ================= */
+function resize(){
+  const wrap = document.getElementById('canvasWrap');
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  canvas.style.width = w+'px'; canvas.style.height = h+'px';
+  scale = Math.min(w/DW, h/DH);
+  ox = (w - DW*scale)/2; oy = (h - DH*scale)/2;
+}
+window.addEventListener('resize', resize);
+resize();
+newCookie(seed);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
