@@ -506,6 +506,27 @@ title: 🎮 沉答Ai小游戏乐园
     </div>
   </a>
 
+  <!-- ===== 地图生成模拟器 3D ===== -->
+  <a class="game-card" href="games/map3d_v1.4.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #06171f, #143c4c);">
+      <span class="card-cover-emoji">🧊</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">地图生成模拟器 3D</div>
+      <div class="card-desc">同一块饼干，立起来了。捶击碎块化作高差错落的立体大陆，断口露出饼干内芯 —— 而且每块陆地都有自己的性格：山脉、高原、丘陵、盆地、平原、火山各占一方，山脊与鞍部、峡谷与海湾、沙滩与珊瑚礁都有名有姓。饼干形状可自选，画质按帧率自动升降档，成图后自动合批，单文件离线可跑。</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(232,160,74,0.15);color:#e8a04a;">创意生成</span>
+        <span class="tag" style="background:rgba(34,211,238,0.15);color:#22d3ee;">Three.js 3D</span>
+        <span class="tag" style="background:rgba(200,168,96,0.15);color:#c8a860;">世界观</span>
+        <span class="tag" style="background:rgba(255,107,157,0.15);color:#FF6B9D;">v1.4.0</span>
+        <span class="tag" style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);">📴 单文件离线可跑</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#22d3ee,#0e7490);color:#04141a;">▶ 开始生成 (v1.2)</span>
+    </div>
+  </a>
+
   <div class="game-card coming-soon">
     <div class="card-cover" style="background: linear-gradient(135deg, #1a1a1a, #2a2a2a);">
       <span class="card-cover-emoji">💣</span>
