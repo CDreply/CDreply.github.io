@@ -196,6 +196,9 @@ github-pages/
 │   ├── map_gen_v1.7.html             # 🍪 地图生成模拟器
 │   └── map3d_v1.4.html               # 🧊 地图生成模拟器 3D（Three.js 已内联）
 ├── XGJ/                     # 🔧 小工具
+├── GJZJ/                    # ⚙️ 搞机总结
+│   ├── index.html                   # 分类页
+│   └── termux_upgrade_2026.html     # 🧰 Termux 跨四年全量升级实录
 ├── JDSH/                    # 夹带私货
 ├── DEPLOYMENT_GUIDE.md      # 部署指南
 └── README.md                # 本文档

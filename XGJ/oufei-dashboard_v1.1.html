@@ -1,0 +1,2362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>欧非仪表盘 · 卡池概率模拟器</title>
+<style>
+:root{
+  --bg:#0B0E14; --panel:#111621; --panel2:#161C28; --panel3:#1B2230;
+  --line:#222B3A; --line2:#2C374A;
+  --text:#E6EAF2; --dim:#8A94A6; --dim2:#5A6478;
+  --gold:#E8B84B; --gold-d:#2A2213;
+  --purple:#A78BFA; --purple-d:#1E1A2E;
+  --gray:#39415A; --gray2:#4A5470;
+  --teal:#4ECDC4; --red:#F87171; --green:#5DD39E;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+  font-size:14px; line-height:1.5;
+  display:grid; grid-template-rows:52px 1fr 246px;
+  overflow:hidden;
+}
+.num{font-family:"JetBrains Mono","SF Mono",Consolas,monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- header ---------- */
+header{
+  display:flex; align-items:center; gap:16px; padding:0 18px;
+  border-bottom:1px solid var(--line); background:var(--panel);
+}
+.logo{display:flex;align-items:baseline;gap:9px;white-space:nowrap}
+.logo b{font-size:16px;font-weight:600;letter-spacing:.5px}
+.logo span{font-size:11px;color:var(--dim2);letter-spacing:1.5px;text-transform:uppercase}
+.spacer{flex:1}
+select,input,button{font-family:inherit;font-size:13px;color:var(--text);outline:none}
+select{
+  background:var(--panel2); border:1px solid var(--line2); border-radius:7px;
+  padding:7px 10px; cursor:pointer; min-width:190px;
+}
+select:hover{border-color:var(--gray2)}
+button.icon-btn{padding:7px 10px;font-size:14px;line-height:1}
+button{
+  background:var(--panel2); border:1px solid var(--line2); border-radius:7px;
+  padding:7px 13px; cursor:pointer; transition:.15s;
+}
+button:hover{background:var(--panel3);border-color:var(--gray2)}
+button:active{transform:translateY(1px)}
+button.primary{background:var(--gold);border-color:var(--gold);color:#1A1400;font-weight:600}
+button.primary:hover{background:#F2C65C}
+button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* ---------- layout ---------- */
+.app{display:grid;grid-template-columns:288px 1fr 312px;overflow:hidden}
+.col{overflow-y:auto;overflow-x:hidden}
+.col::-webkit-scrollbar{width:8px}
+.col::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+.col-left{border-right:1px solid var(--line);background:var(--panel)}
+.col-right{border-left:1px solid var(--line);background:var(--panel)}
+.col-mid{display:flex;flex-direction:column;min-width:0;min-height:0}
+
+.pane-title{
+  font-size:11px;color:var(--dim2);letter-spacing:1.2px;padding:14px 16px 8px;
+  text-transform:uppercase;
+}
+
+/* ---------- left: params ---------- */
+.field{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;gap:10px}
+.field label{color:var(--dim);font-size:13px;flex:1;white-space:nowrap}
+.field .iw{display:flex;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:0 8px}
+.field .iw:focus-within{border-color:var(--gray2)}
+.field input[type=number]{
+  width:64px;background:none;border:none;padding:6px 0;text-align:right;
+  font-family:"JetBrains Mono",Consolas,monospace;font-size:13px;
+}
+.field .unit{color:var(--dim2);font-size:11px;margin-left:5px;min-width:22px}
+.switch{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.switch input{appearance:none;width:34px;height:19px;background:var(--gray);border-radius:10px;position:relative;cursor:pointer;transition:.2s;flex:none}
+.switch input:checked{background:var(--gold)}
+.switch input::after{content:"";position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s}
+.switch input:checked::after{left:17px}
+.switch span{font-size:12.5px;color:var(--dim)}
+
+.srcbox{margin:10px 16px;padding:10px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+.tip{font-size:11.5px;color:var(--dim2);line-height:1.65;padding:0 16px 10px}
+.srcbox .row{display:flex;gap:6px;align-items:baseline;margin-bottom:5px}
+.srcbox .row:last-child{margin-bottom:0}
+.srcbox .tag{font-size:10px;padding:1px 6px;border-radius:4px;flex:none;letter-spacing:.5px}
+.tag.official{background:#123A2A;color:var(--green)}
+.tag.fitted{background:#3A2F14;color:var(--gold)}
+.srcbox p{font-size:11.5px;color:var(--dim2);line-height:1.6}
+.srcbox a{color:var(--teal);text-decoration:none}
+
+/* ---------- middle ---------- */
+.stage{flex:1;display:flex;flex-direction:column;min-height:0;padding:12px 16px 10px;gap:8px}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px}
+.seg button{background:none;border:none;padding:5px 12px;border-radius:6px;color:var(--dim);font-size:12.5px}
+.seg button.on{background:var(--panel3);color:var(--text);box-shadow:inset 0 0 0 1px var(--line2)}
+.mode-seg{margin-left:2px}
+.mode-seg button{padding:6px 11px}
+
+.wide-btn{width:calc(100% - 32px);margin:6px 16px 0;padding:8px;font-size:12.5px;color:var(--dim)}
+.lot-row{padding:9px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.lot-row .top{display:flex;align-items:center;gap:6px}
+.lot-row input[type=color]{width:22px;height:22px;padding:0;border:1px solid var(--line2);border-radius:4px;background:none;cursor:pointer;flex:none}
+.lot-row input[type=text]{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:4px 7px;font-size:12.5px}
+.lot-row input[type=number]{width:50px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:4px 6px;font-size:12px;text-align:right;font-family:Consolas,monospace}
+.lot-row .del{width:22px;height:22px;padding:0;border-radius:4px;font-size:13px;line-height:1;color:var(--dim2);flex:none}
+.lot-row .del:hover{color:var(--red);border-color:var(--red)}
+.lot-row .pct{font-size:11px;color:var(--dim2)}
+.lot-row .pct b{color:var(--gold);font-family:Consolas,monospace;font-weight:500}
+.pity{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
+.pity .track{width:132px;height:5px;background:var(--gray);border-radius:3px;overflow:hidden}
+.pity .fill{height:100%;background:linear-gradient(90deg,var(--teal),var(--gold));width:0;transition:width .35s}
+.guar{font-size:11px;padding:2px 7px;border-radius:4px;background:#3A2F14;color:var(--gold);display:none}
+.guar.on{display:inline-block}
+
+.viewwrap{flex:1;position:relative;min-height:150px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
+#view{display:block;width:100%;height:100%}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;flex-direction:column;gap:6px}
+.bigprob{font-size:34px;font-weight:600;font-family:"JetBrains Mono",Consolas,monospace;letter-spacing:-1px;
+  text-shadow:0 0 16px rgba(11,14,20,.95),0 0 4px rgba(11,14,20,1)}
+.bigprob small{font-size:12px;color:var(--dim2);font-weight:400;letter-spacing:0;margin-left:4px}
+.probsub{font-size:11.5px;color:var(--dim2);text-shadow:0 0 8px rgba(11,14,20,.95)}
+
+.actions{display:flex;gap:8px;align-items:stretch}
+.actions button{flex:1;padding:11px 8px;font-size:13.5px}
+.actions select{
+  flex:0 0 100px;padding:0 4px;font-size:12px;background:var(--panel2);
+  border:1px solid var(--line2);border-radius:7px;cursor:pointer;
+}
+.results{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;min-height:42px;padding-bottom:2px}
+.results .card{
+  height:42px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;border:1px solid transparent;animation:pop .3s ease-out;
+}
+.legend{
+  position:absolute;right:12px;bottom:10px;display:flex;flex-direction:column;gap:4px;
+  font-size:11px;color:var(--dim);pointer-events:none;
+}
+.legend div{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block;flex:none}
+.legend b{font-family:Consolas,monospace;color:var(--text);font-weight:500;min-width:52px;text-align:right}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+.card.none{background:var(--panel2);color:var(--dim2);border-color:var(--line)}
+.card.up{background:linear-gradient(160deg,#E8B84B,#C8912F);color:#241A00;box-shadow:0 0 14px rgba(232,184,75,.35)}
+.card.off{background:linear-gradient(160deg,#A78BFA,#7C5CF0);color:#140F26}
+
+/* ---------- right: dashboard ---------- */
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);margin:0 12px;border-radius:8px;overflow:hidden}
+.kpi .cell{background:var(--panel2);padding:9px 11px}
+.kpi .k{font-size:11px;color:var(--dim2);margin-bottom:3px}
+.kpi .v{font-size:17px;font-weight:600;font-family:"JetBrains Mono",Consolas,monospace}
+.kpi .v small{font-size:10.5px;color:var(--dim2);font-weight:400}
+.verdict{margin:10px 12px 0;padding:9px 11px;border-radius:8px;font-size:12px;background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
+.verdict b{color:var(--text)}
+.verdict.ok{border-color:#1E4A38;background:#0F2119}
+.verdict.warn{border-color:#4A3A18;background:#211A0E}
+.verdict.bad{border-color:#4A2020;background:#210E0E}
+
+.qbar{margin:12px;padding:12px 12px 8px;background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+.qbar .h{display:flex;justify-content:space-between;font-size:11px;color:var(--dim2);margin-bottom:8px}
+.qbar .track{height:8px;background:var(--gray);border-radius:4px;position:relative;overflow:hidden}
+.qbar .span{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,rgba(78,205,196,.5),rgba(232,184,75,.6));border-radius:4px}
+.qbar .med{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--gold)}
+.qtick{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim2);margin-top:6px;font-family:Consolas,monospace}
+
+.mini{margin:12px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.mini .r{display:flex;justify-content:space-between;padding:6px 11px;font-size:12px;border-bottom:1px solid var(--line)}
+.mini .r:last-child{border-bottom:none}
+.mini .r span:first-child{color:var(--dim2)}
+.mini .r span:last-child{font-family:Consolas,monospace}
+
+/* ---------- bottom charts ---------- */
+.charts{border-top:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.chart-head{display:flex;align-items:center;gap:10px;padding:8px 16px 0}
+.chart-head .seg button{padding:4px 10px;font-size:12px}
+.chart-body{flex:1;position:relative;min-height:0;padding:0 8px 6px}
+#chart{display:block;width:100%;height:100%}
+
+.hint{font-size:11px;color:var(--dim2);margin-left:auto}
+@media(max-width:1180px){
+  body{grid-template-rows:auto auto auto;overflow:auto;height:auto}
+  .app{grid-template-columns:1fr}
+  .col{border:none;border-bottom:1px solid var(--line);max-height:none}
+  .col-mid{min-height:520px}
+  .charts{height:280px}
+  header{flex-wrap:wrap;padding:8px 12px;height:auto}
+  .field{max-width:480px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><b>欧非仪表盘</b><span>gacha scope</span></div>
+  <div class="seg mode-seg" id="modeSeg">
+    <button data-mode="gacha" class="on">卡池模拟</button>
+    <button data-mode="lottery">自定义抽奖</button>
+  </div>
+  <select id="bannerSel"></select>
+  <div class="spacer"></div>
+  <button id="btnSound" class="icon-btn" title="音效开关">🔊</button>
+  <button id="btnImport">导入配置</button>
+  <button id="btnExport">导出</button>
+  <button id="btnTpl">复制模板</button>
+  <button id="btnReset">恢复默认</button>
+  <input type="file" id="fileIn" accept=".json,application/json" hidden>
+</header>
+
+<div class="app">
+
+  <aside class="col col-left">
+    <div id="paneGacha">
+      <div class="pane-title">卡池参数</div>
+      <div class="field">
+        <label>基础出率</label>
+        <div class="iw"><input type="number" id="f-base" step="0.01" min="0" max="100"><span class="unit">%</span></div>
+      </div>
+      <div class="field">
+        <label>软保底起点</label>
+        <div class="iw"><input type="number" id="f-softStart" step="1" min="0"><span class="unit">抽</span></div>
+      </div>
+      <div class="field">
+        <label>软保底步长</label>
+        <div class="iw"><input type="number" id="f-softStep" step="0.01" min="0"><span class="unit">%/抽</span></div>
+      </div>
+      <div class="field">
+        <label>硬保底</label>
+        <div class="iw"><input type="number" id="f-hard" step="1" min="1"><span class="unit">抽</span></div>
+      </div>
+      <div class="field">
+        <label>UP 占比</label>
+        <div class="iw"><input type="number" id="f-up" step="1" min="0" max="100"><span class="unit">%</span></div>
+      </div>
+      <div class="field">
+        <label>大小保底</label>
+        <label class="switch"><input type="checkbox" id="f-guarantee"><span>歪了下次必中</span></label>
+      </div>
+
+      <div class="srcbox" id="srcbox"></div>
+    </div>
+
+    <div id="paneLot" style="display:none">
+      <div class="pane-title">奖品与权重</div>
+      <div id="lotList"></div>
+      <button id="btnAddItem" class="wide-btn">+ 添加奖品</button>
+      <div class="field" style="margin-top:8px">
+        <label>头奖保底</label>
+        <div class="iw"><input type="number" id="f-pityN" min="0" max="9999" value="10"><span class="unit">连</span></div>
+      </div>
+      <p class="tip">连续这么多次没中头奖（列表第一项），下一抽必定中。填 0 表示不设保底。</p>
+      <div class="srcbox">
+        <div class="row"><span class="tag fitted">自定义</span><span style="font-size:11.5px;color:var(--dim)">概率 = 权重 ÷ 权重总和</span></div>
+        <p>转盘扇区与方阵面积严格按这个比例绘制，改权重就能看见盘面跟着变。填 0 的奖品会被跳过。</p>
+      </div>
+    </div>
+
+    <div class="pane-title">抽卡设定</div>
+    <div class="field">
+      <label>启用保底机制</label>
+      <label class="switch"><input type="checkbox" id="f-usePity" checked><span>关掉即真随机</span></label>
+    </div>
+    <p class="tip">关闭后每抽独立同概率，不受抽数影响，也不会触发硬保底。</p>
+  </aside>
+
+  <section class="col col-mid">
+    <div class="stage">
+
+      <div class="bar">
+        <div class="seg" id="viewSeg">
+          <button data-view="wheel" class="on">转盘</button>
+          <button data-view="treemap">方阵</button>
+          <button data-view="grid">数据流</button>
+        </div>
+        <div class="pity">
+          <span>保底</span>
+          <div class="track"><div class="fill" id="pityFill"></div></div>
+          <span class="num" id="pityTxt">0/90</span>
+          <span class="guar" id="guarBadge">大保底</span>
+        </div>
+        <div class="spacer" style="flex:1"></div>
+        <div class="hint">本次会话 <b class="num" id="sessPulls">0</b> 抽</div>
+      </div>
+
+      <div class="viewwrap">
+        <canvas id="view"></canvas>
+        <div class="overlay" id="overlayWheel">
+          <div class="bigprob" id="bigProb">0.60<small>%</small></div>
+          <div class="probsub" id="bigProbSub">本抽出货概率</div>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="actions">
+        <button id="btnOne">单抽</button>
+        <button id="btnTen" class="primary">十连</button>
+        <select id="batchN">
+          <option value="10000">1 万周期</option>
+          <option value="100000" selected>10 万周期</option>
+          <option value="1000000">100 万周期</option>
+        </select>
+        <button id="btnRun">批量模拟</button>
+      </div>
+
+      <div class="results" id="results"></div>
+    </div>
+  </section>
+
+  <aside class="col col-right">
+    <div class="pane-title" id="rightTitle">本次模拟</div>
+    <div class="kpi">
+      <div class="cell"><div class="k" id="kRateL">实测出率</div><div class="v" id="kRate">—</div></div>
+      <div class="cell"><div class="k" id="kOfficialL">公示综合率</div><div class="v" id="kOfficial">—</div></div>
+      <div class="cell"><div class="k" id="kMeanL">平均出货</div><div class="v" id="kMean">—<small>抽</small></div></div>
+      <div class="cell"><div class="k" id="kMedianL">中位数</div><div class="v" id="kMedian">—<small>抽</small></div></div>
+      <div class="cell"><div class="k" id="kBestL">最欧</div><div class="v" id="kBest">—<small>抽</small></div></div>
+      <div class="cell"><div class="k" id="kWorstL">最非</div><div class="v" id="kWorst">—<small>抽</small></div></div>
+    </div>
+
+    <div class="verdict" id="verdict">跑一次模拟，这里会告诉你实测结果和公示值的偏差是否在正常范围内。</div>
+
+    <div class="qbar">
+      <div class="h"><span id="qTitle">出货抽数分布</span><span id="qLabel">P10–P90</span></div>
+      <div class="track"><div class="span" id="qSpan" style="left:0;width:0"></div><div class="med" id="qMed" style="left:0"></div></div>
+      <div class="qtick" id="qTicks"><span>1</span><span>45</span><span>90</span></div>
+    </div>
+
+    <div class="mini">
+      <div class="r"><span id="mUpL">UP 命中率</span><span id="mUp">—</span></div>
+      <div class="r"><span id="mHitsL">出货次数</span><span id="mHits">—</span></div>
+      <div class="r"><span id="mPullsL">总抽数</span><span id="mPulls">—</span></div>
+      <div class="r"><span id="mZL">偏差 σ</span><span id="mZ">—</span></div>
+    </div>
+  </aside>
+</div>
+
+<section class="charts">
+  <div class="chart-head">
+    <div class="seg" id="chartSeg">
+      <button data-chart="dist" class="on">出货分布</button>
+      <button data-chart="cdf">累积概率</button>
+      <button data-chart="time">出货时间轴</button>
+    </div>
+    <div class="hint" id="chartHint">横轴抽数 · 柱高为该抽出货占比</div>
+  </div>
+  <div class="chart-body"><canvas id="chart"></canvas></div>
+</section>
+
+<script>
+(function(){
+'use strict';
+
+/* ============ 卡池模板 ============ */
+var BANNERS = [
+  {
+    id:'genshin', name:'原神 · 角色活动祈愿',
+    base:0.6, softStart:74, softStep:6, hard:90, up:50, guarantee:true,
+    official:1.6,
+    src:'米哈游《原神》祈愿详情页 · 基础 0.600% / 综合 1.600% / 最多 90 次',
+    conf:'official',
+    note:'官方仅公示基础率与综合率。"74 抽起每抽 +6%"是社区长期拟合值，非官方公布。'
+  },
+  {
+    id:'hsr', name:'崩坏：星穹铁道 · 角色活动跃迁',
+    base:0.6, softStart:74, softStep:6, hard:90, up:50, guarantee:true,
+    official:1.6,
+    src:'米哈游《星穹铁道》跃迁详情页 · 基础 0.600% / 综合 1.600% / 最多 90 次',
+    conf:'official',
+    note:'与角色祈愿同构，软保底参数同为社区拟合。'
+  },
+  {
+    id:'wuwa', name:'鸣潮 · 角色活动唤取',
+    base:0.8, softStart:70, softStep:7, hard:80, up:50, guarantee:true,
+    official:1.8,
+    src:'库洛《鸣潮》唤取详情页 · 基础 0.8% / 综合 1.8% / 最多 80 次',
+    conf:'fitted',
+    note:'官方未公布软保底区间。此处的起点与步长按"综合率对齐 1.8%"反解得出，属拟合参数。'
+  },
+  {
+    id:'arknights', name:'明日方舟 · 标准寻访',
+    base:2, softStart:51, softStep:2, hard:99, up:50, guarantee:false,
+    official:null,
+    src:'鹰角《明日方舟》抽取概率公示 · 六星 2% / 连续 50 次未出后每抽 +2%',
+    conf:'official',
+    note:'官方明确"每次提高 2% 直至 100%"，故第 99 抽必出，无固定硬保底数值。'
+  },
+  {
+    id:'hi3', name:'崩坏3 · 扩充补给',
+    base:1.5, softStart:0, softStep:0, hard:90, up:100, guarantee:false,
+    official:null,
+    src:'米哈游《崩坏3》扩充补给公告 · S 级 1.5% / 90 次内必出本期 S',
+    conf:'official',
+    note:'没有软保底：1.5% 恒定到第 90 抽。硬保底直接给出本期 UP，不存在歪。'
+  }
+];
+
+/* ============ 状态 ============ */
+var S = {
+  mode: 'gacha',    // gacha = 卡池模拟，lottery = 自定义抽奖
+  cfg: null,
+  pity: 0,          // 距上次出货已抽数
+  guaranteed: false,
+  usePity: true,        // 当前模式的保底开关
+  pityOnGacha: true,    // 卡池模拟：默认开
+  pityOnLot: false,     // 自定义抽奖：默认关（真随机）
+  view: 'wheel',
+  chart: 'dist',
+  sess: { pulls:0, hits:0, ups:0, hist:null, timeline:[], best:0, worst:0 },
+  batch: null,      // 批量模拟结果
+  anim: null,
+  lastDraw: null,   // 上一抽的快照 {segs, angle, result}，用于让指针与结果对得上
+  lot: {
+    items: [
+      { name:'一等奖',   weight:1,  color:'#E8B84B' },
+      { name:'二等奖',   weight:3,  color:'#A78BFA' },
+      { name:'三等奖',   weight:6,  color:'#4ECDC4' },
+      { name:'谢谢参与', weight:20, color:'#39415A' }
+    ],
+    pityN: 10,
+    pityCount: 0
+  },
+  lotSess: null,
+  lotBatch: null
+};
+
+/* 直方图长度必须跟着硬保底走：写死 200 会让 hard>200 的保底彻底失效
+   （pity 被钳在 200，永远满足不了 n+1 >= hard，那个池子就再也抽不出货） */
+function histSize(){
+  var h = (S.cfg && isFinite(S.cfg.hard)) ? Math.ceil(S.cfg.hard) : 100;
+  if (h < 64) h = 64;
+  if (h > 20000) h = 20000;
+  return h + 2;
+}
+
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+function initCfg(b){
+  S.cfg = {
+    id:b.id, name:b.name, base:b.base, softStart:b.softStart, softStep:b.softStep,
+    hard:b.hard, up:b.up, guarantee:b.guarantee, official:b.official,
+    src:b.src, conf:b.conf, note:b.note
+  };
+}
+
+/* ============ 概率内核 ============ */
+/* n = 已经连续未出货的抽数（0 表示这一抽是新一轮的第 1 抽） */
+function probAt(cfg, n, usePity){
+  var p = cfg.base / 100;
+  if (usePity){
+    if (cfg.softStep > 0 && cfg.softStart > 0 && (n + 1) >= cfg.softStart){
+      p += (n + 2 - cfg.softStart) * cfg.softStep / 100;
+    }
+    if (n + 1 >= cfg.hard) p = 1;
+  }
+  return p > 1 ? 1 : p;
+}
+
+/* 密码学随机，缓冲池降低 getRandomValues 调用次数 */
+var RNG = (function(){
+  var buf = new Uint32Array(2048), i = 2048;
+  return {
+    next: function(){
+      if (i >= 2048){ crypto.getRandomValues(buf); i = 0; }
+      return buf[i++] / 4294967296;
+    }
+  };
+})();
+/* 音效：Web Audio 现场合成，不加载任何外部文件 */
+var AUDIO = {
+  ctx: null, master: null, on: true,
+  init: function(){
+    if (this.ctx){
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      return;
+    }
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    this.ctx = new AC();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.62;
+    /* 多个音叠加时容易削波，挂一个压缩器，响度上去了也不会破音 */
+    var comp = this.ctx.createDynamicsCompressor();
+    comp.threshold.value = -14;
+    comp.knee.value = 8;
+    comp.ratio.value = 10;
+    comp.attack.value = 0.003;
+    comp.release.value = 0.2;
+    this.master.connect(comp);
+    comp.connect(this.ctx.destination);
+  },
+  tone: function(freq, dur, type, gain, delay){
+    if (!this.on || !this.ctx) return;
+    var t0 = this.ctx.currentTime + (delay || 0);
+    var o = this.ctx.createOscillator();
+    var g = this.ctx.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain || 0.2, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g);
+    g.connect(this.master);
+    o.start(t0);
+    o.stop(t0 + dur + 0.03);
+  },
+  /* 起手：一声上扫的「呼」，给动画一个起点 */
+  draw: function(){
+    if (!this.on || !this.ctx) return;
+    var t0 = this.ctx.currentTime;
+    var o = this.ctx.createOscillator();
+    var g = this.ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(200, t0);
+    o.frequency.exponentialRampToValueAtTime(760, t0 + 0.26);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.13, t0 + 0.035);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.3);
+    o.connect(g);
+    g.connect(this.master);
+    o.start(t0);
+    o.stop(t0 + 0.34);
+  },
+  /* 未中：低沉短音，音高轻微随机，避免每次一模一样 */
+  miss: function(){
+    this.tone(176 + Math.random() * 22, 0.075, 'triangle', 0.075);
+  },
+  /* 歪 / 小奖：两个上行音 + 一点泛音 */
+  off: function(){
+    this.tone(587.33, 0.14, 'sine', 0.2);
+    this.tone(739.99, 0.3, 'sine', 0.2, 0.09);
+    this.tone(880.00, 0.42, 'triangle', 0.06, 0.2);
+  },
+  /* UP / 头奖：C-E-G-C 琶音 + 大三和弦 + C3 低频垫底 */
+  up: function(){
+    var seq = [523.25, 659.25, 783.99, 1046.50];
+    for (var i = 0; i < seq.length; i++){
+      this.tone(seq[i], i === 3 ? 0.6 : 0.2, 'sine', 0.27, i * 0.085);
+    }
+    this.tone(130.81, 0.5, 'sine', 0.22, 0.33);
+    this.tone(261.63, 0.42, 'triangle', 0.09, 0.34);
+    this.tone(1046.50, 1.0, 'triangle', 0.13, 0.35);
+    this.tone(1318.51, 1.0, 'triangle', 0.1, 0.35);
+    this.tone(1567.98, 1.0, 'triangle', 0.075, 0.35);
+  }
+};
+
+/* 按本次结果挑选音效：2 = 大奖，1 = 中等，0 = 未中/小奖 */
+function playResultSound(list){
+  if (!list || !list.length || !AUDIO.on) return;
+  AUDIO.init();
+  var best = 0;
+  if (S.mode === 'lottery'){
+    for (var k = 0; k < list.length; k++){
+      var idx = list[k].idx;
+      var pr = lotProb(idx);
+      var lvl = (idx === 0 || pr <= 0.05) ? 2 : (pr <= 0.25 ? 1 : 0);
+      if (lvl > best) best = lvl;
+      if (best === 2) break;
+    }
+  } else {
+    for (var i = 0; i < list.length; i++){
+      if (list[i].hit && list[i].up){ best = 2; break; }
+      if (list[i].hit) best = 1;
+    }
+  }
+  if (best === 2) AUDIO.up();
+  else if (best === 1) AUDIO.off();
+  else AUDIO.miss();
+}
+
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* 抽一次，返回 {hit, up, p}，p 是"抽之前"这一抽的真实概率 */
+function pullOne(rand){
+  var cfg = S.cfg;
+  var p = probAt(cfg, S.pity, S.usePity);
+  var hit = rand() < p;
+  var up = false;
+  if (hit){
+    if (S.guaranteed){ up = true; S.guaranteed = false; }
+    else if (rand() < cfg.up / 100){ up = true; }
+    else if (cfg.guarantee){ S.guaranteed = true; }
+    S.pity = 0;
+  } else {
+    S.pity++;
+    /* 防御：配置极端时不至于无限增长，正常情况到 hard 就必出了 */
+    if (S.pity > 50000) S.pity = 0;
+  }
+  return { hit:hit, up:up, p:p };
+}
+
+function resetSession(){
+  S.pity = 0; S.guaranteed = false;
+  S.lastDraw = null;
+  S.sess = { pulls:0, hits:0, ups:0, hist:new Float64Array(histSize()), timeline:[], best:0, worst:0 };
+  S.batch = null;
+}
+
+/* ============ 批量模拟 ============ */
+function runBatch(times){
+  S.lastDraw = null;
+  var cfg = S.cfg;
+  var rand = mulberry32(1024 + times);
+  /* 关掉保底时间隔没有上界，直方图要开大一些 */
+  var hist = new Float64Array(S.usePity ? histSize() : 20002);
+  var totalPulls = 0, hits = 0, ups = 0, best = 1e9, worst = 0;
+  var timeline = [] , tlCap = 4000;
+  var pity = 0, guaranteed = false;
+  var capGap = S.usePity ? (cfg.hard + 5) : 20000;
+
+  for (var t = 0; t < times; t++){
+    /* 上一轮刚出过货，计数归零；但大保底状态必须跨轮继承，
+       否则 UP 命中率会被永远算成 50%，而真实值应是 2/3 */
+    pity = 0;
+    var sinceStart = 0;
+    while (true){
+      var n = pity;
+      var p = probAt(cfg, n, S.usePity);
+      totalPulls++;
+      sinceStart++;
+      if (rand() < p){
+        hits++;
+        if (sinceStart < hist.length) hist[sinceStart] = hist[sinceStart] + 1;
+        if (sinceStart > worst) worst = sinceStart;
+        if (sinceStart < best) best = sinceStart;
+        if (timeline.length < tlCap) timeline.push(sinceStart);
+        if (guaranteed){ ups++; guaranteed = false; }
+        else if (rand() < cfg.up / 100){ ups++; }
+        else if (cfg.guarantee){ guaranteed = true; }
+        break;
+      }
+      pity++;
+      if (sinceStart > capGap) break;
+    }
+  }
+
+  S.batch = {
+    times:times, pulls:totalPulls, hits:hits, ups:ups,
+    rate: hits / totalPulls,
+    hist:hist, timeline:timeline, best:best, worst:worst
+  };
+  /* 批量跑的是统计，不是具体某一次抽卡，把上次的单抽结果清掉免得看混 */
+  document.getElementById('results').innerHTML = '';
+  renderAll();
+}
+
+/* ============ 自定义抽奖内核 ============ */
+function lotTotal(){
+  var t = 0;
+  for (var i = 0; i < S.lot.items.length; i++) t += Math.max(0, S.lot.items[i].weight || 0);
+  return t;
+}
+function lotProb(i){
+  var t = lotTotal();
+  if (t <= 0) return 0;
+  return Math.max(0, S.lot.items[i].weight || 0) / t;
+}
+/* 含保底后的实际命中概率：保底会把头奖概率抬高，界面必须用这个值对账 */
+function lotEffectiveProb(i){
+  var p = lotProb(i);
+  if (i !== 0) return p;
+  if (p <= 0) return 0;
+  if (!S.usePity || S.lot.pityN <= 0) return p;
+  if (p >= 1) return 1;
+  var N = S.lot.pityN;
+  var q = 1 - p;
+  var sum = 0;
+  for (var k = 1; k <= N; k++) sum += k * p * Math.pow(q, k - 1);
+  var E = sum + (N + 1) * Math.pow(q, N);
+  return E > 0 ? 1 / E : p;
+}
+function newCounts(){
+  var a = [];
+  for (var i = 0; i < S.lot.items.length; i++) a.push(0);
+  return a;
+}
+function resetLotSess(){
+  S.lot.pityCount = 0;
+  S.lastDraw = null;
+  S.lotSess = { pulls:0, counts:newCounts(), gaps:[], lastAt:0, best:0, worst:0 };
+  S.lotBatch = null;
+}
+function pullLottery(rand){
+  var items = S.lot.items;
+  var n = items.length;
+  if (!n) return { idx:-1, p:0 };
+  // 头奖保底：连续 pityN 次没中第一项，这一抽直接给（头奖权重为 0 时保底无意义）
+  if (S.usePity && S.lot.pityN > 0 && lotProb(0) > 0 && S.lot.pityCount >= S.lot.pityN){
+    S.lot.pityCount = 0;
+    return { idx:0, p:1, pity:true };
+  }
+  var total = lotTotal();
+  var r = rand() * total;
+  var acc = 0;
+  for (var i = 0; i < n; i++){
+    acc += Math.max(0, items[i].weight || 0);
+    if (r < acc){
+      if (i === 0) S.lot.pityCount = 0; else S.lot.pityCount++;
+      return { idx:i, p: total > 0 ? Math.max(0, items[i].weight || 0) / total : 0 };
+    }
+  }
+  if (n > 1) S.lot.pityCount++;
+  return { idx:n - 1, p:0 };
+}
+/* 依据背景色亮度决定文字用黑还是白 */
+function textOn(hex){
+  if (!hex || hex.length < 7) return '#F5F5F5';
+  var r = parseInt(hex.slice(1, 3), 16);
+  var g = parseInt(hex.slice(3, 5), 16);
+  var b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 140 ? '#141414' : '#F5F5F5';
+}
+
+/* ============ 统计工具 ============ */
+function quantileFromHist(hist, hits, q){
+  var target = hits * q, acc = 0;
+  for (var i = 1; i < hist.length; i++){
+    acc += hist[i];
+    if (acc >= target) return i;
+  }
+  return hist.length - 1;
+}
+
+function erf(x){
+  var s = x < 0 ? -1 : 1; x = Math.abs(x);
+  var a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  var t = 1/(1+p*x);
+  var y = 1 - (((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
+  return s*y;
+}
+
+/* 二项检验：实测出货数与理论期望的偏离（多少个标准差） */
+function binomialZ(observed, p, n){
+  if (n <= 0) return 0;
+  var sd = Math.sqrt(n * p * (1 - p));
+  if (sd === 0) return 0;
+  return (observed - n * p) / sd;
+}
+function twoSidedP(z){
+  return 1 - erf(Math.abs(z) / Math.SQRT2);
+}
+
+/* ============ 渲染：卡池下拉 ============ */
+var sel = document.getElementById('bannerSel');
+BANNERS.forEach(function(b,i){
+  var o = document.createElement('option');
+  o.value = i; o.textContent = b.name;
+  sel.appendChild(o);
+});
+var optCustom = document.createElement('option');
+optCustom.value = 'custom';
+optCustom.textContent = '自定义配置（已导入）';
+optCustom.style.display = 'none';
+sel.appendChild(optCustom);
+
+/* ============ 渲染：参数面板 ============ */
+var F = {
+  base: document.getElementById('f-base'),
+  softStart: document.getElementById('f-softStart'),
+  softStep: document.getElementById('f-softStep'),
+  hard: document.getElementById('f-hard'),
+  up: document.getElementById('f-up'),
+  guarantee: document.getElementById('f-guarantee')
+};
+
+function syncFields(){
+  F.base.value = S.cfg.base;
+  F.softStart.value = S.cfg.softStart;
+  F.softStep.value = S.cfg.softStep;
+  F.hard.value = S.cfg.hard;
+  F.up.value = S.cfg.up;
+  F.guarantee.checked = S.cfg.guarantee;
+  renderSource();
+}
+
+function renderSource(){
+  var box = document.getElementById('srcbox');
+  var tag = S.cfg.conf === 'official'
+    ? '<span class="tag official">官方公示</span>'
+    : '<span class="tag fitted">拟合参数</span>';
+  box.innerHTML =
+    '<div class="row">' + tag + '<span style="font-size:11.5px;color:var(--dim)">' + esc(S.cfg.name) + '</span></div>' +
+    '<p>' + esc(S.cfg.src) + '</p>' +
+    (S.cfg.note ? '<p style="margin-top:5px;color:var(--dim2)">' + esc(S.cfg.note) + '</p>' : '');
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+  });
+}
+function fmt(n){
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+['base','softStart','softStep','hard','up'].forEach(function(k){
+  F[k].addEventListener('change', function(){
+    var v = parseFloat(F[k].value);
+    if (!isFinite(v) || v < 0) v = 0;
+    if (k === 'hard' && v < 1) v = 1;
+    if (k === 'hard' && v > 20000) v = 20000;
+    if (k === 'up' && v > 100) v = 100;
+    if (k === 'base' && v > 100) v = 100;
+    S.cfg[k] = v;
+    F[k].value = v;
+    onCfgChanged();
+  });
+});
+F.guarantee.addEventListener('change', function(){
+  S.cfg.guarantee = F.guarantee.checked;
+  onCfgChanged();
+});
+
+function onCfgChanged(){
+  S.lastDraw = null;
+  S.sess = { pulls:0, hits:0, ups:0, hist:new Float64Array(histSize()), timeline:[], best:0, worst:0 };
+  S.batch = null;
+  if (S.pity >= S.cfg.hard) S.pity = 0;
+  renderAll();
+}
+
+/* ============ 卡池切换 ============ */
+sel.addEventListener('change', function(){
+  if (sel.value === 'custom') return;
+  var b = BANNERS[parseInt(sel.value,10)];
+  initCfg(b);
+  resetSession();
+  syncFields();
+  renderAll();
+});
+
+document.getElementById('f-usePity').addEventListener('change', function(e){
+  S.usePity = e.target.checked;
+  if (S.mode === 'lottery') S.pityOnLot = S.usePity;
+  else S.pityOnGacha = S.usePity;
+  document.getElementById('f-pityN').disabled = !S.usePity;
+  S.pity = 0; S.guaranteed = false;
+  S.lot.pityCount = 0;
+  S.lastDraw = null;
+  S.batch = null;
+  S.lotBatch = null;
+  renderAll();
+});
+
+/* ============ 视图切换 ============ */
+document.getElementById('viewSeg').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if (!b) return;
+  S.view = b.dataset.view;
+  [].forEach.call(this.children, function(c){ c.classList.toggle('on', c === b); });
+  document.getElementById('overlayWheel').style.display = S.view === 'wheel' ? 'flex' : 'none';
+  document.getElementById('legend').style.display = S.view === 'grid' ? 'none' : 'flex';
+  drawView();
+});
+
+document.getElementById('chartSeg').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if (!b) return;
+  S.chart = b.dataset.chart;
+  [].forEach.call(this.children, function(c){ c.classList.toggle('on', c === b); });
+  var hints = {
+    dist:'横轴抽数 · 柱高为该抽出货占比',
+    cdf:'横轴抽数 · 曲线为"到此抽数为止已出货"的累计概率',
+    time:'每一道竖线代表一次出货 · 越密越欧'
+  };
+  document.getElementById('chartHint').textContent = hints[S.chart];
+  drawChart();
+});
+
+/* ============ 模式切换 ============ */
+document.getElementById('modeSeg').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if (!b) return;
+  [].forEach.call(this.children, function(c){ c.classList.toggle('on', c === b); });
+  setMode(b.dataset.mode);
+});
+
+/* 批量模拟的单位随模式变：卡池跑的是「周期」，抽奖跑的是「抽数」 */
+function updateBatchUnits(){
+  var opts = document.querySelectorAll('#batchN option');
+  var lot = S.mode === 'lottery';
+  var labels = lot
+    ? ['1 万抽', '10 万抽', '100 万抽']
+    : ['1 万周期', '10 万周期', '100 万周期'];
+  for (var i = 0; i < opts.length && i < labels.length; i++){
+    opts[i].textContent = labels[i];
+  }
+  var btn = document.getElementById('btnRun');
+  if (btn && !btn.disabled) btn.textContent = lot ? '批量抽取' : '批量模拟';
+}
+
+function setMode(m){
+  if (S.mode === m) return;
+  /* 两个模式各自记住自己的保底开关 */
+  if (S.mode === 'lottery') S.pityOnLot = S.usePity;
+  else S.pityOnGacha = S.usePity;
+  S.mode = m;
+  S.usePity = (m === 'lottery') ? S.pityOnLot : S.pityOnGacha;
+  document.getElementById('f-usePity').checked = S.usePity;
+
+  var isLot = m === 'lottery';
+  document.getElementById('paneGacha').style.display = isLot ? 'none' : 'block';
+  document.getElementById('paneLot').style.display = isLot ? 'block' : 'none';
+  document.getElementById('bannerSel').style.display = isLot ? 'none' : '';
+  document.getElementById('f-pityN').disabled = !S.usePity;
+  document.getElementById('chartSeg').style.display = isLot ? 'none' : 'inline-flex';
+  document.getElementById('chartHint').textContent = isLot
+    ? '实心条 = 实测频率 · 白线 = 设定概率'
+    : '横轴抽数 · 柱高为该抽出货占比';
+  S.wheelAngle = 0;
+  S.lastDraw = null;
+  document.getElementById('results').innerHTML = '';
+  if (isLot){
+    if (!S.lotSess) resetLotSess();
+    renderLotList();
+  }
+  updateBatchUnits();
+  renderAll();
+}
+
+/* ============ 奖品编辑器 ============ */
+var LOT_PALETTE = ['#4ECDC4', '#F87171', '#5DD39E', '#A78BFA', '#E8B84B', '#7DD3FC', '#F0997B', '#ED93B1'];
+
+function renderLotList(){
+  var box = document.getElementById('lotList');
+  var total = lotTotal();
+  var html = '';
+  S.lot.items.forEach(function(it, i){
+    var pct = total > 0 ? Math.max(0, it.weight || 0) / total * 100 : 0;
+    html += '<div class="lot-row" data-i="' + i + '">' +
+      '<div class="top">' +
+        '<input type="color" data-k="color" value="' + it.color + '">' +
+        '<input type="text" data-k="name" value="' + esc(it.name) + '" maxlength="12">' +
+        '<input type="number" data-k="weight" value="' + it.weight + '" min="0" step="1">' +
+        '<button class="del" data-k="del" title="删除这一项">×</button>' +
+      '</div>' +
+      '<div class="pct">' + (i === 0 ? '<span style="color:var(--gold)">头奖 · </span>' : '') +
+        '概率 <b>' + pct.toFixed(pct < 1 ? 3 : 1) + '%</b></div>' +
+    '</div>';
+  });
+  if (total <= 0){
+    html = '<div style="padding:10px 16px;color:#F87171;font-size:11.5px;line-height:1.6">' +
+      '所有权重都是 0，现在抽不出任何东西。至少给一项填大于 0 的权重。</div>' + html;
+  }
+  box.innerHTML = html;
+}
+
+function updateLotPcts(){
+  var total = lotTotal();
+  var rows = document.querySelectorAll('#lotList .lot-row');
+  for (var i = 0; i < rows.length; i++){
+    var it = S.lot.items[i];
+    if (!it) continue;
+    var pct = total > 0 ? Math.max(0, it.weight || 0) / total * 100 : 0;
+    var p = rows[i].querySelector('.pct');
+    if (p) p.innerHTML = (i === 0 ? '<span style="color:var(--gold)">头奖 · </span>' : '') +
+      '概率 <b>' + pct.toFixed(pct < 1 ? 3 : 1) + '%</b>';
+  }
+}
+
+document.getElementById('lotList').addEventListener('input', function(e){
+  var el = e.target;
+  var k = el.dataset.k;
+  if (!k || k === 'del') return;
+  var row = el.closest('.lot-row');
+  if (!row) return;
+  var i = parseInt(row.dataset.i, 10);
+  var it = S.lot.items[i];
+  if (!it) return;
+  if (k === 'name') it.name = el.value;
+  else if (k === 'weight') it.weight = Math.max(0, parseFloat(el.value) || 0);
+  else if (k === 'color') it.color = el.value;
+  S.lastDraw = null;
+  updateLotPcts();
+  renderAll();
+});
+
+document.getElementById('lotList').addEventListener('click', function(e){
+  var b = e.target.closest('.del');
+  if (!b) return;
+  var row = b.closest('.lot-row');
+  var i = parseInt(row.dataset.i, 10);
+  if (S.lot.items.length <= 2){ alert('至少要保留两个奖品'); return; }
+  S.lot.items.splice(i, 1);
+  resetLotSess();
+  renderLotList();
+  renderAll();
+});
+
+document.getElementById('btnAddItem').addEventListener('click', function(){
+  if (S.lot.items.length >= 12){
+    alert('最多 12 个奖品，再多图表就挤不下了。');
+    return;
+  }
+  S.lot.items.push({
+    name: '奖品 ' + (S.lot.items.length + 1),
+    weight: 1,
+    color: LOT_PALETTE[S.lot.items.length % LOT_PALETTE.length]
+  });
+  resetLotSess();
+  renderLotList();
+  renderAll();
+});
+
+document.getElementById('f-pityN').addEventListener('change', function(){
+  S.lot.pityN = Math.max(0, parseInt(this.value, 10) || 0);
+  S.lot.pityCount = 0;
+  S.lastDraw = null;
+  S.lotBatch = null;
+  renderAll();
+});
+
+/* ============ 抽卡交互 ============ */
+var busy = false;
+
+/* 抽一次，按当前模式分派 */
+function drawOnce(rand){
+  if (S.mode === 'lottery'){
+    if (!S.lotSess) resetLotSess();
+    var r = pullLottery(rand);
+    S.lotSess.pulls++;
+    if (r.idx >= 0){
+      S.lotSess.counts[r.idx]++;
+      if (r.idx === 0){
+        var gap = S.lotSess.pulls - S.lotSess.lastAt;
+        S.lotSess.lastAt = S.lotSess.pulls;
+        S.lotSess.gaps.push(gap);
+        if (!S.lotSess.best || gap < S.lotSess.best) S.lotSess.best = gap;
+        if (gap > S.lotSess.worst) S.lotSess.worst = gap;
+      }
+    }
+    return r;
+  }
+  var g = pullOne(rand);
+  S.sess.pulls++;
+  if (g.hit){
+    S.sess.hits++;
+    if (g.up) S.sess.ups++;
+  }
+  return g;
+}
+
+function doPull(count){
+  if (busy) return;
+  if (S.mode === 'lottery' && lotTotal() <= 0){
+    alert('所有权重都是 0，抽不出东西。请至少给一个奖品填大于 0 的权重。');
+    return;
+  }
+  busy = true;
+  S.lastDraw = null;
+  var segs0 = (S.view === 'wheel') ? buildSegs() : null;
+  if (S.view === 'wheel' && AUDIO.on){ AUDIO.init(); AUDIO.draw(); }
+  var out = [];
+  for (var i = 0; i < count; i++) out.push(drawOnce(RNG.next));
+  animateThen(function(){
+    renderResults(out);
+    renderAll();
+    playResultSound(out);
+    busy = false;
+  }, out, segs0);
+}
+
+function doOne(){
+  if (busy) return;
+  if (S.mode === 'lottery' && lotTotal() <= 0){
+    alert('所有权重都是 0，抽不出东西。请至少给一个奖品填大于 0 的权重。');
+    return;
+  }
+  busy = true;
+  S.lastDraw = null;
+  var segs0 = (S.view === 'wheel') ? buildSegs() : null;
+  if (S.view === 'wheel' && AUDIO.on){ AUDIO.init(); AUDIO.draw(); }
+  var r = drawOnce(RNG.next);
+  animateThen(function(){
+    renderResults([r]);
+    renderAll();
+    playResultSound([r]);
+    busy = false;
+  }, [r], segs0);
+}
+
+document.getElementById('btnOne').addEventListener('click', doOne);
+document.getElementById('btnTen').addEventListener('click', function(){ doPull(10); });
+document.getElementById('btnRun').addEventListener('click', function(){
+  if (busy) return;
+  var n = parseInt(document.getElementById('batchN').value, 10) || 100000;
+  busy = true;
+  var btn = this;
+  btn.disabled = true;
+  btn.textContent = '计算中…';
+  setTimeout(function(){
+    if (S.mode === 'lottery') runBatchLottery(n);
+    else runBatch(n);
+    btn.disabled = false;
+    btn.textContent = S.mode === 'lottery' ? '批量抽取' : '批量模拟';
+    busy = false;
+  }, 30);
+});
+
+/* 自定义抽奖的批量模拟：直接抽 N 次 */
+function runBatchLottery(pulls){
+  S.lastDraw = null;
+  var counts = newCounts();
+  var gaps = [];
+  var total = 0, lastAt = 0, best = 0, worst = 0, pityCount = 0;
+  var rand = mulberry32(2048 + pulls);
+  var TL = 4000;
+  var items = S.lot.items;
+  var weightSum = lotTotal();
+  var usePity = S.usePity && S.lot.pityN > 0;
+  var pityN = S.lot.pityN;
+
+  for (var i = 0; i < pulls; i++){
+    var idx;
+    if (usePity && pityCount >= pityN){
+      idx = 0;
+      pityCount = 0;
+    } else {
+      var r = rand() * weightSum;
+      var acc = 0;
+      idx = items.length - 1;
+      for (var k = 0; k < items.length; k++){
+        acc += Math.max(0, items[k].weight || 0);
+        if (r < acc){ idx = k; break; }
+      }
+      if (idx === 0) pityCount = 0; else pityCount++;
+    }
+    counts[idx]++;
+    total++;
+    if (idx === 0){
+      var gap = total - lastAt;
+      lastAt = total;
+      if (gaps.length < TL) gaps.push(gap);
+      if (!best || gap < best) best = gap;
+      if (gap > worst) worst = gap;
+    }
+  }
+
+  S.lotBatch = { pulls: total, counts: counts, gaps: gaps, best: best, worst: worst };
+  document.getElementById('results').innerHTML = '';
+  renderAll();
+}
+
+/* 转盘旋转：先有结果，再反算停在哪 —— 指针落点由结果决定，不是反过来 */
+function animateThen(done, results, segsSnapshot){
+  if (S.view !== 'wheel'){ done(); return; }
+  var segs = segsSnapshot || buildSegs();
+  var a0 = 0, a1 = 360;
+
+  /* 从整组里挑出最值得展示的那一个：转盘落点、中心文字、音效三者都用它 */
+  var pick = results[0];
+  if (S.mode === 'lottery'){
+    for (var k = 1; k < results.length; k++){
+      if (results[k].idx >= 0 && results[k].idx < pick.idx) pick = results[k];
+    }
+    var idx = pick.idx;
+    var st = 0;
+    for (var i = 0; i < idx; i++) st += lotProb(i);
+    a0 = st * 360;
+    a1 = a0 + lotProb(idx) * 360;
+  } else {
+    for (var j = 1; j < results.length; j++){
+      if (results[j].hit && results[j].up){ pick = results[j]; break; }
+      if (results[j].hit) pick = results[j];
+    }
+    var pB = results[0].p;
+    var upP = pB * (S.cfg.up / 100);
+    if (pick.hit && pick.up){ a0 = 0; a1 = upP * 360; }
+    else if (pick.hit){ a0 = upP * 360; a1 = pB * 360; }
+    else { a0 = pB * 360; a1 = 360; }
+  }
+  if (a1 - a0 < 0.6) a1 = a0 + 0.6;
+
+  /* 落点留足边距，避免指针压在扇区边界上看着像指错了 */
+  var span = a1 - a0;
+  var margin = Math.min(20, Math.max(0.2, span * 0.2));
+  var target = a0 + margin + Math.random() * Math.max(0.1, span - margin * 2);
+
+  /* 盘面顺时针转 θ 度后，顶部指针指向盘面的 -θ，所以这里要用减法 */
+  var spin = 1080 - target;
+  var t0 = performance.now();
+  var dur = 1150;
+  var finished = false;
+
+  /* rAF 在后台标签页或某些环境会被暂停，加一个超时兜底，避免按钮永久锁死 */
+  function finish(){
+    if (finished) return;
+    finished = true;
+    S.wheelAngle = ((spin % 360) + 360) % 360;
+    /* 冻结这一抽的盘面，让指针停的位置直到下一次抽卡都还有意义 */
+    S.lastDraw = { segs: segs, angle: S.wheelAngle, result: pick };
+    done();
+  }
+  function frame(t){
+    var k = Math.min(1, (t - t0) / dur);
+    var e = 1 - Math.pow(1 - k, 4);
+    drawWheel(e * spin, segs);
+    if (k < 1) requestAnimationFrame(frame);
+    else finish();
+  }
+  requestAnimationFrame(frame);
+  setTimeout(finish, dur + 350);
+}
+
+/* ============ 渲染：结果卡片 ============ */
+function renderResults(list){
+  var box = document.getElementById('results');
+  box.innerHTML = '';
+  list.forEach(function(r){
+    var d = document.createElement('div');
+    if (S.mode === 'lottery'){
+      var it = S.lot.items[r.idx];
+      if (!it) return;
+      d.className = 'card';
+      d.style.background = it.color;
+      d.style.color = textOn(it.color);
+      d.style.borderColor = 'rgba(255,255,255,.12)';
+      if (r.idx === 0) d.style.boxShadow = '0 0 16px rgba(232,184,75,.45)';
+      d.textContent = String(it.name).slice(0, 4) || '?';
+      d.title = it.name;
+    } else {
+      d.className = 'card ' + (r.hit ? (r.up ? 'up' : 'off') : 'none');
+      d.textContent = r.hit ? (r.up ? 'UP' : '歪') : '—';
+    }
+    box.appendChild(d);
+  });
+}
+
+/* ============ 渲染：仪表盘 ============ */
+function renderAllGacha(){
+  var cfg = S.cfg;
+  var batch = S.batch;
+
+  // 保底进度
+  var pct = S.usePity ? Math.min(100, S.pity / cfg.hard * 100) : 0;
+  document.getElementById('pityFill').style.width = pct + '%';
+  document.getElementById('pityTxt').textContent = S.usePity ? (S.pity + '/' + cfg.hard) : '已关闭';
+  document.getElementById('guarBadge').classList.toggle('on', S.guaranteed);
+  document.getElementById('sessPulls').textContent = S.sess.pulls;
+
+  // 当前抽概率；若上一抽还没被新操作覆盖，就显示那一抽的结果
+  var p = probAt(cfg, S.pity, S.usePity);
+  var bp = document.getElementById('bigProb');
+  var bps = document.getElementById('bigProbSub');
+  if (S.lastDraw && S.lastDraw.result && S.lastDraw.result.hit !== undefined){
+    var lr = S.lastDraw.result;
+    if (lr.hit){
+      bp.innerHTML = '<span style="font-size:26px;color:' + textOn(lr.up ? COL.gold : COL.purple) + '">' +
+        (lr.up ? 'UP' : '歪') + '</span>';
+      bps.textContent = '这一抽概率 ' + (lr.p * 100).toFixed(2) + '%';
+    } else {
+      bp.innerHTML = '<span style="font-size:22px;color:#F5F5F5">未出货</span>';
+      bps.textContent = '这一抽概率 ' + (lr.p * 100).toFixed(2) + '%';
+    }
+  } else {
+    bp.innerHTML = (p * 100).toFixed(2) + '<small>%</small>';
+    bps.textContent = S.usePity
+      ? ('第 ' + (S.pity + 1) + ' 抽 · 距硬保底 ' + (cfg.hard - S.pity) + ' 抽')
+      : ('真随机模式 · 恒定 ' + cfg.base.toFixed(2) + '%');
+  }
+
+  // KPI
+  var data = batch || (S.sess.pulls > 0 ? {
+    pulls: S.sess.pulls, hits: S.sess.hits, ups: S.sess.ups,
+    rate: S.sess.hits / S.sess.pulls,
+    hist: null, best: 0, worst: 0
+  } : null);
+
+  var rateEl = document.getElementById('kRate');
+  var meanEl = document.getElementById('kMean');
+  var medEl = document.getElementById('kMedian');
+  var bestEl = document.getElementById('kBest');
+  var worstEl = document.getElementById('kWorst');
+  var offEl = document.getElementById('kOfficial');
+
+  offEl.innerHTML = cfg.official ? cfg.official.toFixed(2) + '<small>%</small>' : '—';
+
+  if (data && data.hits > 0){
+    rateEl.innerHTML = (data.rate * 100).toFixed(2) + '<small>%</small>';
+    meanEl.innerHTML = (data.pulls / data.hits).toFixed(1) + '<small>抽</small>';
+    if (batch){
+      var med = quantileFromHist(batch.hist, batch.hits, 0.5);
+      medEl.innerHTML = med + '<small>抽</small>';
+      bestEl.innerHTML = batch.best + '<small>抽</small>';
+      worstEl.innerHTML = batch.worst + '<small>抽</small>';
+    } else {
+      medEl.innerHTML = '—';
+      bestEl.innerHTML = '—';
+      worstEl.innerHTML = '—';
+    }
+  } else {
+    rateEl.innerHTML = data ? '0.00<small>%</small>' : '—';
+    meanEl.innerHTML = '—<small>抽</small>';
+    medEl.innerHTML = '—<small>抽</small>';
+    bestEl.innerHTML = '—<small>抽</small>';
+    worstEl.innerHTML = '—<small>抽</small>';
+  }
+
+  // 结论
+  var vEl = document.getElementById('verdict');
+  vEl.className = 'verdict';
+  if (batch){
+    if (cfg.official){
+      var theo = cfg.official / 100;
+      var zz = binomialZ(batch.hits, theo, batch.pulls);
+      var pv = twoSidedP(zz);
+      var absz = Math.abs(zz);
+      var cls = absz < 2 ? 'ok' : absz < 3 ? 'warn' : 'bad';
+      var word = absz < 2 ? '属正常波动' : absz < 3 ? '偏离偏大，但仍在可能的范围内' : '显著偏离，值得复核参数';
+      vEl.className = 'verdict ' + cls;
+      vEl.innerHTML = '实测 <b>' + (batch.rate * 100).toFixed(3) + '%</b> vs 公示 <b>' +
+        cfg.official.toFixed(2) + '%</b>，偏差 <b>' + zz.toFixed(2) + 'σ</b>（p=' +
+        pv.toFixed(2) + '），' + word + '。';
+      document.getElementById('mZ').textContent = zz.toFixed(2) + 'σ';
+    } else {
+      vEl.className = 'verdict';
+      vEl.innerHTML = '该卡池没有公开的综合概率，无法对账。实测 <b>' +
+        (batch.rate * 100).toFixed(3) + '%</b>，平均 <b>' +
+        (batch.pulls / batch.hits).toFixed(1) + '</b> 抽出一个。';
+      document.getElementById('mZ').textContent = '—';
+    }
+  } else if (S.sess.pulls > 0){
+    vEl.innerHTML = '当前是手动抽卡记录（' + S.sess.pulls + ' 抽 / 出货 ' + S.sess.hits +
+      ' 次），样本太小看不出偏差。点「批量模拟」跑十万次。';
+    document.getElementById('mZ').textContent = '—';
+  } else {
+    vEl.textContent = '跑一次模拟，这里会告诉你实测结果和公示值的偏差是否在正常范围内。';
+    document.getElementById('mZ').textContent = '—';
+  }
+
+  // 分位条
+  var qSpan = document.getElementById('qSpan');
+  var qMed = document.getElementById('qMed');
+  if (batch){
+    var p10 = quantileFromHist(batch.hist, batch.hits, 0.10);
+    var p90 = quantileFromHist(batch.hist, batch.hits, 0.90);
+    var medv = quantileFromHist(batch.hist, batch.hits, 0.50);
+    var max = cfg.hard;
+    /* 关掉保底时间隔没有上界，条形要裁到坐标轴范围内 */
+    var c10 = Math.min(p10, max), c90 = Math.min(p90, max), cm = Math.min(medv, max);
+    qSpan.style.left = (c10 / max * 100) + '%';
+    qSpan.style.width = (Math.max(0, c90 - c10) / max * 100) + '%';
+    qMed.style.left = (cm / max * 100) + '%';
+    document.getElementById('qLabel').textContent = 'P10 ' + p10 + ' — P90 ' + p90;
+    document.getElementById('qTicks').innerHTML =
+      '<span>1</span><span>P10 ' + p10 + '</span><span>P50 ' + medv + '</span><span>P90 ' + p90 + '</span><span>' + max + '</span>';
+  } else {
+    qSpan.style.width = '0';
+    qMed.style.left = '0';
+    document.getElementById('qLabel').textContent = 'P10–P90';
+    document.getElementById('qTicks').innerHTML = '<span>1</span><span>' + Math.round(cfg.hard/2) + '</span><span>' + cfg.hard + '</span>';
+  }
+
+  // 迷你表
+  document.getElementById('mUp').textContent = (batch ? fmt(batch.ups) : fmt(S.sess.ups)) + ' 次' +
+    (batch && batch.hits ? '（' + (batch.ups / batch.hits * 100).toFixed(1) + '%）' : '');
+  document.getElementById('mUpL').title = (batch && cfg.guarantee)
+    ? '大小保底会把长期 UP 率从 50% 抬到 66.7%（歪一次，下次必中）'
+    : '';
+  document.getElementById('mHits').textContent = fmt(batch ? batch.hits : S.sess.hits) + ' 次';
+  document.getElementById('mPulls').textContent = fmt(batch ? batch.pulls : S.sess.pulls) + ' 抽';
+
+  // 从自定义抽奖切回时还原标签
+  document.getElementById('kRateL').textContent = '实测出率';
+  document.getElementById('kOfficialL').textContent = '公示综合率';
+  document.getElementById('kMeanL').textContent = '平均出货';
+  document.getElementById('kMedianL').textContent = '中位数';
+  document.getElementById('kBestL').textContent = '最欧';
+  document.getElementById('kWorstL').textContent = '最非';
+  document.getElementById('qTitle').textContent = '出货抽数分布';
+  document.getElementById('mUpL').textContent = 'UP 命中率';
+  document.getElementById('mHitsL').textContent = '出货次数';
+  document.getElementById('mPullsL').textContent = '总抽数';
+  document.getElementById('mZL').textContent = '偏差 σ';
+  document.getElementById('rightTitle').textContent =
+    batch ? '批量结果' : (S.sess.pulls > 0 ? '本次会话' : '本次模拟');
+}
+
+function renderAll(){
+  if (S.mode === 'lottery') renderAllLottery();
+  else renderAllGacha();
+  drawView();
+  drawChart();
+  updateLegend();
+}
+
+/* 自定义抽奖的仪表盘 */
+function renderAllLottery(){
+  var lot = S.lot;
+  var st = S.lotBatch || S.lotSess || { pulls:0, counts:newCounts(), gaps:[], best:0, worst:0 };
+  var topP = lotEffectiveProb(0);
+  var pityOn = S.usePity && S.lot.pityN > 0;
+
+  var showPity = S.usePity && lot.pityN > 0;
+  var pct = showPity ? Math.min(100, lot.pityCount / lot.pityN * 100) : 0;
+  document.getElementById('pityFill').style.width = pct + '%';
+  document.getElementById('pityTxt').textContent = showPity ? (lot.pityCount + '/' + lot.pityN) : '已关闭';
+  document.getElementById('guarBadge').classList.toggle('on', false);
+  document.getElementById('sessPulls').textContent = fmt(st.pulls);
+
+  var rawTop = lotProb(0);
+  var bp = document.getElementById('bigProb');
+  var bps = document.getElementById('bigProbSub');
+  if (S.lastDraw && S.lastDraw.result && S.lastDraw.result.idx >= 0){
+    var lr = S.lastDraw.result;
+    var lit = lot.items[lr.idx];
+    if (lit){
+      bp.innerHTML = '<span style="font-size:23px;color:' + textOn(lit.color) + '">' +
+        esc(String(lit.name).slice(0, 6)) + '</span>';
+      bps.textContent = '这一抽概率 ' + (lr.p * 100).toFixed(2) + '%' + (lr.idx === 0 ? ' · 头奖' : '');
+    }
+  } else {
+    bp.innerHTML = (rawTop * 100).toFixed(2) + '<small>%</small>';
+    bps.textContent = pityOn
+      ? ('权重 ' + (rawTop * 100).toFixed(2) + '% · 含保底实际 ' + (topP * 100).toFixed(2) + '%')
+      : ('头奖「' + (lot.items[0] ? lot.items[0].name : '—') + '」· 共 ' + lot.items.length + ' 个奖品');
+  }
+
+  document.getElementById('kRateL').textContent = '头奖实测';
+  document.getElementById('kOfficialL').textContent = pityOn ? '含保底理论' : '头奖理论';
+  document.getElementById('kMeanL').textContent = '平均间隔';
+  document.getElementById('kMedianL').textContent = '中位间隔';
+  document.getElementById('kBestL').textContent = '最欧';
+  document.getElementById('kWorstL').textContent = '最非';
+  document.getElementById('qTitle').textContent = '头奖间隔';
+  document.getElementById('mUpL').textContent = '头奖次数';
+  document.getElementById('mHitsL').textContent = '奖品数';
+  document.getElementById('mPullsL').textContent = '总抽数';
+  document.getElementById('mZL').textContent = '命中偏差';
+  document.getElementById('rightTitle').textContent = S.lotBatch ? '批量结果' : '自定义抽奖';
+
+  var topCount = st.counts[0] || 0;
+  var measured = st.pulls > 0 ? topCount / st.pulls : 0;
+  var meanGap = topCount > 0 ? st.pulls / topCount : 0;
+  var gaps = (st.gaps || []).slice().sort(function(a, b){ return a - b; });
+  var medGap = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 0;
+
+  document.getElementById('kRate').innerHTML = st.pulls > 0 ? (measured * 100).toFixed(2) + '<small>%</small>' : '—';
+  document.getElementById('kOfficial').innerHTML = (topP * 100).toFixed(2) + '<small>%</small>';
+  document.getElementById('kMean').innerHTML = meanGap ? meanGap.toFixed(1) + '<small>抽</small>' : '—';
+  document.getElementById('kMedian').innerHTML = medGap ? medGap + '<small>抽</small>' : '—';
+  document.getElementById('kBest').innerHTML = st.best ? st.best + '<small>抽</small>' : '—';
+  document.getElementById('kWorst').innerHTML = st.worst ? st.worst + '<small>抽</small>' : '—';
+
+  var vEl = document.getElementById('verdict');
+  if (st.pulls > 0 && topP > 0){
+    var z = binomialZ(topCount, topP, st.pulls);
+    var pv = twoSidedP(z);
+    var az = Math.abs(z);
+    vEl.className = 'verdict ' + (az < 2 ? 'ok' : az < 3 ? 'warn' : 'bad');
+    vEl.innerHTML = '头奖实测 <b>' + (measured * 100).toFixed(2) + '%</b> vs 设定 <b>' +
+      (topP * 100).toFixed(2) + '%</b>，偏差 <b>' + z.toFixed(2) + 'σ</b>（p=' +
+      pv.toFixed(2) + '）。' + (az < 2 ? '这个抽奖器是干净的。' : az < 3 ? '偏差偏大，多抽几次再看。' : '偏差显著，检查一下权重设置。');
+    document.getElementById('mZ').textContent = z.toFixed(2) + 'σ';
+  } else {
+    vEl.className = 'verdict';
+    vEl.textContent = '抽几次，这里会核对实测头奖率和设定概率是否一致。';
+    document.getElementById('mZ').textContent = '—';
+  }
+
+  var qSpan = document.getElementById('qSpan');
+  var qMed = document.getElementById('qMed');
+  if (gaps.length > 3 && gaps[gaps.length - 1] > 0){
+    var pd10 = gaps[Math.floor(gaps.length * 0.1)];
+    var pd90 = gaps[Math.floor(gaps.length * 0.9)];
+    var maxG = gaps[gaps.length - 1];
+    qSpan.style.left = (pd10 / maxG * 100) + '%';
+    qSpan.style.width = ((pd90 - pd10) / maxG * 100) + '%';
+    qMed.style.left = (medGap / maxG * 100) + '%';
+    document.getElementById('qLabel').textContent = 'P10 ' + pd10 + ' — P90 ' + pd90;
+    document.getElementById('qTicks').innerHTML = '<span>1</span><span>P10 ' + pd10 + '</span><span>P50 ' +
+      medGap + '</span><span>P90 ' + pd90 + '</span><span>' + maxG + '</span>';
+  } else {
+    qSpan.style.width = '0';
+    qSpan.style.left = '0';
+    qMed.style.left = '0';
+    document.getElementById('qLabel').textContent = '间隔分布';
+    document.getElementById('qTicks').innerHTML = '<span>1</span><span>—</span><span>—</span>';
+  }
+
+  document.getElementById('mUp').textContent = fmt(topCount) + ' 次';
+  document.getElementById('mHits').textContent = lot.items.length + ' 个';
+  document.getElementById('mPulls').textContent = fmt(st.pulls) + ' 抽';
+}
+
+function updateLegend(){
+  var el = document.getElementById('legend');
+  if (S.mode === 'lottery'){
+    var total = lotTotal();
+    var html = '';
+    var shown = Math.min(5, S.lot.items.length);
+    for (var i = 0; i < shown; i++){
+      var it = S.lot.items[i];
+      var v = total > 0 ? Math.max(0, it.weight || 0) / total * 100 : 0;
+      html += '<div><span>' + esc(String(it.name).slice(0, 6)) + '</span><b>' + v.toFixed(v < 1 ? 2 : 1) +
+        '%</b><i style="background:' + it.color + '"></i></div>';
+    }
+    if (S.lot.items.length > shown){
+      html += '<div><span>还有 ' + (S.lot.items.length - shown) + ' 项</span><b>—</b><i style="background:transparent"></i></div>';
+    }
+    el.innerHTML = html;
+    return;
+  }
+  var p = probAt(S.cfg, S.pity, S.usePity);
+  var upP = p * (S.cfg.up / 100);
+  var offP = p - upP;
+  el.innerHTML =
+    '<div><span>UP</span><b>' + (upP * 100).toFixed(2) + '%</b><i style="background:' + COL.gold + '"></i></div>' +
+    '<div><span>歪</span><b>' + (offP * 100).toFixed(2) + '%</b><i style="background:' + COL.purple + '"></i></div>' +
+    '<div><span>未出货</span><b>' + ((1 - p) * 100).toFixed(2) + '%</b><i style="background:#2A3345"></i></div>';
+}
+
+/* ============ 画布工具 ============ */
+function fitCanvas(c){
+  var r = c.getBoundingClientRect();
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var w = Math.max(1, Math.floor(r.width)), h = Math.max(1, Math.floor(r.height));
+  if (c.width !== w * dpr || c.height !== h * dpr){
+    c.width = w * dpr; c.height = h * dpr;
+  }
+  var ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx: ctx, w: w, h: h };
+}
+
+var COL = {
+  gold:'#E8B84B', purple:'#A78BFA', gray:'#39415A',
+  line:'#222B3A', dim:'#5A6478', dim2:'#8A94A6', text:'#E6EAF2', teal:'#4ECDC4'
+};
+
+/* 当前该画哪些扇区：两种模式共用一套绘制 */
+function buildSegs(){
+  var arr = [];
+  if (S.mode === 'lottery'){
+    var total = lotTotal();
+    S.lot.items.forEach(function(it){
+      var v = total > 0 ? Math.max(0, it.weight || 0) / total : 0;
+      if (v > 0) arr.push({ v:v, c:it.color, label:it.name });
+    });
+    return arr;
+  }
+  var p = probAt(S.cfg, S.pity, S.usePity);
+  var upP = p * (S.cfg.up / 100);
+  if (upP > 0) arr.push({ v:upP, c:COL.gold, label:'UP' });
+  if (p - upP > 0) arr.push({ v:p - upP, c:COL.purple, label:'歪' });
+  if (1 - p > 0) arr.push({ v:1 - p, c:COL.gray, label:'未出货' });
+  return arr;
+}
+
+/* ============ 转盘 ============ */
+function drawWheel(angle, segsOverride){
+  var canvas = document.getElementById('view');
+  var f = fitCanvas(canvas), ctx = f.ctx, w = f.w, h = f.h;
+  var cx = w / 2, cy = h / 2;
+  var r = Math.min(w * 0.40, h * 0.44, 206);
+  var segs = segsOverride || buildSegs();
+
+  var a = (angle || 0) * Math.PI / 180 - Math.PI / 2;
+  segs.forEach(function(s){
+    if (s.v <= 0) return;
+    var sweep = s.v * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, a, a + sweep);
+    ctx.closePath();
+    ctx.fillStyle = s.c;
+    ctx.fill();
+    ctx.strokeStyle = '#0B0E14';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    /* 大扇区不写字（中心和图例已经交代了），小扇区才需要标签辅助识别 */
+    if (s.label && sweep > 0.3 && sweep < 2.8 && !S.lastDraw){
+      var mid = a + sweep / 2;
+      var tx = cx + Math.cos(mid) * r * 0.80;
+      var ty = cy + Math.sin(mid) * r * 0.80;
+      ctx.fillStyle = textOn(s.c);
+      ctx.font = '600 11px system-ui,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(s.label).slice(0, 3), tx, ty);
+    }
+    a += sweep;
+  });
+
+  // 外圈
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#2C374A';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 外环：保底进度（这不是概率，是进度）
+  var showRing = false, prog = 0;
+  if (S.mode === 'lottery'){
+    if (S.usePity && S.lot.pityN > 0){
+      showRing = true;
+      prog = Math.min(1, S.lot.pityCount / S.lot.pityN);
+    }
+  } else if (S.usePity && S.cfg.hard > 0){
+    showRing = true;
+    prog = Math.min(1, S.pity / S.cfg.hard);
+  }
+  if (showRing){
+    var rr = r + 9;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    ctx.strokeStyle = '#1A2130';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    if (prog > 0){
+      ctx.beginPath();
+      ctx.arc(cx, cy, rr, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
+      ctx.strokeStyle = COL.teal;
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+    }
+  }
+
+  // 中心轴
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#2C374A';
+  ctx.fill();
+
+  // 指针
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - r - 3);
+  ctx.lineTo(cx - 7, cy - r + 12);
+  ctx.lineTo(cx + 7, cy - r + 12);
+  ctx.closePath();
+  ctx.fillStyle = COL.text;
+  ctx.fill();
+}
+
+/* 方阵：squarified treemap，每块面积严格等于概率 */
+function squarify(items, x, y, w, h){
+  var total = 0;
+  items.forEach(function(it){ total += it.raw; });
+  if (total <= 0) return [];
+  var scale = (w * h) / total;
+  var rest = items.map(function(it){
+    return { a: it.raw * scale, c: it.c, label: it.label, raw: it.raw };
+  });
+  var res = [];
+  var rx = x, ry = y, rw = w, rh = h;
+  var i = 0;
+  while (i < rest.length){
+    var short = Math.min(rw, rh);
+    var row = [], rowArea = 0, best = Infinity;
+    while (i < rest.length){
+      var trial = row.concat([rest[i]]);
+      var area = rowArea + rest[i].a;
+      var thick = area / short;
+      var worst = 0;
+      trial.forEach(function(it){
+        var len = it.a / thick;
+        var rr = Math.max(thick / len, len / thick);
+        if (rr > worst) worst = rr;
+      });
+      if (worst <= best){ row = trial; rowArea = area; best = worst; i++; }
+      else break;
+    }
+    var thick2 = rowArea / short;
+    if (rw <= rh){
+      var ox = rx;
+      row.forEach(function(it){
+        var len = it.a / thick2;
+        res.push({ x:ox, y:ry, w:len, h:thick2, c:it.c, label:it.label, raw:it.raw });
+        ox += len;
+      });
+      ry += thick2; rh -= thick2;
+    } else {
+      var oy = ry;
+      row.forEach(function(it){
+        var len = it.a / thick2;
+        res.push({ x:rx, y:oy, w:thick2, h:len, c:it.c, label:it.label, raw:it.raw });
+        oy += len;
+      });
+      rx += thick2; rw -= thick2;
+    }
+  }
+  return res;
+}
+
+function drawTreemap(){
+  var canvas = document.getElementById('view');
+  var f = fitCanvas(canvas), ctx = f.ctx, w = f.w, h = f.h;
+  var pad = 12;
+  var x0 = pad, y0 = pad, ww = w - pad * 2, hh = h - pad * 2;
+
+  var items = buildSegs().map(function(s){
+    return { raw:s.v, c:s.c, label:s.label };
+  }).filter(function(it){ return it.raw > 0; });
+  items.sort(function(a, b){ return b.raw - a.raw; });
+
+  var rects = squarify(items, x0, y0, ww, hh);
+  rects.forEach(function(r){
+    if (r.w < 0.4 || r.h < 0.4) return;
+    ctx.fillStyle = r.c;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.strokeStyle = '#0B0E14';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+
+    // 网格纹理：让大块看起来像"格子拼成的"，面积比例不变
+    if (r.w > 36 && r.h > 36){
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(r.x, r.y, r.w, r.h);
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(255,255,255,.05)';
+      ctx.lineWidth = 1;
+      for (var gx = r.x + 26; gx < r.x + r.w; gx += 26){
+        ctx.beginPath(); ctx.moveTo(gx, r.y); ctx.lineTo(gx, r.y + r.h); ctx.stroke();
+      }
+      for (var gy = r.y + 26; gy < r.y + r.h; gy += 26){
+        ctx.beginPath(); ctx.moveTo(r.x, gy); ctx.lineTo(r.x + r.w, gy); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (r.w > 84 && r.h > 24){
+      ctx.fillStyle = textOn(r.c);
+      ctx.font = '600 12px system-ui,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(r.label + ' ' + (r.raw * 100).toFixed(2) + '%', r.x + 8, r.y + 6);
+    }
+  });
+
+  ctx.strokeStyle = '#2C374A';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x0, y0, ww, hh);
+
+  ctx.fillStyle = COL.dim;
+  ctx.font = '11px system-ui,sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('每块面积 = 该结果真实概率', x0 + 2, y0 + hh + 10);
+}
+
+function drawView(){
+  if (S.view === 'wheel'){
+    if (S.lastDraw) drawWheel(S.lastDraw.angle, S.lastDraw.segs);
+    else drawWheel(S.wheelAngle || 0, null);
+  } else if (S.view === 'treemap'){
+    drawTreemap();
+  } else {
+    drawBars();
+  }
+}
+
+/* 数据流模式：用一条堆叠条说明概率构成 */
+function drawBars(){
+  var canvas = document.getElementById('view');
+  var f = fitCanvas(canvas), ctx = f.ctx, w = f.w, h = f.h;
+  var segs = buildSegs();
+  var isLot = S.mode === 'lottery';
+
+  var pad = Math.min(46, w * 0.08);
+  var barH = 52;
+  var y = h / 2 - barH / 2;
+  var ww = w - pad * 2;
+
+  ctx.fillStyle = '#111621';
+  ctx.fillRect(pad, y, ww, barH);
+
+  var x = pad;
+  segs.forEach(function(s){
+    var bw = s.v * ww;
+    if (bw < 0.4) return;
+    ctx.fillStyle = s.c;
+    ctx.fillRect(x, y, bw, barH);
+    x += bw;
+  });
+
+  ctx.strokeStyle = '#2C374A';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pad, y, ww, barH);
+
+  ctx.fillStyle = COL.dim2;
+  ctx.font = '12px system-ui,sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(isLot ? '各奖品的概率构成 — 每段长度 = 真实概率' : '这一抽的概率构成 — 每段的长度 = 真实概率', w / 2, y - 22);
+
+  ctx.fillStyle = COL.dim;
+  ctx.font = '11px system-ui,sans-serif';
+  if (isLot){
+    ctx.fillText('共 ' + S.lot.items.length + ' 个奖品 · 权重总和 ' + lotTotal(), w / 2, y + barH + 24);
+  } else {
+    var p = probAt(S.cfg, S.pity, S.usePity);
+    ctx.fillText('← 出金 ' + (p * 100).toFixed(2) + '%　　未出货 ' + ((1 - p) * 100).toFixed(2) + '% →', w / 2, y + barH + 24);
+  }
+
+  ctx.textAlign = 'left';
+  ctx.fillText('抽卡结果见下方格子', pad, y + barH + 46);
+}
+
+/* ============ 图表 ============ */
+function drawChart(){
+  if (S.mode === 'lottery'){ drawChartLottery(); return; }
+  var canvas = document.getElementById('chart');
+  var f = fitCanvas(canvas), ctx = f.ctx, w = f.w, h = f.h;
+  var padL = 46, padR = 16, padT = 28, padB = 24;
+  var cw = w - padL - padR, ch = h - padT - padB;
+  if (cw < 40 || ch < 30) return;
+
+  var batch = S.batch;
+  ctx.font = '11px system-ui,sans-serif';
+  ctx.textBaseline = 'middle';
+
+  // 网格
+  ctx.strokeStyle = '#1A2130';
+  ctx.lineWidth = 1;
+  for (var g = 0; g <= 4; g++){
+    var gy = padT + ch * g / 4;
+    ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + cw, gy); ctx.stroke();
+  }
+
+  if (!batch || !batch.hits){
+    ctx.fillStyle = COL.dim;
+    ctx.textAlign = 'center';
+    ctx.font = '12px system-ui,sans-serif';
+    ctx.fillText('点「批量模拟」跑十万次，这里会出现分布图', w / 2, padT + ch / 2);
+    return;
+  }
+
+  var maxX = S.cfg.hard;
+  function X(v){
+    v = Math.max(1, Math.min(v, maxX));
+    return padL + cw * (v - 1) / Math.max(1, maxX - 1);
+  }
+
+  if (S.chart === 'dist'){
+    var peak = 0;
+    for (var i = 1; i <= maxX; i++) if (batch.hist[i] > peak) peak = batch.hist[i];
+    if (peak === 0) peak = 1;
+
+    for (var j = 1; j <= maxX; j++){
+      if (!batch.hist[j]) continue;
+      var bh = ch * (batch.hist[j] / peak);
+      var inPity = (S.cfg.softStep > 0 && S.cfg.softStart > 0 && j >= S.cfg.softStart) || j >= S.cfg.hard;
+      ctx.fillStyle = inPity ? 'rgba(232,184,75,.75)' : 'rgba(78,205,196,.55)';
+      ctx.fillRect(X(j) - 1, padT + ch - bh, Math.max(1.5, cw / maxX - 1), bh);
+    }
+
+    // 纵轴
+    ctx.fillStyle = COL.dim;
+    ctx.textAlign = 'right';
+    for (var k = 0; k <= 4; k++){
+      var val = peak * (4 - k) / 4;
+      ctx.fillText((val / batch.hits * 100).toFixed(1) + '%', padL - 8, padT + ch * k / 4);
+    }
+
+    // 软保底标记
+    if (S.cfg.softStep > 0 && S.cfg.softStart > 0){
+      var sx = X(S.cfg.softStart);
+      ctx.strokeStyle = 'rgba(232,184,75,.5)';
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.moveTo(sx, padT); ctx.lineTo(sx, padT + ch); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = COL.gold;
+      ctx.textAlign = 'left';
+      ctx.font = '10.5px system-ui,sans-serif';
+      ctx.fillText('软保底', sx + 4, padT + 8);
+    }
+
+    ctx.fillStyle = COL.dim;
+    ctx.font = '11px system-ui,sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    var noteTxt = S.cfg.softStep > 0
+      ? ('左侧贴地的平台段 = 每抽 ' + S.cfg.base.toFixed(2) + '%，柱矮得几乎看不见 —— 这就是体感的来源')
+      : ('没有软保底：每抽恒为 ' + S.cfg.base.toFixed(2) + '%，最右边那根柱子是硬保底');
+    ctx.fillText(noteTxt, padL, 12);
+  }
+  else if (S.chart === 'cdf'){
+    var acc = 0;
+    ctx.beginPath();
+    ctx.moveTo(X(1), padT + ch);
+    for (var m = 1; m <= maxX; m++){
+      acc += batch.hist[m];
+      var yy = padT + ch - ch * (acc / batch.hits);
+      ctx.lineTo(X(m), yy);
+    }
+    ctx.lineTo(X(maxX), padT + ch - ch);
+    ctx.strokeStyle = COL.gold;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 50% 水平线
+    ctx.strokeStyle = 'rgba(138,148,166,.35)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(padL, padT + ch / 2); ctx.lineTo(padL + cw, padT + ch / 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = COL.dim;
+    ctx.textAlign = 'left';
+    ctx.font = '10.5px system-ui,sans-serif';
+    ctx.fillText('50%', padL + 4, padT + ch / 2 - 8);
+
+    // P50 竖线
+    var p50 = quantileFromHist(batch.hist, batch.hits, 0.5);
+    ctx.strokeStyle = 'rgba(232,184,75,.45)';
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.moveTo(X(p50), padT); ctx.lineTo(X(p50), padT + ch);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = COL.gold;
+    ctx.textAlign = 'left';
+    ctx.font = '10.5px system-ui,sans-serif';
+    ctx.fillText('P50 · ' + p50 + ' 抽', X(p50) + 4, padT + 8);
+
+    ctx.textAlign = 'right';
+    for (var q = 0; q <= 4; q++){
+      ctx.fillStyle = COL.dim;
+      ctx.fillText((100 - q * 25) + '%', padL - 8, padT + ch * q / 4);
+    }
+  }
+  else {
+    // 出货条纹图：每个抽卡周期一条，长度 = 这一周期花了多少抽出货，按欧非排序
+    var tl = batch.timeline;
+    var n = tl.length;
+    if (n === 0){
+      ctx.fillStyle = COL.dim;
+      ctx.textAlign = 'center';
+      ctx.font = '12px system-ui,sans-serif';
+      ctx.fillText('还没有出货记录', w / 2, padT + ch / 2);
+      return;
+    }
+    var rows = Math.min(72, n);
+    var gapStep = n / rows;
+    var samples = [];
+    for (var t = 0; t < rows; t++) samples.push(tl[Math.floor(t * gapStep)]);
+    samples.sort(function(a, b){ return a - b; });
+    var rowH = ch / rows;
+    var barH = Math.max(1.4, rowH * 0.62);
+    for (var s = 0; s < samples.length; s++){
+      var wpx = X(samples[s]) - padL;
+      if (wpx < 1) wpx = 1;
+      var yy = padT + s * rowH + (rowH - barH) / 2;
+      ctx.fillStyle = 'rgba(232,184,75,0.13)';
+      ctx.fillRect(padL, yy + barH / 2, wpx, Math.max(1, barH * 0.35));
+      ctx.fillStyle = COL.gold;
+      ctx.fillRect(padL + wpx - 3, yy, 3, barH);
+    }
+    var medRow = samples[Math.floor(samples.length / 2)];
+    var mx = X(medRow);
+    ctx.strokeStyle = 'rgba(138,148,166,.4)';
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath(); ctx.moveTo(mx, padT); ctx.lineTo(mx, padT + ch); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = COL.gold;
+    ctx.textAlign = 'left';
+    ctx.font = '10.5px system-ui,sans-serif';
+    ctx.fillText('中位 ' + medRow + ' 抽', mx + 4, padT + 8);
+
+    ctx.fillStyle = COL.dim;
+    ctx.textAlign = 'left';
+    ctx.font = '11px system-ui,sans-serif';
+    ctx.fillText('每一条 = 一个完整抽卡周期（共 ' + fmt(batch.times) + ' 次），上欧下非 · 竖线是中位数', padL, 12);
+  }
+
+  // x 轴刻度
+  ctx.fillStyle = COL.dim;
+  ctx.textAlign = 'center';
+  ctx.font = '11px system-ui,sans-serif';
+  [1, Math.round(maxX * 0.25), Math.round(maxX * 0.5), Math.round(maxX * 0.75), maxX].forEach(function(v){
+    ctx.fillText(v, X(v), h - 8);
+  });
+
+  // 轴
+  ctx.strokeStyle = '#2C374A';
+  ctx.beginPath();
+  ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + ch); ctx.lineTo(padL + cw, padT + ch);
+  ctx.stroke();
+}
+
+/* 自定义抽奖的图表：每个奖品一行，实心条 = 实测，白线 = 设定值 */
+function drawChartLottery(){
+  var canvas = document.getElementById('chart');
+  var f = fitCanvas(canvas), ctx = f.ctx, w = f.w, h = f.h;
+  var padL = 96, padR = 86, padT = 30, padB = 14;
+  var cw = w - padL - padR, chh = h - padT - padB;
+  if (cw < 60 || chh < 20) return;
+
+  var st = S.lotBatch || S.lotSess;
+  var items = S.lot.items;
+  var n = items.length;
+  var total = lotTotal();
+
+  ctx.font = '11px system-ui,sans-serif';
+  ctx.textBaseline = 'middle';
+
+  if (!st || !st.pulls){
+    ctx.fillStyle = COL.dim;
+    ctx.textAlign = 'center';
+    ctx.font = '12px system-ui,sans-serif';
+    ctx.fillText('点「批量模拟」跑一次，这里会出现各奖品的实测频次与设定值的对照', w / 2, padT + chh / 2);
+    return;
+  }
+  if (!n) return;
+
+  var maxVal = 0.01;
+  items.forEach(function(it, i){
+    var theo = lotEffectiveProb(i);
+    var obs = (st.counts[i] || 0) / st.pulls;
+    if (theo > maxVal) maxVal = theo;
+    if (obs > maxVal) maxVal = obs;
+  });
+
+  var rowH = chh / n;
+  var barH = Math.max(6, Math.min(16, rowH * 0.46));
+
+  items.forEach(function(it, i){
+    var theo = lotEffectiveProb(i);
+    var obs = (st.counts[i] || 0) / st.pulls;
+    var y = padT + i * rowH + rowH / 2;
+    var avail = cw * 0.94;
+
+    ctx.fillStyle = COL.dim2;
+    ctx.textAlign = 'right';
+    ctx.fillText(String(it.name).slice(0, 9), padL - 10, y);
+
+    ctx.fillStyle = 'rgba(255,255,255,.05)';
+    ctx.fillRect(padL, y - barH / 2, avail, barH);
+
+    ctx.fillStyle = it.color;
+    ctx.fillRect(padL, y - barH / 2, Math.max(0.5, obs / maxVal * avail), barH);
+
+    var tx = padL + theo / maxVal * avail;
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.fillRect(tx - 1, y - barH / 2 - 3, 2, barH + 6);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = COL.dim2;
+    ctx.fillText((obs * 100).toFixed(2) + '%', padL + cw + 8, y);
+  });
+
+  ctx.fillStyle = COL.dim;
+  ctx.textAlign = 'left';
+  var chartNote = S.usePity && S.lot.pityN > 0
+    ? '实心条 = 实测频率，白线 = 含保底后的概率 · 共 ' + fmt(st.pulls) + ' 抽'
+    : '实心条 = 实测频率，白线 = 设定概率 · 共 ' + fmt(st.pulls) + ' 抽';
+  ctx.fillText(chartNote, padL, 13);
+}
+
+/* ============ 导入导出 ============ */
+function copyText(txt, btn){
+  var ok = function(){
+    var old = btn.textContent;
+    btn.textContent = '已复制 ✓';
+    btn.disabled = true;
+    setTimeout(function(){ btn.textContent = old; btn.disabled = false; }, 1500);
+  };
+  var fallback = function(){
+    var ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    var good = false;
+    try { good = document.execCommand('copy'); } catch(e){ good = false; }
+    document.body.removeChild(ta);
+    if (good) ok();
+    else alert('自动复制失败，请手动选中文本复制。');
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok, fallback);
+  } else fallback();
+}
+
+function buildTemplateText(){
+  if (S.mode === 'lottery') return buildLotteryTemplate();
+  var c = S.cfg;
+  var sample = {
+    id: 'my-banner',
+    name: '我的卡池',
+    base: c.base,
+    softStart: c.softStart,
+    softStep: c.softStep,
+    hard: c.hard,
+    up: c.up,
+    guarantee: c.guarantee,
+    official: c.official,
+    src: '数据来源（官方公示页名称或链接）',
+    conf: 'official',
+    note: ''
+  };
+  var cur = {
+    id: c.id, name: c.name, base: c.base, softStart: c.softStart,
+    softStep: c.softStep, hard: c.hard, up: c.up, guarantee: c.guarantee,
+    official: c.official, src: c.src, conf: c.conf, note: c.note
+  };
+  return [
+    '我在用一个叫「欧非仪表盘」的抽卡概率模拟器。请帮我生成一份卡池配置。',
+    '',
+    '只输出一个 JSON 对象，不要解释、不要加 markdown 代码块标记，格式如下：',
+    '',
+    JSON.stringify(sample, null, 2),
+    '',
+    '字段含义与约束：',
+    '- base：单抽基础出率，百分比数值（0.6 表示 0.6%），范围 0~100',
+    '- softStart：软保底从第几抽开始生效，填 0 表示没有软保底',
+    '- softStep：软保底生效后每抽递增多少个百分点，可为 0',
+    '- hard：硬保底抽数，到这一抽必定出货，必须 ≥ 1 且 ≥ softStart',
+    '- up：出货时是当期限定（UP）的概率，百分比 0~100',
+    '- guarantee：是否有大小保底（歪了下次必中）',
+    '- official：官方公示的综合概率（含保底），百分比；没有公示就填 null',
+    '- conf：填 "official" 表示基础率与综合率来自官方公示，"fitted" 表示参数是拟合推测',
+    '- src / note：数据来源与补充说明，纯文本',
+    '',
+    '请把下面这个卡池翻译成上面的 JSON：',
+    '【在这里写你要的卡池，例如：某游戏角色池，基础 1.2%，综合 2.0%，120 抽保底，没有软保底，有大小保底】',
+    '',
+    '作为参考，当前编辑器里打开的是这个卡池：',
+    JSON.stringify(cur, null, 2)
+  ].join('\n');
+}
+
+function buildLotteryTemplate(){
+  var sample = {
+    _type: 'lottery',
+    lottery: {
+      pityN: 10,
+      items: [
+        { name: '一等奖', weight: 1, color: '#E8B84B' },
+        { name: '二等奖', weight: 3, color: '#A78BFA' },
+        { name: '三等奖', weight: 6, color: '#4ECDC4' },
+        { name: '谢谢参与', weight: 20, color: '#39415A' }
+      ]
+    }
+  };
+  var cur = {
+    _type: 'lottery',
+    lottery: { pityN: S.lot.pityN, items: S.lot.items }
+  };
+  return [
+    '我在用一个叫「欧非仪表盘」的抽奖模拟器，需要你帮我设计一份奖品配置。',
+    '',
+    '只输出一个 JSON 对象，不要解释、不要加 markdown 代码块标记，格式如下：',
+    '',
+    JSON.stringify(sample, null, 2),
+    '',
+    '字段说明：',
+    '- items：奖品数组，第一项是头奖，至少两项',
+    '- weight：相对权重，实际概率 = 该权重 ÷ 所有奖品权重之和；填 0 表示这一项永远抽不到',
+    '- color：十六进制颜色值，用来绘制转盘扇区',
+    '- pityN：连续多少次没中头奖后，下一抽必定中头奖；填 0 表示不设保底',
+    '',
+    '请帮我设计：',
+    '【在这里写需求，例如：公司年会抽奖，一等奖 1 台游戏机，二等奖 3 个机械键盘，三等奖 10 个保温杯，其余为参与奖，一等奖概率控制在 0.5% 左右】',
+    '',
+    '作为参考，当前编辑器里正在用的是这一份：',
+    JSON.stringify(cur, null, 2)
+  ].join('\n');
+}
+
+document.getElementById('btnTpl').addEventListener('click', function(){
+  copyText(buildTemplateText(), this);
+});
+
+document.getElementById('btnSound').addEventListener('click', function(){
+  AUDIO.on = !AUDIO.on;
+  this.textContent = AUDIO.on ? '🔊' : '🔇';
+  this.title = AUDIO.on ? '音效已开启' : '音效已关闭';
+  if (AUDIO.on){
+    AUDIO.init();
+    AUDIO.tone(880, 0.08, 'sine', 0.1);
+  }
+});
+
+document.getElementById('btnExport').addEventListener('click', function(){
+  var data, fname;
+  if (S.mode === 'lottery'){
+    data = {
+      _format: 'oufei-dashboard/1',
+      _type: 'lottery',
+      _exported: new Date().toISOString().slice(0, 10),
+      lottery: {
+        pityN: S.lot.pityN,
+        items: S.lot.items.map(function(it){
+          return { name: it.name, weight: it.weight, color: it.color };
+        })
+      }
+    };
+    fname = 'lottery-config.json';
+  } else {
+    data = {
+      _format: 'oufei-dashboard/1',
+      _type: 'banner',
+      _exported: new Date().toISOString().slice(0, 10),
+      banner: S.cfg
+    };
+    fname = 'banner-' + S.cfg.id + '.json';
+  }
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1500);
+});
+
+document.getElementById('btnImport').addEventListener('click', function(){
+  document.getElementById('fileIn').click();
+});
+
+/* 导入核心：自动识别类型，返回 'lottery' / 'banner'，出错抛异常 */
+function applyImported(obj){
+  if (obj._type === 'lottery' || (obj.lottery && obj.lottery.items)){
+    var lp = obj.lottery || obj;
+    if (!lp.items || !lp.items.length) throw new Error('缺少 items 奖品列表');
+    if (lp.items.length < 2) throw new Error('至少需要两个奖品');
+    if (lp.items.length > 12) throw new Error('奖品最多 12 个');
+    var items = lp.items.map(function(it, i){
+      return {
+        name: String(it.name || ('奖品 ' + (i + 1))).slice(0, 12),
+        weight: Math.max(0, parseFloat(it.weight) || 0),
+        color: /^#[0-9a-fA-F]{6}$/.test(String(it.color)) ? it.color : LOT_PALETTE[i % LOT_PALETTE.length]
+      };
+    });
+    var tot = 0;
+    for (var q = 0; q < items.length; q++) tot += items[q].weight;
+    if (tot <= 0) throw new Error('所有奖品权重都是 0');
+
+    S.lot.items = items;
+    S.lot.pityN = Math.max(0, parseInt(lp.pityN, 10) || 0);
+    document.getElementById('f-pityN').value = S.lot.pityN;
+    if (S.mode !== 'lottery') setMode('lottery');
+    resetLotSess();
+    renderLotList();
+    renderAll();
+    return 'lottery';
+  }
+
+  var b = obj.banner || obj;
+  var need = ['base','softStart','softStep','hard','up'];
+  for (var i = 0; i < need.length; i++){
+    if (typeof b[need[i]] !== 'number') throw new Error('缺少字段 ' + need[i]);
+  }
+  if (b.hard < 1) throw new Error('硬保底必须 ≥ 1 抽');
+  if (b.base < 0 || b.base > 100) throw new Error('基础出率必须在 0 ~ 100 之间');
+  if (b.up < 0 || b.up > 100) throw new Error('UP 占比必须在 0 ~ 100 之间');
+  if (b.softStep < 0) throw new Error('软保底步长不能为负');
+  if (b.softStart > b.hard) throw new Error('软保底起点不能大于硬保底');
+
+  S.cfg = {
+    id: b.id || 'custom', name: b.name || '自定义卡池',
+    base: b.base, softStart: b.softStart, softStep: b.softStep,
+    hard: b.hard, up: b.up, guarantee: !!b.guarantee,
+    official: (typeof b.official === 'number' ? b.official : null),
+    src: b.src || '导入的自定义配置',
+    conf: b.conf || 'fitted',
+    note: b.note || '由外部 JSON 导入。'
+  };
+  optCustom.style.display = '';
+  optCustom.textContent = '自定义配置（' + S.cfg.name + '）';
+  sel.value = 'custom';
+  if (S.mode !== 'gacha') setMode('gacha');
+  resetSession();
+  syncFields();
+  renderAll();
+  return 'banner';
+}
+
+document.getElementById('fileIn').addEventListener('change', function(e){
+  var file = e.target.files && e.target.files[0];
+  if (!file) return;
+  var fr = new FileReader();
+  fr.onload = function(){
+    try {
+      applyImported(JSON.parse(fr.result));
+    } catch(err){
+      alert('导入失败：' + err.message);
+    }
+    e.target.value = '';
+  };
+  fr.readAsText(file);
+});
+
+document.getElementById('btnReset').addEventListener('click', function(){
+  /* 自定义抽奖模式下，恢复默认 = 恢复默认奖品表 */
+  if (S.mode === 'lottery'){
+    S.lot.items = [
+      { name:'一等奖',   weight:1,  color:'#E8B84B' },
+      { name:'二等奖',   weight:3,  color:'#A78BFA' },
+      { name:'三等奖',   weight:6,  color:'#4ECDC4' },
+      { name:'谢谢参与', weight:20, color:'#39415A' }
+    ];
+    S.lot.pityN = 10;
+    document.getElementById('f-pityN').value = 10;
+    resetLotSess();
+    renderLotList();
+    renderAll();
+    return;
+  }
+  var idx = parseInt(sel.value, 10);
+  if (!isFinite(idx) || !BANNERS[idx]) idx = 0;
+  optCustom.style.display = 'none';
+  sel.value = idx;
+  var b = BANNERS[idx];
+  initCfg(b);
+  resetSession();
+  syncFields();
+  renderAll();
+});
+
+/* ============ 启动 ============ */
+initCfg(BANNERS[0]);
+resetSession();
+resetLotSess();
+syncFields();
+document.getElementById('overlayWheel').style.display = 'flex';
+document.getElementById('legend').style.display = 'flex';
+updateBatchUnits();
+renderAll();
+
+/* 打开即先跑一次十万次，让首屏就有数据 */
+setTimeout(function(){ runBatch(100000); }, 60);
+
+/* 调试 / 扩展接口（方便二次开发与自动化测试） */
+window.OuFei = {
+  state: S,
+  pull: function(n){
+    n = n || 1;
+    for (var i = 0; i < n; i++){
+      var r = pullOne(RNG.next);
+      S.sess.pulls++;
+      if (r.hit){ S.sess.hits++; if (r.up) S.sess.ups++; }
+    }
+    renderAll();
+  },
+  batch: runBatch,
+  render: renderAll,
+  importConfig: applyImported,
+  audio: AUDIO
+};
+
+window.addEventListener('resize', function(){
+  drawView();
+  drawChart();
+});
+
+})();
+</script>
+</body>
+</html>

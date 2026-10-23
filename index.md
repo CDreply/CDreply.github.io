@@ -104,6 +104,13 @@ title: 🎮 沉答Ai小游戏乐园
   }
   .category-tag.misc:hover { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.2); }
 
+  .category-tag.tech {
+    background: rgba(167,139,250,0.1);
+    border: 1px solid rgba(167,139,250,0.28);
+    color: #A78BFA;
+  }
+  .category-tag.tech:hover { box-shadow: 0 4px 20px rgba(167,139,250,0.18); }
+
   /* ===== 分区标题 ===== */
   .section-label {
     max-width: 1100px;
@@ -289,6 +296,7 @@ title: 🎮 沉答Ai小游戏乐园
 <nav class="category-nav">
   <a class="category-tag primary" href="#games">🎮 小游戏</a>
   <a class="category-tag tool" href="XGJ/index.html">🔧 小工具</a>
+  <a class="category-tag tech" href="GJZJ/index.html">⚙️ 搞机总结</a>
   <a class="category-tag misc" href="JDSH/index.html">夹带私货</a>
 </nav>
 

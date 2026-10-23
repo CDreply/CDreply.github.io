@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Termux 全量升级实录（参考手册版）</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --line:#30363d;
+    --tx:#e6edf3; --tx2:#8b949e; --blue:#58a6ff;
+    --ok:#3fb950; --warn:#d29922; --danger:#f85149;
+    --mono:"SF Mono",Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--tx);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;font-size:16px;line-height:1.78}
+
+  aside{position:fixed;top:0;left:0;width:270px;height:100vh;background:var(--panel);
+    border-right:1px solid var(--line);overflow-y:auto;padding:26px 0 40px}
+  aside::-webkit-scrollbar{width:6px}
+  aside::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
+  .side-title{padding:0 22px 18px;font-size:15px;font-weight:700;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .side-title span{display:block;font-size:11px;color:var(--tx2);font-weight:400;margin-top:5px}
+  .side-group{padding:14px 22px 6px;font-size:10.5px;letter-spacing:2px;color:var(--tx2);text-transform:uppercase}
+  aside a{display:flex;gap:10px;padding:6px 22px;color:var(--tx2);text-decoration:none;
+    font-size:13.5px;border-left:2px solid transparent;transition:.15s}
+  aside a:hover{color:var(--tx);background:var(--panel2)}
+  aside a.active{color:var(--blue);border-left-color:var(--blue);background:rgba(88,166,255,.08)}
+  aside a i{font-style:normal;font-family:var(--mono);font-size:11.5px;color:#4d5866;padding-top:2px}
+  aside a.active i{color:var(--blue)}
+
+  main{margin-left:270px;padding:52px 56px 100px;max-width:1060px}
+
+  header.hero{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:28px}
+  .kicker{font-size:12px;letter-spacing:3px;color:var(--blue);text-transform:uppercase;margin-bottom:12px}
+  h1{font-size:32px;line-height:1.3;font-weight:800;letter-spacing:-.5px}
+  .sub{color:var(--tx2);font-size:15px;margin-top:12px}
+  .badges{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+  .badge{font-size:12px;padding:4px 11px;border-radius:20px;border:1px solid var(--line);background:var(--panel2);color:var(--tx2)}
+  .badge.ok{color:var(--ok);border-color:rgba(63,185,80,.35);background:rgba(63,185,80,.08)}
+  .badge.warn{color:var(--warn);border-color:rgba(210,153,34,.35);background:rgba(210,153,34,.08)}
+
+  .ai-notice{
+    background:linear-gradient(135deg,rgba(210,153,34,.13),rgba(248,81,73,.08));
+    border:1px solid rgba(210,153,34,.45);border-left:4px solid var(--warn);
+    border-radius:9px;padding:20px 22px;margin:0 0 40px;
+  }
+  .ai-notice .hd{
+    display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800;
+    color:var(--warn);margin-bottom:10px;letter-spacing:.3px;
+  }
+  .ai-notice .hd .ico{
+    width:22px;height:22px;border-radius:50%;background:var(--warn);color:#0d1117;
+    display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;
+  }
+  .ai-notice p{color:#e6d5b0;font-size:14.5px;margin:8px 0}
+  .ai-notice strong{color:#fff}
+  .ai-notice ul{margin:10px 0 4px 20px;color:#e6d5b0;font-size:14px}
+  .ai-notice li{margin:4px 0}
+
+  h2{font-size:23px;font-weight:700;margin:54px 0 18px;scroll-margin-top:24px;display:flex;align-items:baseline;gap:12px}
+  h2 em{font-style:normal;font-family:var(--mono);font-size:13px;color:var(--blue);
+    border:1px solid rgba(88,166,255,.3);border-radius:5px;padding:2px 8px;font-weight:400}
+  h3{font-size:16.5px;font-weight:700;margin:28px 0 10px}
+  p{margin:12px 0;color:#c9d1d9}
+  ul,ol{margin:12px 0 12px 22px;color:#c9d1d9}
+  li{margin:6px 0}
+  strong{color:#fff;font-weight:600}
+  code{font-family:var(--mono);font-size:13.5px;background:var(--panel2);padding:2px 6px;border-radius:4px;color:#ffa657;border:1px solid var(--line)}
+  pre{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;overflow-x:auto;margin:14px 0}
+  pre code{background:none;border:none;padding:0;color:#c9d1d9;font-size:12.8px;line-height:1.85}
+  pre code .c{color:#6e7681}
+
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:9px 13px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);font-weight:600;font-size:13px}
+  td{color:#c9d1d9}
+  tr:nth-child(even) td{background:rgba(255,255,255,.012)}
+
+  .box{border-radius:8px;padding:14px 18px;margin:18px 0;border-left:3px solid;font-size:14.5px}
+  .box.ok{background:rgba(63,185,80,.07);border-color:var(--ok)}
+  .box.warn{background:rgba(210,153,34,.07);border-color:var(--warn)}
+  .box.danger{background:rgba(248,81,73,.07);border-color:var(--danger)}
+  .box.info{background:rgba(88,166,255,.07);border-color:var(--blue)}
+  .box b{display:block;margin-bottom:6px;font-size:13.5px}
+  .box.ok b{color:var(--ok)} .box.warn b{color:var(--warn)}
+  .box.danger b{color:var(--danger)} .box.info b{color:var(--blue)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:20px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:16px 18px}
+  .card .k{font-size:11.5px;letter-spacing:1px;color:var(--tx2);text-transform:uppercase;margin-bottom:8px}
+  .card .v{font-size:19px;font-weight:700;font-family:var(--mono);color:var(--blue)}
+  .card .d{font-size:12.5px;color:var(--tx2);margin-top:6px;line-height:1.55}
+
+  .tag{font-size:11.5px;padding:2px 8px;border-radius:4px;font-family:var(--mono);white-space:nowrap}
+  .tag.ok{background:rgba(63,185,80,.15);color:var(--ok)}
+  .tag.bad{background:rgba(248,81,73,.15);color:var(--danger)}
+  .tag.warn{background:rgba(210,153,34,.15);color:var(--warn)}
+
+  .flow{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0;align-items:center}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:9px 14px;
+    font-size:13px;display:flex;gap:9px;align-items:center}
+  .step .n{font-family:var(--mono);font-size:11px;color:#0d1117;background:var(--blue);
+    width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .arrow{color:#4d5866;font-family:var(--mono)}
+
+  .refnote{
+    background:var(--panel2);border:1px dashed var(--line);border-radius:7px;
+    padding:11px 16px;margin:14px 0 20px;font-size:13.5px;color:var(--tx2);
+  }
+  .refnote b{color:var(--blue);display:inline}
+
+  footer{margin-top:70px;padding-top:24px;border-top:1px solid var(--line);color:var(--tx2);font-size:13px;line-height:1.9}
+
+  @media (max-width:900px){
+    aside{position:static;width:auto;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:16px 0}
+    .side-title{padding:0 18px 12px}
+    .side-group{display:none}
+    aside a{display:inline-flex;padding:5px 12px;border-left:none;border-bottom:2px solid transparent}
+    aside a.active{border-bottom-color:var(--blue)}
+    main{margin-left:0;padding:30px 20px 70px}
+    h1{font-size:24px} h2{font-size:19px}
+    pre{padding:13px 14px}
+    pre code{font-size:11.6px}
+  }
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="side-title">Termux 全量升级实录<span>参考手册版 · 已脱敏</span></div>
+
+  <div class="side-group">声明</div>
+  <a href="#notice"><i>!</i>关于本文</a>
+  <a href="#s0"><i>00</i>三句话结论</a>
+
+  <div class="side-group">认识</div>
+  <a href="#s1"><i>01</i>PHP 是什么</a>
+  <a href="#s2"><i>02</i>这次漏洞影响什么</a>
+
+  <div class="side-group">决策</div>
+  <a href="#s3"><i>03</i>为什么不能分批升</a>
+  <a href="#s4"><i>04</i>升级流程概览</a>
+
+  <div class="side-group">故障</div>
+  <a href="#s5"><i>05</i>php-fpm 起不来</a>
+  <a href="#s6"><i>06</i>nginx 双实例</a>
+  <a href="#s7"><i>07</i>站点文件被覆盖</a>
+  <a href="#s8"><i>08</i>Python 包失效</a>
+
+  <div class="side-group">参考</div>
+  <a href="#s9"><i>09</i>踩坑清单</a>
+  <a href="#s10"><i>10</i>Termux 常用命令</a>
+  <a href="#s11"><i>11</i>命令参考</a>
+  <a href="#s12"><i>12</i>备份与恢复</a>
+</aside>
+
+<main>
+
+<header class="hero">
+  <div class="kicker">Termux Full Upgrade · Reference</div>
+  <h1>Termux 全量升级实录</h1>
+  <div class="sub">126 个包、PHP 8.1.13 → 8.5.12、四个真实故障的根因与修法</div>
+  <div class="badges">
+    <span class="badge warn">AI 总结生成 · 仅供参考</span>
+    <span class="badge ok">已脱敏</span>
+    <span class="badge">面向代码小白</span>
+  </div>
+</header>
+
+<div class="ai-notice" id="notice">
+  <div class="hd"><span class="ico">!</span>重要声明：本文主要内容由 AI 总结生成，仅供参考</div>
+  <p>本文由 <strong>WorkBuddy（AI 助手）</strong>根据一次真实的 Termux 升级过程整理生成，用于记录与分享，<strong>不构成权威技术文档</strong>。</p>
+  <ul>
+    <li>文中命令与结论已尽可能对照官方文档、软件包源码与实机结果核对，但<strong>不同设备、不同版本、不同网络环境下行为可能不同</strong>。</li>
+    <li>命令按本文执行前，<strong>请先备份数据</strong>；涉及系统级操作时，建议先在副本或测试环境中验证。</li>
+    <li>版本号、漏洞编号、软件行为均有时效性，阅读时请以你自己环境中的实际输出为准。</li>
+    <li>因执行本文命令造成的任何数据丢失或服务中断，作者与本文不承担责任。</li>
+  </ul>
+  <p style="margin-top:10px">一句话：<strong>把它当参考，不要当圣经。</strong></p>
+</div>
+
+<!-- ===== 00 ===== -->
+<h2 id="s0"><em>00</em>三句话结论</h2>
+
+<div class="grid">
+  <div class="card"><div class="k">千万别做</div><div class="v" style="font-size:15px;line-height:1.4">apt-get upgrade</div><div class="d">会造出半升级：库换了、程序没换，直接崩</div></div>
+  <div class="card"><div class="k">正确命令</div><div class="v" style="font-size:15px">pkg upgrade</div><div class="d">内部就是 full-upgrade，允许安装新包</div></div>
+  <div class="card"><div class="k">唯一保险</div><div class="v" style="font-size:15px">prefix 快照</div><div class="d">环境崩了连 shell 都进不去，命令都敲不了</div></div>
+</div>
+
+<p>展开一句：<strong>Termux 不支持部分升级</strong>。维护者在 issue 里的原话是——</p>
+
+<pre><code><span class="c">// 引自 termux/termux-packages issue #21187</span>
+Partial upgrades such as updated libicu but left intact swift, <b>are not supported</b>.</code></pre>
+
+<p>翻译：要么全升，要么先别动，没有中间路线。</p>
+
+<!-- ===== 01 ===== -->
+<h2 id="s1"><em>01</em>PHP 是什么</h2>
+
+<p>如果你只写过 HTML，可以这样理解：</p>
+
+<div class="box info">
+  <b>一句话版本</b>
+  <strong>PHP 是一种「跑在服务器上的编程语言」，专门用来现做网页。</strong>你在地址栏敲一个网址，服务器上的 PHP 就开始干活——查数据库、拼 HTML、算好结果，再把整页塞给你的浏览器。
+</div>
+
+<h3>它和前端语言的区别</h3>
+
+<table>
+  <tr><th></th><th>HTML / CSS / JavaScript</th><th>PHP</th></tr>
+  <tr><td>在哪运行</td><td>你的浏览器里</td><td><strong>服务器上</strong>（你看不到它的代码）</td></tr>
+  <tr><td>你能看到源码吗</td><td>能（右键查看源代码）</td><td><strong>不能</strong>，只收到它算完的结果</td></tr>
+  <tr><td>典型用途</td><td>页面长相、交互</td><td>登录、发帖、上传、查数据</td></tr>
+</table>
+
+<p>所以你浏览一个 PHP 网站时，浏览器和服务器之间是这样的：</p>
+
+<pre><code>浏览器  ──请求──▶  服务器（PHP 在这里执行）  ──HTML──▶  浏览器显示</code></pre>
+
+<div class="box warn">
+  <b>关键点：漏洞在「服务器那一端」</b>
+  浏览器里的一切都是安全的——你只是收到了结果。出问题时，出事的是<strong>那台服务器</strong>：别人拿到了它的控制权。
+</div>
+
+<h3>PHP 有两种跑法，安全性差别很大</h3>
+
+<table>
+  <tr><th>方式</th><th>怎么工作</th><th>这次漏洞下的风险</th></tr>
+  <tr><td><strong>mod_php</strong></td><td>PHP 被编译成一个模块，直接塞进 Apache 里，每个请求都由 Apache 自己解释</td><td><span class="tag bad">最高</span> 请求在<strong>业务代码执行之前</strong>就被打穿，安全插件、维护模式全都看不见</td></tr>
+  <tr><td><strong>php-fpm</strong></td><td>PHP 是一个独立后台进程，nginx 收到请求后转交给它处理</td><td><span class="tag warn">高</span> 至少中间隔了一层，可以做网络层拦截</td></tr>
+</table>
+
+<p>怎么知道自己用的是哪种？在服务器上跑：</p>
+
+<pre><code><span class="c"># 看有没有 php-fpm 进程在跑</span>
+pgrep -a php-fpm
+
+<span class="c"># 看 Apache 有没有加载 libphp 模块</span>
+ls /usr/lib/apache2/modules/libphp* 2&gt;/dev/null</code></pre>
+
+<p>前者有输出 = php-fpm；后者有输出 = mod_php。</p>
+
+<h3>顺便说个数字</h3>
+
+<p>全球大约 <strong>七成</strong> 的网站用 PHP。WordPress（全球四成网站）、Wikipedia，以及大量论坛、商城、企业站都建立在它上面。所以 PHP 一出底层漏洞，波及面是全行业级别的。</p>
+
+<!-- ===== 02 ===== -->
+<h2 id="s2"><em>02</em>这次漏洞影响什么</h2>
+
+<table>
+  <tr><th>编号</th><th>类型</th><th>可能后果</th></tr>
+  <tr><td><code>CVE-2026-109618</code></td><td>Use-After-Free（释放后使用）</td><td rowspan="2"><strong>未授权远程代码执行</strong><br>严重度 CVSS 4.0 = <strong>9.2</strong></td></tr>
+  <tr><td><code>CVE-2026-109619</code></td><td>内存泄露</td></tr>
+</table>
+
+<h3>「Use-After-Free」到底是什么意思</h3>
+
+<p>打个比方：程序向系统借了一块内存放数据，用完归还了。正常情况这块内存不该再碰。但如果程序有个逻辑错误，<strong>归还之后还在用这块地址</strong>——而系统已经把它分给别人了——那它读到的就是别人的数据，写进去就是改别人的数据。</p>
+
+<p>攻击者要做的，就是精心安排“别人”是谁。安排得当，就能让程序<strong>替他执行一段他自己写的代码</strong>。这就是 RCE（Remote Code Execution，远程代码执行）——一整台服务器的控制权。</p>
+
+<h3>触发条件有多低</h3>
+
+<table>
+  <tr><th>项目</th><th>情况</th></tr>
+  <tr><td>要登录吗</td><td><strong>不用</strong></td></tr>
+  <tr><td>要用户点击吗</td><td><strong>不用</strong></td></tr>
+  <tr><td>要你的代码有 bug 吗</td><td><strong>不用</strong>，漏洞在 PHP 引擎本身</td></tr>
+  <tr><td>怎么触发</td><td>发一个特制的 <code>multipart/form-data</code> 请求（就是网页上传文件用的那种格式）</td></tr>
+</table>
+
+<div class="box danger">
+  <b>意味着什么</b>
+  哪怕你的网站上只跑着一句 <code>Hello World</code>，只要它由受影响版本的 PHP 处理请求，就同样可被打。业务代码写得再干净也不顶用——<strong>底座漏了</strong>。
+</div>
+
+<h3>影响范围与修复版本</h3>
+
+<table>
+  <tr><th></th><th>版本</th></tr>
+  <tr><td>受影响</td><td>≤ 8.5.11 / 8.4.26 / 8.3.35 / 8.2.34（再往前的旧分支基本全中）</td></tr>
+  <tr><td>已修复</td><td><strong>8.5.12 / 8.4.27 / 8.3.36 / 8.2.35</strong></td></tr>
+</table>
+
+<div class="box warn">
+  <b>8.1 及更早分支</b>
+  官方只提供了「最小化源码回溯补丁」，需要自己编译。而 8.1 整条线在 2025-12-31 已 EOL——也就是说近一年积累的所有 PHP 漏洞都没有官方修复。这类环境建议直接换容器或换技术栈，不要指望打补丁。
+</div>
+
+<h3>为什么 phpMyAdmin 这类工具特别危险</h3>
+
+<p>两个原因叠加：</p>
+
+<ol>
+  <li><strong>它的正常运行就会踩中利用路径</strong>。phpMyAdmin 启动就要 <code>session_start()</code>、解析序列化数据，正好是 109618 的已知触发点。</li>
+  <li><strong>它的进程内存里躺着数据库账号密码</strong>。打穿一个管理工具，等于把整个数据库的连接凭证一起交出去。</li>
+</ol>
+
+<h3>三分钟自查</h3>
+
+<pre><code><span class="c"># 1. 看 PHP 版本（要看完整的第一行，含构建日期）</span>
+php -v | head -1
+
+<span class="c"># 2. Debian/Ubuntu 系：安全补丁会加 debXXuX 后缀，版本号本身不变</span>
+dpkg -l | grep -E 'php[0-9]|libapache2-mod-php'
+
+<span class="c"># 3. 容器里装的（有 docker 的话）</span>
+docker ps</code></pre>
+
+<div class="box warn">
+  <b>Debian 系的坑：版本号没变不等于没修</b>
+  发行版的安全更新走 backport，<strong>不改上游版本号</strong>，只在包版本后面加后缀（如 <code>8.2.30-1~deb12u2</code>）。所以 <code>php -v</code> 显示 8.2.30 只证明“上游没发新版”，不证明“你的系统没修”。必须看 <code>dpkg -l</code> 的后缀。
+</div>
+
+<!-- ===== 03 ===== -->
+<h2 id="s3"><em>03</em>为什么不能分批升</h2>
+
+<p>这是整件事最关键的一个认知。看 <code>pkg</code> 命令的源码（<code>termux-tools/scripts/pkg.in</code>）：</p>
+
+<pre><code><span class="c">// pkg 脚本里 upgrade 分支的实现</span>
+up|upg*) select_mirror; apt update; apt <b>full-upgrade</b> "$@" ;;</code></pre>
+
+<p>这句在 v1.32 到 v1.46 之间<strong>完全没变</strong>。也就是说 <code>pkg upgrade</code> 一直就是 <code>apt full-upgrade</code> 的包装，不是“更激进的替代品”。</p>
+
+<h3>两种命令的实测差异</h3>
+
+<table>
+  <tr><th>命令</th><th>实测结果</th><th>原因</th></tr>
+  <tr><td><code>apt-get upgrade</code></td><td>98 升 + <strong>28 个被 kept back</strong></td><td>只换版本，<strong>不允许安装新包</strong>。新版 <code>termux-tools</code> 依赖一个三年前不存在的包（<code>termux-core</code>），整条依赖链被挡住</td></tr>
+  <tr><td><code>apt-get full-upgrade</code></td><td>126 升 + 31 新装 + 3 删 + <strong>0 扣留</strong></td><td>允许安装新包，依赖一次配齐</td></tr>
+</table>
+
+<div class="box danger">
+  <b>半升级长什么样</b>
+  那 98 升里包含 <code>libicu 72 → 78</code>，它的 SONAME 从 <code>libicuuc.so.72</code> 换成了 <code>.78</code>（SONAME 相当于库的“身份证号”，所有链接它的程序都按这个号找文件）。<br><br>
+  而被扣留的 28 个里包含 <code>php</code>、<code>nodejs</code>、<code>glib</code>——它们全都链接着旧号的 ICU。<br><br>
+  <strong>结果</strong>：库换了新号，程序还在按旧号找，启动立刻报错：<br>
+  <code>CANNOT LINK EXECUTABLE ... libicuuc.so.72 not found</code><br><br>
+  <strong>量化特征</strong>：<code>Need to get</code> 只有几十 MB。完整升级应是一两百 MB——<strong>数字异常小，就是半升级的信号</strong>。
+</div>
+
+<h3>三个数字验收</h3>
+
+<pre><code><span class="c"># -s 是 simulate，只算不装；把结果存文件，避免用 tail 切掉摘要</span>
+apt-get -s full-upgrade &gt; ~/plan.txt 2&gt;&amp;1
+
+<span class="c"># 摘要行：升了多少 / 要下多少 / 有没有被扣</span>
+grep -E 'upgraded,|Need to get|not upgraded' ~/plan.txt
+
+<span class="c"># 数一下要安装的条目数</span>
+grep -c '^Inst ' ~/plan.txt
+
+<span class="c"># 列出会被删除的包（一定要看！）</span>
+grep '^Remv ' ~/plan.txt</code></pre>
+
+<table>
+  <tr><th>看什么</th><th>应为</th><th>异常时</th></tr>
+  <tr><td><code>not upgraded</code></td><td><strong>0</strong></td><td>非 0 说明还有包被扣，别升</td></tr>
+  <tr><td><code>Inst</code> 行数</td><td>接近待升级总数</td><td>远小于 → 依赖没解开</td></tr>
+  <tr><td><code>Remv</code> 列表</td><td>只含包结构重构的旧包</td><td><strong>出现 bash / coreutils / dpkg / apt 立刻停手</strong></td></tr>
+</table>
+
+<div class="box warn">
+  <b>取证写法很讲究</b>
+  别用 <code>| tail -40</code> 看 apt 的计划——摘要（多少升、多少删、下多少）在输出<strong>开头</strong>，明细在后，<code>tail</code> 恰好把最关键的行切掉。一律先 <code>&gt; 文件</code> 存盘再 grep。
+</div>
+
+<div class="box danger">
+  <b>看到 autoremove 候选，千万别动手</b>
+  升级前 apt 会列出一堆“不再需要”的包。别信——那是因为依赖它们的包还没升级完。本次候选里有 <code>libgd</code>、<code>unbound</code>、<code>fontconfig</code>、<code>openssl-1.1</code>，删了等于拆掉 PHP 图像处理和 DNS 的基座。<strong>全部验证通过之前，不碰 <code>apt autoremove</code>。</strong>
+</div>
+
+<!-- ===== 04 ===== -->
+<h2 id="s4"><em>04</em>升级流程概览</h2>
+
+<div class="flow">
+  <div class="step"><span class="n">1</span>备份数据</div><span class="arrow">→</span>
+  <div class="step"><span class="n">2</span>环境快照</div><span class="arrow">→</span>
+  <div class="step"><span class="n">3</span>验证计划</div><span class="arrow">→</span>
+  <div class="step"><span class="n">4</span>换源</div><span class="arrow">→</span>
+  <div class="step"><span class="n">5</span>执行升级</div><span class="arrow">→</span>
+  <div class="step"><span class="n">6</span>验证服务</div>
+</div>
+
+<div class="refnote">
+  <b>说明：</b>这里只给顺序。具体命令在 <a href="#s12" style="color:var(--blue)">12 备份与恢复</a> 与 <a href="#s11" style="color:var(--blue)">11 命令参考</a> 里，按主题查阅即可。
+</div>
+
+<table>
+  <tr><th>步骤</th><th>做什么</th><th>为什么</th></tr>
+  <tr><td>1</td><td>备份业务数据（<code>$HOME</code> 下的站点、文件）</td><td><strong>不可再生</strong>，丢了就没了</td></tr>
+  <tr><td>2</td><td>打包 <code>$PREFIX</code> 做环境快照</td><td>环境崩了连 shell 都进不去，那时没法救</td></tr>
+  <tr><td>3</td><td><code>apt-get -s full-upgrade</code> 看计划</td><td>提前发现“要删关键包”这类灾难</td></tr>
+  <tr><td>4</td><td><code>termux-change-repo</code> 换国内源</td><td>海外源下几百 MB 容易断</td></tr>
+  <tr><td>5</td><td><code>pkg upgrade</code>，可能跑两遍</td><td>第一遍被扣的包，第二遍才装上</td></tr>
+  <tr><td>6</td><td>验证 PHP / 链接库 / 服务 / 站点</td><td>只信可观测证据，不信日志里的动作行</td></tr>
+</table>
+
+<h3>过程中会弹 conffile 冲突，怎么选</h3>
+
+<p>升级时会突然停下，问你 <code>Configuration file ... What would you like to do?</code>。判据只有一条：<strong>这个文件你手工配过没有</strong>。</p>
+
+<table>
+  <tr><th>提示文案</th><th>含义</th><th>选择</th></tr>
+  <tr><td>Modified (by you or by a script) since installation</td><td><strong>你改过</strong>这个已登记的配置文件</td><td><strong>N</strong>，保留自己的</td></tr>
+  <tr><td>File on system created by you or by a script<br>File also in package provided by package maintainer</td><td>系统上有这个文件（可能是旧版安装脚本生成的），包里也有同名文件</td><td>看它是否在 <code>automatically installed</code> 列表里：<br>在 → <strong>Y</strong>（是依赖，不是你在用）<br>不在 → <strong>N</strong></td></tr>
+</table>
+
+<div class="box info">
+  <b>判断「我到底配没配过」的捷径</b>
+  看这个服务有没有出现在升级前的 <code>The following packages were automatically installed and no longer required</code> 清单里。在里面 = 它是被当依赖自动装的，配置可以放心用新版默认值。
+</div>
+
+<!-- ===== 05 ===== -->
+<h2 id="s5"><em>05</em>php-fpm 起不来</h2>
+
+<h3>现象</h3>
+
+<pre><code>ERROR: failed to include more than 5 files recursively
+ERROR: Unable to include .../php-fpm.d/www.conf from .../php-fpm.d/www.conf at line 143
+ERROR: FPM initialization failed</code></pre>
+
+<p>翻译成人话：一个配置文件在 include 它自己，递归到第五层被掐断。</p>
+
+<h3>第一层误判（我踩过）</h3>
+
+<p>看到“从自己 include 自己”，很自然会想“末行多了条 include 吧”。确实，池配置文件末尾写着：</p>
+
+<pre><code>include=/data/data/com.termux/files/usr/etc/php-fpm.d/*.conf</code></pre>
+
+<p>这行本该<strong>只出现在主配置 <code>php-fpm.conf</code> 末尾</strong>，职责是把 <code>php-fpm.d/</code> 下的所有池配置加载进来。删掉它之后，报错变成：</p>
+
+<pre><code>ERROR: No pool defined. at least one pool section must be specified in config file</code></pre>
+
+<h3>真正的根因</h3>
+
+<div class="box danger">
+  <b>整个 <code>www.conf</code> 是 <code>php-fpm.conf</code> 的副本</b>
+  对比文件大小就露馅：出问题的 <code>www.conf</code> 只有 <strong>143 行 / 5.4KB</strong>，而包内自带的 <code>www.conf.default</code> 是 <strong>489 行 / 22KB</strong>。<br><br>
+  更直接的判据：那 143 行里<strong>根本没有 <code>[www]</code> 段</strong>，全是 global 段的注释和配置——也就是 <code>php-fpm.conf</code> 该有的内容。<br><br>
+  <strong>所以不是“多一行”，是整个文件被写错了。</strong>
+</div>
+
+<h3>修法</h3>
+
+<pre><code><span class="c"># 1. 先看有没有池段（^\[ 表示以 [ 开头的行）</span>
+grep -n '^\[' $PREFIX/etc/php-fpm.d/www.conf
+<span class="c"># 输出为空 → 确认没有池段，需要重建</span>
+
+<span class="c"># 2. 用包内自带的完整默认配置覆盖</span>
+cp $PREFIX/etc/php-fpm.d/www.conf.default $PREFIX/etc/php-fpm.d/www.conf
+
+<span class="c"># 3. 再看一次，应出现 [www]</span>
+grep -n '^\[' $PREFIX/etc/php-fpm.d/www.conf
+
+<span class="c"># 4. 检查语法</span>
+php-fpm -t
+<span class="c"># 应显示 test is successful</span></code></pre>
+
+<h3>顺带的小坑：行数对不上</h3>
+
+<p><code>wc -l php-fpm.conf</code> 报 142 行，报错却说 <code>at line 143</code>——因为<strong>末行没换行符时 <code>wc -l</code> 不计数</strong>。行数差 1 不代表文件坏了。</p>
+
+<h3>listen 必须和 nginx 对齐</h3>
+
+<p>新版默认监听 unix socket，而 nginx 可能写着 <code>fastcgi_pass 127.0.0.1:9000</code>。两边不一致 = 502。</p>
+
+<pre><code><span class="c"># 看 fpm 监听什么</span>
+grep -E '^listen' $PREFIX/etc/php-fpm.d/www.conf
+
+<span class="c"># 看 nginx 往哪转</span>
+grep -rn 'fastcgi_pass' $PREFIX/etc/nginx/
+
+<span class="c"># 方案 A：改 fpm 用 TCP（只动一处）</span>
+sed -i 's#^listen = .*#listen = 127.0.0.1:9000#' $PREFIX/etc/php-fpm.d/www.conf
+
+<span class="c"># 方案 B：改 nginx 用 socket（在 nginx.conf 里写）</span>
+<span class="c"># fastcgi_pass unix:/data/data/com.termux/files/usr/var/run/php-fpm.sock;</span>
+
+php-fpm -t &amp;&amp; sv restart php-fpm</code></pre>
+
+<div class="box info">
+  <b>为什么本文推荐 TCP</b>
+  unix socket 还牵扯权限：<code>user = nobody</code> 在非 root 环境下会被忽略（启动时打一条 NOTICE），实际 worker 以当前用户身份运行，socket 属主也是它。多一层变量。<strong>回环 TCP 在手机上几乎没有可感知的性能损失。</strong>
+</div>
+
+<!-- ===== 06 ===== -->
+<h2 id="s6"><em>06</em>nginx 双实例</h2>
+
+<h3>现象</h3>
+
+<pre><code>pgrep -a nginx
+26136 nginx: master process nginx
+27228 nginx -p /data/data/com.termux/files/home/.nginx -g daemon off;</code></pre>
+
+<p>两个主进程抢一个端口。一个占着，一个 bind 失败——但都留在进程表里，看起来“都活着”。<code>sv status</code> 显示的 pid 和 <code>netstat</code> 显示的对不上，就是信号。</p>
+
+<h3>我犯的错：一条命令杀掉两种进程</h3>
+
+<div class="box danger">
+  <b><code>pkill -9 -f nginx</code> 把监督进程也杀了</b>
+  <code>-f</code> 匹配<strong>完整命令行</strong>。而 runit 的监督进程，命令行是 <code>runsv nginx</code>——里面正好含 “nginx”。<br><br>
+  结果：nginx 死了，看守 nginx 的进程也死了。再敲 <code>sv up nginx</code> 会得到：<br>
+  <code>fail: nginx: runsv not running</code><br><br>
+  <code>sv</code> 是跟监督进程说话的。监工被杀了，<code>sv</code> 就成了对空气喊话。
+</div>
+
+<h3>正确做法</h3>
+
+<table>
+  <tr><th>目的</th><th>正确写法</th><th>不要用</th></tr>
+  <tr><td>停服务</td><td><code>sv down nginx</code>（runsv 自己会杀干净）</td><td><code>pkill -f nginx</code></td></tr>
+  <tr><td>杀残留进程</td><td><code>pkill -x nginx</code>（只匹配进程名<strong>等于</strong> nginx）</td><td><code>pkill -9 -f nginx</code></td></tr>
+  <tr><td>重启</td><td><code>sv restart nginx</code></td><td><code>kill &lt;pid&gt;</code></td></tr>
+</table>
+
+<h3>误杀之后怎么救</h3>
+
+<pre><code><span class="c"># 1. 重新拉起 runsvdir（服务监督总进程）</span>
+source $PREFIX/etc/profile.d/start-services.sh
+
+<span class="c"># 2. 确认各服务的监督进程回来了</span>
+pgrep -a runsv
+
+<span class="c"># 3. 清掉 down 文件并启动 nginx</span>
+sv up nginx
+
+<span class="c"># 4. 确认状态</span>
+sv status nginx</code></pre>
+
+<div class="box info">
+  <b>为什么 <code>sv up</code> 不能省</b>
+  <code>sv down</code> 会在服务目录里留一个 <code>down</code> 文件。runsvdir 恢复后，runsv 看到这个文件会认为“是用户手动停的”，不会自动拉起。<code>sv up</code> 的作用就是删掉它。
+</div>
+
+<p>另外 <code>sv status</code> 尾部那个 <code>normally down</code> 不用管——服务目录没有 <code>down</code> 文件时 runit 就这么显示，服务其实在跑。</p>
+
+<!-- ===== 07 ===== -->
+<h2 id="s7"><em>07</em>站点文件被覆盖</h2>
+
+<div class="box danger">
+  <b>升级 nginx 包会重装 <code>$PREFIX/share/nginx/html/index.html</code></b>
+  如果你把站点直接放在这个默认 web 根下，升级后首页会变回 “Welcome to nginx!”。其它资源（css/js/子目录）都在，<strong>只有 <code>index.html</code> 被覆盖</strong>。
+</div>
+
+<p>恢复：</p>
+
+<pre><code><span class="c"># 把生成好的静态文件拷回站点根</span>
+cp -rf ~/your-site-public/* $PREFIX/share/nginx/html/
+
+<span class="c"># 确认首页回来了</span>
+curl -s http://127.0.0.1:8080/ | head -5</code></pre>
+
+<h3>长期方案：把站点搬出包管理目录</h3>
+
+<pre><code><span class="c"># 1. 建一个自己的目录</span>
+mkdir -p ~/www
+
+<span class="c"># 2. 把站点文件搬过去</span>
+mv $PREFIX/share/nginx/html/* ~/www/ 2&gt;/dev/null
+
+<span class="c"># 3. nginx.conf 里改成绝对路径</span>
+<span class="c"># root /data/data/com.termux/files/home/www;</span></code></pre>
+
+<div class="box info">
+  <b>相对路径的陷阱</b>
+  <code>root html;</code> 是相对路径，实际解析取决于 nginx 启动时的 <code>-p</code>（prefix 前缀）参数。加上 <code>-p</code> 之后，同一个配置会指向完全不同的目录。<strong>排查站点 404 时，第一件事就是看进程的 <code>-p</code> 是什么。</strong>
+</div>
+
+<!-- ===== 08 ===== -->
+<h2 id="s8"><em>08</em>Python 包失效</h2>
+
+<p>Python 从 3.11 升到 3.14 之后，所有 pip 装过的命令行工具都会报：</p>
+
+<pre><code>ModuleNotFoundError: No module named 'xxx'</code></pre>
+
+<p>原因很简单：第三方包装在带版本号的目录里（<code>$PREFIX/lib/python3.11/site-packages</code>），解释器一换代，旧目录就不再被读取。</p>
+
+<pre><code><span class="c"># 看看现在有哪些包</span>
+pip list
+
+<span class="c"># 重新装回你要用的那个</span>
+pip install -U &lt;包名&gt;
+
+<span class="c"># 若提示 externally-managed-environment</span>
+pip install -U &lt;包名&gt; --break-system-packages</code></pre>
+
+<div class="box warn">
+  <b>Node 同理</b>
+  全局 npm 包装在 <code>$PREFIX/lib/node_modules</code>，Node 大版本升级后命令行工具会失效，需要 <code>npm install -g &lt;包名&gt;</code> 重装。
+</div>
+
+<!-- ===== 09 ===== -->
+<h2 id="s9"><em>09</em>踩坑清单</h2>
+
+<table>
+  <tr><th>#</th><th>坑</th><th>教训</th></tr>
+  <tr><td>1</td><td><code>apt-get upgrade</code> 造出半升级</td><td><code>apt upgrade</code> 不允许装新包，依赖链整条被扣。<strong><code>pkg upgrade</code> 内部就是 full-upgrade，别拆</strong></td></tr>
+  <tr><td>2</td><td>把 <code>apt-get -s</code> 的输出当成真执行</td><td><code>-s</code> 全程模拟，<code>Inst</code>/<code>Conf</code> 都是伪动作。判“是否真装”只看 <code>dpkg -s</code> 和文件 mtime</td></tr>
+  <tr><td>3</td><td><code>| tail -40</code> 切掉了关键摘要</td><td>apt 摘要在前、明细在后。一律 <code>&gt; 文件</code> 存盘再 grep</td></tr>
+  <tr><td>4</td><td>池配置里出现 <code>include</code> 就以为“多一行”</td><td>整个文件可能是另一个文件的副本。查行数、查有没有 <code>[www]</code> 段</td></tr>
+  <tr><td>5</td><td><code>pkill -f</code> 杀了 runit 监督进程</td><td>用 <code>sv down</code> 或 <code>pkill -x</code></td></tr>
+  <tr><td>6</td><td>升级 nginx 覆盖了站点首页</td><td>站点别放包管理的默认 web 根</td></tr>
+  <tr><td>7</td><td>Web 终端吃掉反斜杠</td><td><code>sed 's/...\(...\).../\1/'</code> 会变成裸括号报错。改用 <code>awk '{print $N}'</code> 避开转义</td></tr>
+  <tr><td>8</td><td>粘贴时带上提示符 <code>~ $</code></td><td><code>~</code> 被展开成家目录当命令执行，刷出一屏 <code>command not found</code></td></tr>
+  <tr><td>9</td><td><code>wc -l</code> 比报错行数少 1</td><td>末行无换行符时不计数，不代表文件损坏</td></tr>
+  <tr><td>10</td><td>看到 autoremove 候选就清理</td><td>那只说明依赖方还没升完，删了等于拆地基</td></tr>
+</table>
+
+<div class="box ok">
+  <b>一条贯穿全程的原则</b>
+  <strong>判“是否生效”只用可观测证据</strong>：<code>dpkg -s</code> 的 Version、文件 mtime、二进制实际版本、<code>curl</code> 的状态码。日志里的动作行（<code>Conf</code> / <code>ok: run</code> / <code>normally down</code>）都可能骗人。
+</div>
+
+<!-- ===== 10 ===== -->
+<h2 id="s10"><em>10</em>Termux 常用命令</h2>
+
+<div class="refnote">
+  <b>给小白：</b>这一节不用背。把它当字典——遇到“想看看某个东西”的时候，回来查一下就行。每条命令下面都有注释说明它在干什么。
+</div>
+
+<h3>10.1 认清你在哪：目录与文件</h3>
+
+<pre><code><span class="c"># 显示当前所在目录（print working directory）</span>
+pwd
+
+<span class="c"># 列出当前目录内容；-l 详细模式，-a 显示隐藏文件</span>
+ls -la
+
+<span class="c"># 切换目录；~ 代表你的家目录（$HOME）</span>
+cd ~
+
+<span class="c"># 回到上一级目录</span>
+cd ..
+
+<span class="c"># 建目录；-p 表示父目录不存在时一并创建</span>
+mkdir -p ~/myapp/data
+
+<span class="c"># 复制；-r 用于目录（recursive 递归）</span>
+cp -r 源目录 目标位置
+
+<span class="c"># 移动 / 重命名（同一个命令）</span>
+mv 旧名字 新名字
+
+<span class="c"># 删除文件（⚠️ Termux 没有回收站，删了就没了）</span>
+rm 文件名
+
+<span class="c"># 删除整个目录（⚠️ 极其危险，先 pwd + ls 确认再敲）</span>
+rm -rf 目录名
+
+<span class="c"># 看文件内容；大文件用 less（可翻页，按 q 退出）</span>
+cat 文件名
+less 文件名
+
+<span class="c"># 看文件末尾 20 行，常用于看日志</span>
+tail -20 文件名
+
+<span class="c"># 实时跟踪日志新增（按 Ctrl+C 退出）</span>
+tail -f 文件名</code></pre>
+
+<h3>10.2 找东西：搜索</h3>
+
+<pre><code><span class="c"># 按文件名找；. 表示从当前目录开始往下找</span>
+find . -name "*.php"
+
+<span class="c"># 按内容找；-r 递归，-n 显示行号，-i 忽略大小写</span>
+grep -rn "关键词" 目录名
+
+<span class="c"># 只列出包含关键词的文件名（不打印内容）</span>
+grep -rl "关键词" 目录名</code></pre>
+
+<h3>10.3 装东西：包管理</h3>
+
+<pre><code><span class="c"># 刷新软件源索引（只更新“有什么新版本”，不安装）</span>
+pkg update
+
+<span class="c"># 升级所有已装包（内部等于 apt full-upgrade）</span>
+pkg upgrade
+
+<span class="c"># 安装 / 卸载</span>
+pkg install 包名
+pkg uninstall 包名
+
+<span class="c"># 搜索可用的包</span>
+pkg search 关键词
+
+<span class="c"># 列出已安装的包</span>
+pkg list-installed
+
+<span class="c"># 查看某个包的信息（版本、大小、依赖）</span>
+pkg show 包名
+
+<span class="c"># 查看哪些包有新版本可升</span>
+apt list --upgradable
+
+<span class="c"># 查某个包到底装没装、装的什么版本（比 php -v 更可信）</span>
+dpkg -s 包名 | grep Version
+
+<span class="c"># 换软件源（国内建议清华 TUNA 或中科大）</span>
+termux-change-repo</code></pre>
+
+<h3>10.4 管服务：runit（<code>sv</code> 命令）</h3>
+
+<pre><code><span class="c"># 看服务状态；run: 表示在跑，down: 表示停了</span>
+sv status nginx php-fpm
+
+<span class="c"># 启动 / 停止 / 重启</span>
+sv up nginx
+sv down nginx
+sv restart nginx
+
+<span class="c"># 设置开机自启 / 取消自启</span>
+sv-enable nginx
+sv-disable nginx
+
+<span class="c"># 列出所有服务目录</span>
+ls $PREFIX/var/service/
+
+<span class="c"># ⚠️ 如果 sv 报 "runsv not running"，说明监督总进程挂了，这样恢复：</span>
+source $PREFIX/etc/profile.d/start-services.sh</code></pre>
+
+<h3>10.5 看进程与端口</h3>
+
+<pre><code><span class="c"># 列出进程（-a 显示命令行，方便认出是谁）</span>
+pgrep -a nginx
+
+<span class="c"># 完整进程列表（类似电脑上的任务管理器）</span>
+ps aux
+
+<span class="c"># 按名字精确杀进程（-x 只匹配进程名完全相等）</span>
+pkill -x nginx
+
+<span class="c"># ⚠️ 不要用 pkill -f：-f 匹配完整命令行，会把 runsv nginx 一起杀掉</span>
+
+<span class="c"># 看谁在监听端口；-t TCP，-l 只看监听中，-n 显示数字端口，-p 显示进程</span>
+netstat -tlnp
+
+<span class="c"># 只看某个端口</span>
+netstat -tlnp | grep 8080
+
+<span class="c"># 测试本机地址是否通（-I 只取响应头，不下载正文）</span>
+curl -I http://127.0.0.1:8080/</code></pre>
+
+<h3>10.6 存储与权限</h3>
+
+<pre><code><span class="c"># 让 Termux 能访问手机共享存储（DCIM、Download 等）</span>
+termux-setup-storage
+
+<span class="c"># 看磁盘占用；-h 用 MB/GB 显示</span>
+df -h
+
+<span class="c"># 看某个目录有多大</span>
+du -sh 目录名
+
+<span class="c"># 改权限：777 = 所有人可读写执行（仅测试用，长期不安全）</span>
+chmod -R 777 目录名
+
+<span class="c"># 改属主（Termux 里通常用不到，因为你没有 root）</span>
+chown 用户:组 文件名</code></pre>
+
+<h3>10.7 保活与后台</h3>
+
+<pre><code><span class="c"># 抓唤醒锁，防止息屏后服务被系统杀掉（通知栏会出现常驻通知）</span>
+termux-wake-lock
+
+<span class="c"># 释放唤醒锁</span>
+termux-wake-unlock
+
+<span class="c"># 后台跑命令，输出丢到空设备（长期服务建议用 sv，不要用这个）</span>
+nohup 命令 &gt;/dev/null 2&gt;&amp;1 &amp;
+
+<span class="c"># 查看当前所有后台任务</span>
+jobs</code></pre>
+
+<h3>10.8 编辑文件</h3>
+
+<pre><code><span class="c"># nano：最容易上手，底部有快捷键提示；Ctrl+O 保存，Ctrl+X 退出</span>
+nano 文件名
+
+<span class="c"># vim：功能强但上手陡；进去先按 i 进入插入模式，Esc 后输入 :wq 保存退出</span>
+vim 文件名</code></pre>
+
+<div class="box warn">
+  <b>新手最常踩的三个坑</b>
+  ① <strong>粘贴时带上提示符</strong>（<code>~ $</code>）——终端会把 <code>~</code> 当命令执行，刷出一屏 <code>command not found</code>；<br>
+  ② <strong><code>rm -rf</code> 没有回收站</strong>——敲之前先 <code>pwd</code> 确认自己在哪，再 <code>ls</code> 确认删的是啥；<br>
+  ③ <strong>把重要文件放 <code>$PREFIX</code> 里</strong>——升级软件包时会被覆盖或删除，放 <code>$HOME</code> 下才安全。
+</div>
+
+<!-- ===== 11 ===== -->
+<h2 id="s11"><em>11</em>命令参考</h2>
+
+<div class="refnote">
+  <b>这一节不是步骤。</b>下面按主题分组，随便挑要用的看，没有先后顺序要求。每条命令上方或右侧都有注释，说明它在做什么、为什么这么写。执行前请确认自己理解它的效果。
+</div>
+
+<h3>11.1 查看状态类（只读，最安全）</h3>
+
+<pre><code><span class="c"># 当前 PHP 版本（第一行含构建日期，能判断新旧）</span>
+php -v | head -1
+
+<span class="c"># PHP 装了哪些扩展（gd 管图片，zip 管压缩，mbstring 管中文）</span>
+php -m
+
+<span class="c"># 只看某几个关键扩展装了没（-x 是精确匹配整行）</span>
+php -m | tr 'A-Z' 'a-z' | grep -x -E 'gd|zip|mbstring|curl|dom|xml|json'
+
+<span class="c"># PHP 二进制文件信息（时间戳能看出是不是升级过）</span>
+ls -l $PREFIX/bin/php
+
+<span class="c"># PHP 实际链接了哪些系统库（判断有没有链到旧版本，很关键）</span>
+ldd $PREFIX/bin/php
+
+<span class="c"># 只看 ICU 相关的库（升级后应为 libicuuc.so.78 这类新号）</span>
+ldd $PREFIX/bin/php | grep icu
+
+<span class="c"># dpkg 数据库里记录的版本（比 php -v 更可信，因为它不依赖 PATH）</span>
+dpkg -s php | grep Version
+
+<span class="c"># php-fpm 配置语法检查（改完配置先跑这个，别直接重启）</span>
+php-fpm -t
+
+<span class="c"># nginx 配置语法检查</span>
+nginx -t
+
+<span class="c"># 服务运行状态</span>
+sv status nginx php-fpm
+
+<span class="c"># 端口监听情况（谁占了哪个端口）</span>
+netstat -tlnp | grep -E '8080|9000'
+
+<span class="c"># 站点响应码（200 正常 / 302 跳转 / 502 后端挂了 / 404 路径不对）</span>
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/
+
+<span class="c"># 还有多少个包待升级（数字为 0 表示升完了）</span>
+apt list --upgradable 2&gt;/dev/null | grep -vc '^Listing'</code></pre>
+
+<h3>11.2 升级相关</h3>
+
+<pre><code><span class="c"># 换软件源（交互式，选清华 TUNA 或中科大）</span>
+termux-change-repo
+
+<span class="c"># 刷新索引（只更新“有什么新版本”，不下载不安装）</span>
+pkg update
+
+<span class="c"># 看升级计划：-s 是模拟，只算不装，不会改动系统</span>
+apt-get -s full-upgrade
+
+<span class="c"># 同上，但把输出存成文件，方便逐行检查（推荐）</span>
+apt-get -s full-upgrade &gt; ~/plan.txt 2&gt;&amp;1
+
+<span class="c"># 从计划文件里提取摘要：升了多少 / 要下多少 / 有没有被扣</span>
+grep -E 'upgraded,|Need to get|not upgraded' ~/plan.txt
+
+<span class="c"># 数一下总共要安装多少个条目</span>
+grep -c '^Inst ' ~/plan.txt
+
+<span class="c"># ⚠️ 列出会被删除的包，务必逐条确认（删错就废了）</span>
+grep '^Remv ' ~/plan.txt
+
+<span class="c"># 真正执行升级（内部就是 full-upgrade；跑一遍不够就再跑一遍）</span>
+pkg upgrade
+
+<span class="c"># 升级前抓唤醒锁，防止息屏导致中断</span>
+termux-wake-lock</code></pre>
+
+<h3>11.3 服务与进程</h3>
+
+<pre><code><span class="c"># 启动 / 停止 / 重启（推荐方式，runsv 会正确接管）</span>
+sv up nginx
+sv down nginx
+sv restart nginx
+
+<span class="c"># 看状态；"normally down" 不用管，服务实际在跑</span>
+sv status nginx
+
+<span class="c"># 监督总进程被误杀后的恢复（sv 报 runsv not running 时用）</span>
+source $PREFIX/etc/profile.d/start-services.sh
+
+<span class="c"># 确认各服务的监督进程都在</span>
+pgrep -a runsv
+
+<span class="c"># 列出所有由 runit 管理的服务</span>
+ls $PREFIX/var/service/
+
+<span class="c"># 精确匹配进程名杀进程（安全写法）</span>
+pkill -x nginx
+
+<span class="c"># ⚠️ 危险写法，会连带杀掉 runsv nginx，不要用：</span>
+<span class="c"># pkill -9 -f nginx</span>
+
+<span class="c"># 看进程详情（带完整命令行，便于识别）</span>
+pgrep -af 'php|nginx'</code></pre>
+
+<h3>11.4 服务日志</h3>
+
+<pre><code><span class="c"># runit 管理的服务日志：$PREFIX/var/log/sv/&lt;服务名&gt;/current</span>
+tail -30 $PREFIX/var/log/sv/php-fpm/current
+
+<span class="c"># 实时跟踪 nginx 日志</span>
+tail -f $PREFIX/var/log/sv/nginx/current
+
+<span class="c"># 找报错行（-i 忽略大小写）</span>
+grep -i error $PREFIX/var/log/sv/php-fpm/current | tail -20</code></pre>
+
+<h3>11.5 配置排查</h3>
+
+<pre><code><span class="c"># 看配置文件里有没有池段（[www] 这种方括号开头的行）</span>
+grep -n '^\[' $PREFIX/etc/php-fpm.d/www.conf
+
+<span class="c"># 看 fpm 监听地址</span>
+grep -E '^listen' $PREFIX/etc/php-fpm.d/www.conf
+
+<span class="c"># 看 nginx 把 PHP 请求转到哪</span>
+grep -rn 'fastcgi_pass' $PREFIX/etc/nginx/
+
+<span class="c"># 对比文件大小，识别“文件被写成另一个文件”的情况</span>
+ls -l $PREFIX/etc/php-fpm.d/
+
+<span class="c"># 对比两个文件的差异（dpkg 冲突时常用）</span>
+diff 旧文件 新文件
+
+<span class="c"># 看 nginx 启动时的完整参数，特别是 -p 前缀</span>
+pgrep -a nginx</code></pre>
+
+<h3>11.6 修改配置（谨慎）</h3>
+
+<pre><code><span class="c"># 把 fpm 监听改成 TCP 9000（s#...#..# 用 # 作分隔符，避免和路径里的 / 冲突）</span>
+sed -i 's#^listen = .*#listen = 127.0.0.1:9000#' $PREFIX/etc/php-fpm.d/www.conf
+
+<span class="c"># 用包内默认配置覆盖（先备份！）</span>
+cp $PREFIX/etc/php-fpm.d/www.conf $PREFIX/etc/php-fpm.d/www.conf.bak
+cp $PREFIX/etc/php-fpm.d/www.conf.default $PREFIX/etc/php-fpm.d/www.conf
+
+<span class="c"># 删除文件最后一行（$ 代表末行，比写死行号安全）</span>
+sed -i '$d' 文件名
+
+<span class="c"># 改完一定先验语法，再重启</span>
+php-fpm -t &amp;&amp; sv restart php-fpm
+nginx -t &amp;&amp; sv restart nginx</code></pre>
+
+<h3>11.7 依赖语言换代后的修复</h3>
+
+<pre><code><span class="c"># Python：看已装包</span>
+pip list
+
+<span class="c"># Python：重装某个包（升解释器后必须做）</span>
+pip install -U 包名
+
+<span class="c"># Python：若提示 externally-managed-environment</span>
+pip install -U 包名 --break-system-packages
+
+<span class="c"># Node：看全局包</span>
+npm list -g --depth=0
+
+<span class="c"># Node：重装全局包</span>
+npm install -g 包名
+
+<span class="c"># 看 node 版本（注意：Termux 的命令叫 node，不叫 nodejs）</span>
+node -v</code></pre>
+
+<!-- ===== 12 ===== -->
+<h2 id="s12"><em>12</em>备份与恢复</h2>
+
+<div class="refnote">
+  <b>成对使用：</b>下面「备份」和「恢复」紧挨着放，方便对照。<strong>两者是两套独立命令，不要混着敲</strong>——尤其 <code>tar -c</code>（打包）和 <code>tar -x</code>（解压）只差一个字母，敲错了会覆盖数据。
+</div>
+
+<h3>12.1 备份（升级前先做这个）</h3>
+
+<p>先分清两种东西的性价比：</p>
+
+<table>
+  <tr><th>备份对象</th><th>可再生吗</th><th>优先级</th></tr>
+  <tr><td>业务数据：站点文件、上传的附件、配置（<code>$HOME</code> 下的东西）</td><td><span class="tag bad">不可再生</span></td><td><strong>最高</strong></td></tr>
+  <tr><td>运行环境：所有已装的包（<code>$PREFIX</code>）</td><td><span class="tag ok">可再生</span>，重装即可</td><td>省重装时间，也值得做</td></tr>
+</table>
+
+<pre><code><span class="c"># ① 建备份目录（放共享存储 /sdcard，不要放 $HOME，卸载 app 会一起删）</span>
+mkdir -p ~/storage/shared/backup
+
+<span class="c"># ② 备份业务数据</span>
+<span class="c">#    -c 创建归档 / -z gzip 压缩 / -f 指定文件名</span>
+<span class="c">#    $(date +%F) 自动插入当天日期，如 2026-10-23</span>
+<span class="c">#    -C 先切换到指定目录，再打包后面的 &lt;数据目录&gt;</span>
+tar -czf ~/storage/shared/backup/data-$(date +%F).tar.gz \
+  -C $HOME &lt;你的数据目录&gt;
+
+<span class="c"># ③ 备份整个运行环境（$PREFIX）</span>
+<span class="c">#    --exclude 排除缓存和临时文件，能省几百 MB</span>
+<span class="c">#    -C /data/data/com.termux/files 先切到上级，再打包 usr 目录</span>
+tar -czf ~/storage/shared/backup/prefix-$(date +%F).tar.gz \
+  --exclude='usr/var/cache/apt/archives/*' \
+  --exclude='usr/tmp/*' \
+  -C /data/data/com.termux/files usr
+
+<span class="c"># ④ 记录已安装包清单（方便日后对照或重建）</span>
+dpkg --get-selections &gt; ~/storage/shared/backup/selections-$(date +%F).txt
+
+<span class="c"># ⑤ 检查结果：能看到文件大小就说明成功了</span>
+ls -lh ~/storage/shared/backup/
+
+<span class="c"># ⑥ 确认剩余空间（快照通常 200MB~1GB）</span>
+df -h /data | tail -1
+
+<span class="c"># ⑦ 验证压缩包能正常读取（强烈建议做，别等到要恢复时才发现坏了）</span>
+tar -tzf ~/storage/shared/backup/prefix-$(date +%F).tar.gz | head -5</code></pre>
+
+<div class="box warn">
+  <b>为什么环境快照也值得做</b>
+  <code>pkg upgrade</code> 不会动 <code>$HOME</code>，所以业务数据本身是安全的。但环境崩了会连 <code>bash</code> 都起不来（<code>CANNOT LINK EXECUTABLE "bash": library "libandroid-support.so" not found</code>），那时你连命令都敲不了，“报错再修”这条路直接失效。
+</div>
+
+<h3>12.2 恢复（确认要回滚时才用）</h3>
+
+<div class="box danger">
+  <b>执行前先确认三件事</b>
+  ① 你要恢复到哪个包（选对文件名，别恢复到几天前的旧快照）；<br>
+  ② 目标位置是否会被覆盖（<code>tar -x</code> 会直接覆盖同名文件，不会问你）；<br>
+  ③ 有没有把当前状态也备份一份（万一恢复错了还能回去）。
+</div>
+
+<pre><code><span class="c"># ① 先列出备份包里的内容，确认它是你要的那个</span>
+tar -tzf ~/storage/shared/backup/prefix-2026-10-22.tar.gz | head -20
+
+<span class="c"># ② 恢复业务数据（-x 解压 / -z gzip / -f 指定文件 / -p 保留原权限）</span>
+<span class="c">#    -C 指定解压到哪，这里解到家目录</span>
+tar -xzpf ~/storage/shared/backup/data-2026-10-22.tar.gz -C $HOME
+
+<span class="c"># ③ 恢复运行环境（必须在 Failsafe 会话或已有可用 shell 的情况下执行）</span>
+tar -xzpf ~/storage/shared/backup/prefix-2026-10-22.tar.gz \
+  -C /data/data/com.termux/files
+
+<span class="c"># ④ 恢复后刷新包状态，修复可能的中断安装</span>
+dpkg --configure -a
+
+<span class="c"># ⑤ 处理依赖不完整的情况</span>
+apt --fix-broken install
+
+<span class="c"># ⑥ 验证环境是否可用</span>
+php -v | head -1
+ls $PREFIX/bin/ | wc -l</code></pre>
+
+<h3>12.3 环境崩到连命令都敲不了时</h3>
+
+<p>症状：打开 Termux 就报 <code>CANNOT LINK EXECUTABLE "bash"</code>，任何命令都不响应。</p>
+
+<pre><code><span class="c"># 1. 长按 Termux 图标（或点通知栏），选择 "Failsafe" 会话</span>
+<span class="c">#    这是一个最小化 shell，不加载你的 .bashrc</span>
+
+<span class="c"># 2. 手动设置环境变量（Failsafe 里这些可能是空的）</span>
+export PREFIX=/data/data/com.termux/files/usr
+export LD_LIBRARY_PATH=$PREFIX/lib
+export PATH=$PREFIX/bin:$PATH
+
+<span class="c"># 3. 确认能执行基本命令</span>
+ls $PREFIX/bin/bash
+
+<span class="c"># 4. 在这个会话里解回快照</span>
+cd /data/data/com.termux/files
+tar -xzpf ~/storage/shared/backup/prefix-2026-10-22.tar.gz
+
+<span class="c"># 5. 退出 Termux 重新打开</span></code></pre>
+
+<div class="box info">
+  <b>如果 Failsafe 也救不回来</b>
+  最后的选项是重装 Termux。注意：<strong>卸载 app 会删掉整个 <code>~/</code></strong>，所以数据备份必须在 <code>/sdcard</code>（共享存储）里。重装后先 <code>termux-setup-storage</code>，再把数据搬回来。
+</div>
+
+<footer>
+  <strong>参考手册版</strong> · 2026-10-23<br>
+  本文主要内容由 AI 总结生成，仅供参考。执行前请自行判断风险并做好备份。<br><br>
+  场景：Termux + nginx + php-fpm + 静态站，包集合约四年未升级<br>
+  结果：126 包升级完成，PHP 8.1.13 → 8.5.12，站点与博客全部恢复<br><br>
+  主机名、容器名、账号标识均已替换为通用示例。命令按自身环境调整路径后使用。
+</footer>
+
+</main>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('aside a'));
+  var secs  = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+  var ticking = false;
+  function update(){
+    ticking = false;
+    var y = window.scrollY + 130, cur = 0;
+    for (var i = 0; i < secs.length; i++){
+      if (secs[i] && secs[i].offsetTop <= y) cur = i;
+    }
+    links.forEach(function(a, i){ a.classList.toggle('active', i === cur); });
+  }
+  window.addEventListener('scroll', function(){
+    if (!ticking){ ticking = true; requestAnimationFrame(update); }
+  }, {passive:true});
+  update();
+})();
+</script>
+
+</body>
+</html>
