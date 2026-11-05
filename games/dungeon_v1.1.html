@@ -1,0 +1,2713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0910">
+<title>单词地牢 v1.1 · 把怪物脸上的字拼出来，就砍下去</title>
+<!-- 单词地牢 v1.1 · 打字战斗 · 宝箱怪与装备 · 四套词库 · 连击暴击 · 每日地牢 -->
+<style>
+:root{
+  --bg:#0a0910; --panel:#14121e; --panel2:#1b1828;
+  --line:#2a2540; --line2:#3a3355;
+  --txt:#e8e4f5; --dim:#8f88ab; --dim2:#5f5878;
+  --gold:#ffc94a; --red:#e0424a; --green:#6fe3a0;
+  --purple:#a06bff; --torch:#ff9a3c; --cyan:#4fd0e8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+html{background:var(--bg);}
+body{
+  background-color:var(--bg);
+  background-image:radial-gradient(130% 85% at 50% -12%, #1c1430 0%, #100d1c 52%, #08070d 100%);
+  background-repeat:no-repeat;
+  color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+  overflow:hidden;
+}
+.app{
+  width:100%;max-width:980px;margin:0 auto;
+  height:100vh;height:100dvh;
+  padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:8px;
+}
+
+/* ================= HUD ================= */
+.hud{
+  flex:none;display:flex;align-items:center;gap:10px;overflow:hidden;
+  padding:8px 12px;border-radius:12px;
+  background:linear-gradient(180deg,#191527,#12101c);
+  border:1px solid var(--line);
+  box-shadow:0 2px 0 rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.hud-l{flex:none;display:flex;flex-direction:column;gap:2px;min-width:56px;}
+.floor{display:flex;align-items:baseline;gap:3px;}
+.floor b{
+  font:800 22px/1 ui-monospace,"SF Mono",Consolas,monospace;
+  color:var(--gold);font-variant-numeric:tabular-nums;
+  text-shadow:0 0 12px rgba(255,201,74,.45);
+}
+.floor span{font:500 10px/1 inherit;color:var(--dim2);}
+.wave{font:500 10.5px/1 ui-monospace,Consolas,monospace;color:var(--dim);}
+.wave i{font-style:normal;color:var(--green);}
+
+.hud-c{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+.hpwrap{
+  position:relative;height:16px;border-radius:5px;overflow:hidden;
+  background:#241d2e;border:1px solid #35293f;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.6);
+}
+.hpbar{
+  position:absolute;left:0;top:0;bottom:0;width:100%;
+  background:linear-gradient(180deg,#ff6b73,#c22a38 60%,#8e1a26);
+  transition:width .18s cubic-bezier(.3,1.4,.5,1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35);
+}
+.hpbar.low{background:linear-gradient(180deg,#ff8a5c,#c2332a 60%,#6d1010);animation:hppulse .7s ease-in-out infinite;}
+@keyframes hppulse{0%,100%{opacity:1}50%{opacity:.55}}
+.hptxt{
+  position:absolute;left:0;right:0;top:0;bottom:0;
+  display:flex;align-items:center;justify-content:center;
+  font:700 10.5px/1 ui-monospace,Consolas,monospace;
+  color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.9);
+  letter-spacing:.06em;font-variant-numeric:tabular-nums;
+}
+.sub{
+  display:flex;align-items:center;gap:5px;overflow:hidden;white-space:nowrap;
+  font:500 10.5px/1 ui-monospace,Consolas,monospace;color:var(--dim2);
+}
+.sub b{color:var(--dim);font-weight:700;font-variant-numeric:tabular-nums;}
+.sub .dot{color:#3a3355;}
+
+.hud-r{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:56px;}
+.combo{
+  display:flex;align-items:baseline;gap:2px;
+  transition:transform .12s ease;
+}
+.combo b{
+  font:800 22px/1 ui-monospace,Consolas,monospace;
+  color:var(--dim2);font-variant-numeric:tabular-nums;
+  transition:color .15s;
+}
+.combo span{font:600 8.5px/1 inherit;color:var(--dim2);letter-spacing:.08em;}
+.combo.on b{color:var(--gold);text-shadow:0 0 14px rgba(255,201,74,.6);}
+.combo.on span{color:#b08a3a;}
+.combo.pop{transform:scale(1.28);}
+.wpm{font:500 10px/1 ui-monospace,Consolas,monospace;color:var(--dim2);}
+.wpm b{color:var(--cyan);font-weight:700;font-variant-numeric:tabular-nums;}
+
+/* ================= 舞台 ================= */
+.stage{
+  position:relative;flex:1 1 auto;min-height:0;
+  border-radius:14px;
+  background:transparent;
+}
+#cv{
+  position:absolute;display:block;
+  border-radius:14px;
+  box-shadow:0 14px 38px rgba(0,0,0,.72), 0 0 0 1px #262040,
+             0 0 60px rgba(80,50,160,.10);
+}
+.stage.shake{animation:shk .16s linear;}
+@keyframes shk{
+  0%{transform:translate(0,0)}25%{transform:translate(-4px,2px)}
+  50%{transform:translate(4px,-2px)}75%{transform:translate(-2px,-2px)}
+  100%{transform:translate(0,0)}
+}
+
+/* ================= 底部 ================= */
+.foot{
+  flex:none;display:flex;align-items:center;gap:8px;
+  font:500 10.5px/1 inherit;color:var(--dim2);
+}
+.foot .mode{
+  display:flex;align-items:center;gap:5px;
+  padding:5px 9px;border-radius:7px;
+  background:var(--panel);border:1px solid var(--line);
+  color:var(--dim);font-weight:600;
+  flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap;
+}
+.foot .sp{flex:1;}
+.fbtn{
+  display:flex;align-items:center;gap:5px;
+  padding:6px 11px;border-radius:8px;
+  background:var(--panel);border:1px solid var(--line2);
+  color:var(--dim);font:600 11px/1 inherit;cursor:pointer;
+  transition:all .13s;
+}
+.fbtn:hover{background:var(--panel2);color:var(--txt);border-color:#4a4270;}
+.fbtn:active{transform:scale(.95);}
+.fbtn.act{color:var(--gold);border-color:#5c4a1e;background:#221b10;}
+
+/* ================= 遮罩层 ================= */
+.ov{
+  position:absolute;inset:0;z-index:20;
+  display:none;align-items:center;justify-content:center;
+  padding:16px;
+  background:radial-gradient(80% 80% at 50% 40%, rgba(12,9,22,.86), rgba(6,5,10,.96));
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  animation:fadein .22s ease;
+}
+.ov.show{display:flex;}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+
+.panel{
+  width:100%;max-width:540px;max-height:100%;
+  overflow-y:auto;overscroll-behavior:contain;
+  padding:18px 16px;
+  border-radius:16px;
+  background:linear-gradient(180deg,#1a1528,#120f1c);
+  border:1px solid #332b4d;
+  box-shadow:0 18px 50px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.05);
+  animation:pop .26s cubic-bezier(.2,1.4,.5,1);
+}
+@keyframes pop{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+.panel::-webkit-scrollbar{width:6px;}
+.panel::-webkit-scrollbar-thumb{background:#3a3355;border-radius:3px;}
+
+.ttl{
+  font:800 20px/1.2 inherit;letter-spacing:.02em;
+  display:flex;align-items:center;gap:8px;margin-bottom:4px;
+}
+.ttl em{font-style:normal;font-size:22px;}
+.sub-t{font:500 11.5px/1.5 inherit;color:var(--dim);margin-bottom:14px;}
+.sub-t b{color:var(--gold);}
+
+/* 模式卡片 */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.mcard{
+  position:relative;text-align:left;cursor:pointer;
+  padding:11px 12px;border-radius:11px;
+  background:#171325;border:1px solid #2c2542;
+  transition:all .14s;overflow:hidden;
+}
+.mcard:before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--mc,#a06bff);opacity:.85;
+}
+.mcard:hover{background:#1e1830;border-color:var(--mc,#a06bff);transform:translateY(-2px);}
+.mcard:active{transform:translateY(0) scale(.985);}
+.mcard .mi{font-size:19px;line-height:1;margin-bottom:5px;}
+.mcard .mn{font:700 13.5px/1.2 inherit;color:var(--txt);margin-bottom:3px;}
+.mcard .md{font:500 10.5px/1.45 inherit;color:var(--dim2);}
+.mcard .mb{
+  margin-top:7px;font:600 10px/1 ui-monospace,Consolas,monospace;
+  color:var(--mc,#a06bff);letter-spacing:.04em;
+}
+.mcard.lock{opacity:.45;cursor:not-allowed;}
+.mcard.lock:hover{transform:none;border-color:#2c2542;background:#171325;}
+.mcard .today{
+  position:absolute;right:8px;top:8px;
+  font:700 8.5px/1 inherit;padding:3px 5px;border-radius:4px;
+  background:rgba(255,201,74,.15);color:var(--gold);letter-spacing:.06em;
+}
+
+.keys{
+  margin-top:14px;padding:10px 12px;border-radius:10px;
+  background:rgba(255,154,60,.07);border:1px solid rgba(255,154,60,.2);
+  font:500 11px/1.6 inherit;color:#c9a57a;
+}
+.keys b{color:var(--torch);}
+
+/* 结算 */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0;}
+.st{
+  padding:10px 11px;border-radius:10px;
+  background:#171325;border:1px solid #2a2440;
+}
+.st .k{font:500 10px/1 inherit;color:var(--dim2);margin-bottom:6px;letter-spacing:.06em;}
+.st .v{
+  font:800 19px/1 ui-monospace,Consolas,monospace;
+  color:var(--txt);font-variant-numeric:tabular-nums;
+}
+.st .v small{font:600 10px/1 inherit;color:var(--dim2);margin-left:2px;}
+.st.hi .v{color:var(--gold);}
+
+.big{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:13px;border-radius:11px;cursor:pointer;
+  font:800 14px/1 inherit;letter-spacing:.05em;
+  background:linear-gradient(180deg,#8b5cf6,#5b31c9);
+  color:#fff;border:1px solid #a583ff;
+  box-shadow:0 4px 0 #3a1e8c, 0 8px 20px rgba(120,70,255,.35);
+  transition:all .12s;
+}
+.big:hover{filter:brightness(1.1);}
+.big:active{transform:translateY(3px);box-shadow:0 1px 0 #3a1e8c;}
+.big.gold{
+  background:linear-gradient(180deg,#ffc94a,#d99015);
+  color:#3a2400;border-color:#ffe08a;
+  box-shadow:0 4px 0 #8a5a00, 0 8px 20px rgba(255,180,50,.3);
+}
+.big.ghost{
+  background:#1c1730;color:var(--dim);border-color:#332b4d;
+  box-shadow:0 4px 0 #131020;
+  font-weight:700;font-size:12.5px;padding:11px;
+}
+.big.ghost:hover{color:var(--txt);}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+
+/* 层通关 */
+.clear-big{
+  text-align:center;margin-bottom:6px;
+}
+.clear-big .n{
+  font:900 54px/1 ui-monospace,Consolas,monospace;
+  color:var(--gold);letter-spacing:-.04em;
+  text-shadow:0 0 30px rgba(255,201,74,.5), 0 4px 0 #7a4d00;
+}
+.clear-big .l{font:600 12px/1 inherit;color:var(--dim);letter-spacing:.3em;margin-top:8px;}
+
+/* 小提示 */
+.tip{
+  margin-top:10px;padding:9px 11px;border-radius:9px;
+  background:rgba(111,227,160,.06);border:1px solid rgba(111,227,160,.16);
+  font:500 10.5px/1.55 inherit;color:#7fbf9a;
+}
+.tip b{color:var(--green);}
+
+/* 隐藏输入框 */
+#kbd{
+  position:fixed;left:-9999px;top:0;
+  width:1px;height:1px;opacity:0;
+  border:0;padding:0;font-size:16px;
+}
+
+/* emoji 单独指定字体栈，避免被中文字体抢走字形 */
+.mcard .mi,.ttl em,.fbtn,.foot .mode{
+  font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",
+              -apple-system,"Segoe UI",sans-serif;
+}
+
+@media (max-width:520px){
+  .app{padding:6px 8px calc(6px + env(safe-area-inset-bottom));gap:6px;}
+  .hud{padding:6px 8px;gap:6px;}
+  .floor b{font-size:18px;}
+  .floor span{font-size:9px;}
+  .combo b{font-size:18px;}
+  .combo span{font-size:7.5px;}
+  .wpm{font-size:9px;}
+  .hud-l{min-width:46px;}
+  .hud-r{min-width:44px;}
+  .modes{grid-template-columns:1fr;}
+  .mcard{padding:9px 11px;}
+  .panel{padding:14px 12px;}
+  .ttl{font-size:17px;}
+  .st .v{font-size:16px;}
+  .foot .mode{font-size:9.5px;padding:5px 7px;}
+  .fbtn{padding:6px 8px;font-size:10px;}
+}
+.hint{
+  display:none;align-items:center;justify-content:center;gap:6px;
+  flex:none;padding:5px 10px;border-radius:8px;
+  background:rgba(255,154,60,.08);border:1px solid rgba(255,154,60,.18);
+  font:500 10px/1.3 inherit;color:#c9a57a;text-align:center;
+}
+@media (max-width:520px){ .hint{display:flex;} }
+@media (max-height:560px){
+  .hud{padding:5px 9px;}
+  .floor b{font-size:18px;}
+  .combo b{font-size:18px;}
+  .hpwrap{height:13px;}
+  .foot{font-size:9.5px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== HUD ===== -->
+  <div class="hud">
+    <div class="hud-l">
+      <div class="floor"><b id="hFloor">1</b><span>层</span></div>
+      <div class="wave">还 <i id="hWave">0</i> 只</div>
+    </div>
+    <div class="hud-c">
+      <div class="hpwrap">
+        <div class="hpbar" id="hpHp"></div>
+        <div class="hptxt" id="hpHpTxt">100 / 100</div>
+      </div>
+      <div class="sub">
+        <span><b id="hScore">0</b> 分</span>
+        <span class="dot">·</span>
+        <span>命中 <b id="hAcc">100%</b></span>
+      </div>
+    </div>
+    <div class="hud-r">
+      <div class="combo" id="hCombo"><b>0</b><span>COMBO</span></div>
+      <div class="wpm"><b id="hWpm">0</b> WPM</div>
+    </div>
+  </div>
+
+  <div class="hint">📱 竖屏也能玩，但横过来 + 接个键盘才是这游戏的正确姿势</div>
+
+  <!-- ===== 舞台 ===== -->
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+
+    <!-- 开始 / 选模式 -->
+    <div class="ov show" id="ovStart">
+      <div class="panel">
+        <div class="ttl"><em>🗝️</em>单词地牢</div>
+        <div class="sub-t">
+          怪物脸上的字，就是你手里的刀。<br>
+          把它完整拼出来 —— <b>砍下去</b>。拼错，它会趁机扑上来。<br>
+          偶尔混进来一只<b style="color:#ffc94a">金光宝箱怪</b>，一刀砍爆就掉装备。
+        </div>
+        <div class="modes" id="modeList">
+          <div class="mcard" data-mode="en" style="--mc:#a06bff">
+            <div class="mi">📖</div>
+            <div class="mn">英文单词</div>
+            <div class="md">3 到 14 个字母，从 cat 到 addEventListener</div>
+            <div class="mb" id="bestEN">最高 1 层</div>
+          </div>
+          <div class="mcard" data-mode="py" style="--mc:#6fe3a0">
+            <div class="mi">🀄</div>
+            <div class="mn">中文拼音</div>
+            <div class="md">上汉字下拼音，打拼音字母。手感最顺的一档</div>
+            <div class="mb" id="bestPY">最高 1 层</div>
+          </div>
+          <div class="mcard" data-mode="code" style="--mc:#4fd0e8">
+            <div class="mi">⌨️</div>
+            <div class="mn">代码关键字</div>
+            <div class="md">var、const、JSON.stringify、addEventListener</div>
+            <div class="mb" id="bestCODE">最高 1 层</div>
+          </div>
+          <div class="mcard" data-mode="daily" style="--mc:#ffc94a" id="cardDaily">
+            <div class="mi">🌙</div>
+            <div class="mn">今日地牢</div>
+            <div class="md">每天固定 20 个词，全世界同一套，比谁爬得深</div>
+            <div class="mb" id="bestDAILY">今日 1 层</div>
+            <div class="today" id="dailyTag">TODAY</div>
+          </div>
+        </div>
+        <div class="keys">
+          <b>⌨ 建议用实体键盘玩。</b>手机也能玩，点下面的键盘按钮会弹系统键盘，但会挡住半个屏幕。<br>
+          <b>⚠ 请把输入法切到英文状态</b> —— 中文输入法会吃掉按键，游戏里打不出字不是 bug。<br>
+          <b style="color:#ffc94a">🎁 宝箱怪必掉装备</b>：利刃加伤害、拳套加暴击、护心镜加血、沙漏减速怪物、星符强化连击，每件最多叠 3 层，一局结束清空。
+        </div>
+      </div>
+    </div>
+
+    <!-- 暂停 -->
+    <div class="ov" id="ovPause">
+      <div class="panel" style="max-width:340px">
+        <div class="ttl"><em>⏸</em>暂停</div>
+        <div class="sub-t">地牢里没有时间，怪物也不会动。</div>
+        <button class="big gold" id="btnResume">继续 (Esc)</button>
+        <div class="row2">
+          <button class="big ghost" id="btnRestart">重新开始</button>
+          <button class="big ghost" id="btnQuit">换模式</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 层通关 -->
+    <div class="ov" id="ovClear">
+      <div class="panel" style="max-width:380px;text-align:center">
+        <div class="clear-big">
+          <div class="n" id="clFloor">2</div>
+          <div class="l">层 · 已清空</div>
+        </div>
+        <div class="stats" id="clStats"></div>
+        <button class="big gold" id="btnNextFloor">继续下潜</button>
+      </div>
+    </div>
+
+    <!-- 游戏结束 -->
+    <div class="ov" id="ovOver">
+      <div class="panel">
+        <div class="ttl"><em>💀</em><span id="overTitle">倒在第 1 层</span></div>
+        <div class="sub-t" id="overSub">地牢又深了一层，明天再来。</div>
+        <div class="stats" id="overStats"></div>
+        <button class="big gold" id="btnAgain">再来一次</button>
+        <div class="row2">
+          <button class="big ghost" id="btnOverQuit">换个模式</button>
+          <button class="big ghost" id="btnShare">复制战报</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 底部 ===== -->
+  <div class="foot">
+    <div class="mode" id="hMode">📖 英文单词</div>
+    <div class="sp"></div>
+    <div class="fbtn" id="btnKbd" title="唤起手机系统键盘">⌨ 键盘</div>
+    <div class="fbtn act" id="btnSound">🔊</div>
+    <div class="fbtn" id="btnPause" title="暂停 (Esc)">⏸</div>
+  </div>
+</div>
+
+<input id="kbd" type="text" inputmode="text" autocomplete="off" autocorrect="off"
+       autocapitalize="off" spellcheck="false" aria-hidden="true" tabindex="-1">
+
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   1. 常量
+   ========================================================= */
+var VW = 720, VH = 450;          // 逻辑画布尺寸
+var GROUND = 366;                 // 地平线 y
+var PLAYER_X = 118;               // 玩家 x
+var NEAR_X = 250;                 // 怪物贴脸时 x
+var FAR_X = 466;                  // 怪物满距时 x
+var PLAYER_MAX_HP = 100;
+var COMBO_WINDOW = 5000;          // 5 秒无输入断连
+var FLOOR_HEAL = 12;
+var MSG_T = 1400;
+
+/* =========================================================
+   2. 词库
+   ========================================================= */
+
+// ---- 英文：按长度分四档 + Boss 长词 ----
+var EN_S = ('cat dog rat bat fox owl bug ant eel cow pig hen elk ape cub ' +
+  'jam mug oak pin rag sap tar urn vat wax yam zip ash bog cob dim fen ' +
+  'gum hut ink keg lid mob nap orb pod rib sob tub vex wig yak den ewe ' +
+  'fir gel hob ivy jib kit lap mop nib oar pew ram sip tot van web axe ' +
+  'elf ice jaw key log mud net ox pen rye sky toy vow way yet zoo').split(' ');
+
+var EN_M = ('blade crypt demon ember forge ghost haunt ivory judge knife ' +
+  'lance magic night pearl queen raven sword thorn tower vigil witch ' +
+  'arrow armor beast blade charm crown curse dread flame ghost heart ' +
+  'light metal minor noble offer power quick razor shine spear stone ' +
+  'storm trace unite valor water wrath yield amber bramble cavern ' +
+  'dagger falcon hollow marble oil pivot ravine salute timber velvet ' +
+  'wander zenith beacon candle danger eleven fallen gather helmet ' +
+  'island jungle kettle ladder mantle needle orphan pebble quilt ' +
+  'ribbon saddle temple tunnel useless vessel walnut winter').split(' ');
+
+var EN_L = ('abandon ancient bargain captain deliver evening feather ' +
+  'gravity harvest instant journey kingdom lantern machine neutral ' +
+  'observe phantom quality radical sanctum thunder ultimate venture ' +
+  'warrior whisper zealous academy barrier chamber compass descent ' +
+  'eclipse faction gallery habitat iceberg justice keepers liberty ' +
+  'miracle nomadic obvious passage quaking restore scholar temper ' +
+  'unusual various welfare yonder zone abyssals bewitch charcoal ' +
+  'dominion emerald fortress guardian hallowed illusion jeopardy ' +
+  'kindred luminous mosaic nightmare oblivion precious requiem ' +
+  'sentinel twilight umbrella village wasteland').split(' ');
+
+var EN_XL = ('abbreviation absolution adventurous annihilation ' +
+  'bewilderment catastrophe civilization concentration constellation ' +
+  'contradiction determination disappearance extraordinary ' +
+  'hallucination imprisonment indifference investigation ' +
+  'manifestation misunderstanding perpendicular perseverance ' +
+  'precipitation reconciliation remembrance resurrection ' +
+  'sanctification schizophrenia simultaneously ' +
+  'transformation understanding unprecedented vulnerability ' +
+  'architecture assassination concentration').split(' ');
+
+var EN_BOSS = ('extraordinary transmutation annihilation resurrection ' +
+  'transfiguration incomprehensible indestructible ' +
+  'counterrevolution misunderstanding').split(' ');
+
+// ---- 拼音：[拼音, 汉字] ----
+var PY = [
+  ['nihao','你好'],['zaijian','再见'],['pengyou','朋友'],['shijie','世界'],
+  ['shengri','生日'],['kuaile','快乐'],['chuntian','春天'],['xiatian','夏天'],
+  ['qiutian','秋天'],['dongtian','冬天'],['yueliang','月亮'],['taiyang','太阳'],
+  ['xingxing','星星'],['dahai','大海'],['senlin','森林'],['shangu','山谷'],
+  ['heliu','河流'],['tiankong','天空'],['yunduo','云朵'],['yushui','雨水'],
+  ['xuehua','雪花'],['shitou','石头'],['huoyan','火焰'],['baojian','宝剑'],
+  ['yongshi','勇士'],['mofa','魔法'],['mimi','秘密'],['shijian','时间'],
+  ['jiyi','记忆'],['mengjing','梦境'],['yingzi','影子'],['huisheng','回声'],
+  ['chenmo','沉默'],['gudu','孤独'],['xiwang','希望'],['ziyou','自由'],
+  ['yuanfang','远方'],['guxiang','故乡'],['lvxing','旅行'],['wanan','晚安'],
+  ['zaoan','早安'],['xiexie','谢谢'],['duibuqi','对不起'],['meiguanxi','没关系'],
+  ['weishenme','为什么'],['mingtian','明天'],['zuotian','昨天'],['xianzai','现在'],
+  ['yongheng','永恒'],['guangming','光明'],['heian','黑暗'],['shengming','生命'],
+  ['shensheng','神圣'],['jianqiang','坚强'],['wenrou','温柔'],['fenkai','分开'],
+  ['xiangyu','相遇'],['zhongdian','终点'],['qidian','起点'],['daolu','道路'],
+  ['shanmai','山脉'],['haian','海岸'],['huayuan','花园'],['shuijing','水晶'],
+  ['wangguo','王国'],['chengbao','城堡'],['dixia','地下'],['shuomian','睡眠'],
+  ['zhandou','战斗'],['shengli','胜利'],['shibai','失败'],['yongqi','勇气'],
+  ['jiejue','解决'],['bichi','彼此'],['zhunque','准确'],['lianxi','练习']
+];
+
+// ---- 代码关键字 ----
+var CODE_S = ('var let const if else for while new try catch throw ' +
+  'this null true false async await class break continue typeof ' +
+  'delete switch case default finally void yield in of super ' +
+  'extends static get set NaN').split(' ');
+
+var CODE_M = ('function callback promise document element request ' +
+  'response resolve reject return import export reduce filter ' +
+  'forEach includes indexOf toString parseInt parseFloat ' +
+  'JSON.parse Math.floor Math.random console.log ' +
+  'Object.keys Array.from String.slice Promise.all').split(' ');
+
+var CODE_L = ('addEventListener querySelector getElementById ' +
+  'createElement preventDefault stopPropagation localStorage ' +
+  'sessionStorage requestAnimationFrame setTimeout setInterval ' +
+  'JSON.stringify Array.isArray Object.assign Number.parseInt ' +
+  'String.fromCharCode Date.parse classList.add classList.remove ' +
+  'element.appendChild document.createElement').split(' ');
+
+var CODE_BOSS = ('removeEventListener querySelectorAll addEventListener ' +
+  'encodeURIComponent decodeURIComponent requestAnimationFrame').split(' ');
+
+/* =========================================================
+   3. 工具
+   ========================================================= */
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+
+function hash32(str){
+  var h = 2166136261 >>> 0, i;
+  for (i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+
+// 整数种子版伪随机（不 hash 字符串，避免双层）
+function rnd01(n){
+  var x = (n ^ 0x9e3779b9) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 2246822507) >>> 0;
+  x = Math.imul(x ^ (x >>> 13), 3266489909) >>> 0;
+  x = (x ^ (x >>> 16)) >>> 0;
+  return x / 4294967296;
+}
+
+function shuffle(arr, seed){
+  var a = arr.slice(), i, j, t;
+  for (i = a.length - 1; i > 0; i--){
+    j = Math.floor(rnd01(seed + i * 7919) * (i + 1));
+    t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function roundRect(g, x, y, w, h, r){
+  var rr = Math.min(r, w / 2, h / 2);
+  g.beginPath();
+  g.moveTo(x + rr, y);
+  g.lineTo(x + w - rr, y);
+  g.quadraticCurveTo(x + w, y, x + w, y + rr);
+  g.lineTo(x + w, y + h - rr);
+  g.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  g.lineTo(x + rr, y + h);
+  g.quadraticCurveTo(x, y + h, x, y + h - rr);
+  g.lineTo(x, y + rr);
+  g.quadraticCurveTo(x, y, x + rr, y);
+  g.closePath();
+}
+
+var MONO = 'ui-monospace,"SF Mono","Cascadia Code",Consolas,"Courier New",monospace';
+
+/* =========================================================
+   4. 音效（Web Audio 合成，无外部文件）
+   ========================================================= */
+var AC = null, sfxOn = true, masterGain = null;
+
+function initAudio(){
+  if (AC) return;
+  try{
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    AC = new Ctx();
+    masterGain = AC.createGain();
+    masterGain.gain.value = 0.8;
+    masterGain.connect(AC.destination);
+  }catch(e){ AC = null; }
+}
+
+function tone(freq, dur, type, vol, slideTo){
+  if (!AC || !sfxOn) return;
+  try{
+    var t0 = AC.currentTime;
+    var o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0001, vol || 0.1), t0 + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(masterGain);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }catch(e){}
+}
+
+function noise(dur, vol, hp){
+  if (!AC || !sfxOn) return;
+  try{
+    var t0 = AC.currentTime;
+    var len = Math.floor(AC.sampleRate * dur);
+    var buf = AC.createBuffer(1, len, AC.sampleRate);
+    var d = buf.getChannelData(0), i;
+    for (i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    var src = AC.createBufferSource(); src.buffer = buf;
+    var f = AC.createBiquadFilter();
+    f.type = 'highpass'; f.frequency.value = hp || 400;
+    var g = AC.createGain();
+    g.gain.setValueAtTime(vol || 0.12, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(masterGain);
+    src.start(t0);
+  }catch(e){}
+}
+
+var SFX = {
+  // 打字：清脆的机械键盘感
+  key:   function(){
+    tone(1050 + Math.random() * 360, 0.026, 'square', 0.055);
+    noise(0.014, 0.03, 3200);
+  },
+  err:   function(){ tone(170, 0.12, 'sawtooth', 0.13, 80); noise(0.08, 0.055, 650); },
+  hit:   function(){ tone(340, 0.1, 'triangle', 0.16, 140); noise(0.1, 0.09, 900); },
+  crit:  function(){ tone(950, 0.08, 'square', 0.11, 1550); tone(1380, 0.18, 'triangle', 0.1, 470); noise(0.15, 0.1, 2200); },
+  hurt:  function(){ tone(118, 0.22, 'sawtooth', 0.19, 46); noise(0.18, 0.12, 180); },
+  kill:  function(){ tone(330, 0.09, 'square', 0.11, 680); setTimeout(function(){ tone(700, 0.13, 'triangle', 0.1, 980); }, 62); },
+  // 宝箱掉落：上行琶音
+  loot:  function(){
+    [0, 75, 150, 260, 380].forEach(function(d, i){
+      setTimeout(function(){ tone([784, 988, 1175, 1568, 1976][i], 0.26, 'triangle', 0.095); }, d);
+    });
+    setTimeout(function(){ noise(0.3, 0.05, 5000); }, 40);
+  },
+  // 装备上身：一声清亮
+  equip: function(){ tone(1250, 0.1, 'sine', 0.13, 1800); setTimeout(function(){ tone(1680, 0.18, 'sine', 0.1, 2200); }, 55); },
+  // 连击里程碑
+  combo: function(){ tone(1560, 0.07, 'sine', 0.075, 1980); },
+  floor: function(){
+    [0, 105, 210, 370].forEach(function(d, i){
+      setTimeout(function(){ tone([523, 659, 784, 1047][i], 0.24, 'triangle', 0.1); }, d);
+    });
+  },
+  over:  function(){
+    [0, 160, 340, 560].forEach(function(d, i){
+      setTimeout(function(){ tone([392, 330, 262, 196][i], 0.32, 'sawtooth', 0.1); }, d);
+    });
+  },
+  boss:  function(){ tone(68, 0.6, 'sawtooth', 0.18, 42); noise(0.55, 0.09, 150); }
+};
+
+/* =========================================================
+   5. 全局状态
+   ========================================================= */
+var S = {
+  phase: 'menu',        // menu | play | pause | clear | over
+  mode: 'en',
+  floor: 1,
+  hp: PLAYER_MAX_HP,
+  score: 0,
+  combo: 0,
+  maxCombo: 0,
+  lastTypeAt: 0,
+  typedChars: 0,
+  missChars: 0,
+  kills: 0,
+  runStart: 0,
+  playMs: 0,
+
+  queue: [],            // 怪物队列，queue[0] 是活跃怪
+  cur: null,            // 当前词 {word, cn, typed, len}
+  particles: [],
+  floats: [],
+  shake: 0,
+  flash: 0,             // 受击红闪
+  bossFlash: 0,
+  msg: null,            // {text, color, t}
+  atkFx: 0,             // 玩家出刀动画 0..1
+  playerHurt: 0,
+  torchSeed: 1,
+
+  maxHp: 100,
+  gear: { blade:0, fist:0, heart:0, hourglass:0, star:0 },
+  loot: null,           // 掉落提示 {name, color, t}
+
+  waveTotal: 0,
+  waveLeft: 0,
+  isBossFloor: false,
+  bossHpMax: 0
+};
+
+/* =========================================================
+   6. 词库调度
+   ========================================================= */
+var DAILY = null;   // 今日 20 词
+
+function dayKey(){
+  var d = new Date();
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+function daySeed(){ return hash32('dungeon-' + dayKey()); }
+
+function buildDaily(){
+  var all = EN_S.concat(EN_M, EN_L);
+  var list = shuffle(all, daySeed()).slice(0, 20);
+  // 保证至少两个长词
+  var longs = shuffle(EN_L, daySeed() + 13).slice(0, 2);
+  list[0] = longs[0]; list[1] = longs[1];
+  DAILY = list;
+}
+
+// 按层数决定词长档位
+function pickWord(){
+  var f = S.floor, r = Math.random(), minL, maxL;
+
+  if (S.mode === 'daily'){
+    // 今日地牢：从 20 词里循环抽，层数高时优先长词
+    var pool = DAILY;
+    if (f >= 4){
+      var longOnes = pool.filter(function(w){ return w.length >= 7; });
+      if (longOnes.length && r < 0.55) pool = longOnes;
+    }
+    return { word: pool[Math.floor(Math.random() * pool.length)], cn: '' };
+  }
+
+  if (S.mode === 'py'){
+    var p;
+    if (f <= 2)       p = PY.filter(function(x){ return x[0].length <= 6; });
+    else if (f <= 5)  p = PY.filter(function(x){ return x[0].length <= 8; });
+    else              p = PY.filter(function(x){ return x[0].length >= 7; });
+    if (!p.length) p = PY;
+    var q = p[Math.floor(Math.random() * p.length)];
+    return { word: q[0], cn: q[1] };
+  }
+
+  if (S.mode === 'code'){
+    var arr;
+    if (f <= 2)       arr = r < 0.75 ? CODE_S : CODE_M;
+    else if (f <= 5)  arr = r < 0.35 ? CODE_S : (r < 0.85 ? CODE_M : CODE_L);
+    else              arr = r < 0.15 ? CODE_M : (r < 0.7 ? CODE_L : CODE_BOSS);
+    return { word: arr[Math.floor(Math.random() * arr.length)], cn: '' };
+  }
+
+  // 英文
+  if (f <= 2)       arr = r < 0.85 ? EN_S : EN_M;
+  else if (f <= 4)  arr = r < 0.35 ? EN_S : (r < 0.85 ? EN_M : EN_L);
+  else if (f <= 8)  arr = r < 0.15 ? EN_M : (r < 0.72 ? EN_L : EN_XL);
+  else              arr = r < 0.35 ? EN_L : (r < 0.85 ? EN_XL : EN_BOSS);
+  return { word: arr[Math.floor(Math.random() * arr.length)], cn: '' };
+}
+
+function pickBossWord(){
+  var arr;
+  if (S.mode === 'code') arr = CODE_BOSS;
+  else if (S.mode === 'py'){
+    arr = PY.filter(function(x){ return x[0].length >= 8; });
+    if (!arr.length) arr = PY;
+    var q = arr[Math.floor(Math.random() * arr.length)];
+    return { word: q[0], cn: q[1] };
+  }
+  else if (S.mode === 'daily') arr = DAILY;
+  else arr = EN_BOSS;
+  var w = arr[Math.floor(Math.random() * arr.length)];
+  return { word: w, cn: '' };
+}
+
+/* =========================================================
+   6.5 装备（宝箱怪掉落）
+   ========================================================= */
+var GEAR = [
+  { id:'blade',     name:'利刃',   color:'#ff8a5c', max:3, desc:'伤害 +12%' },
+  { id:'fist',      name:'拳套',   color:'#ffc94a', max:3, desc:'暴击率 +5%' },
+  { id:'heart',     name:'护心镜', color:'#ff5c72', max:3, desc:'最大生命 +12' },
+  { id:'hourglass', name:'沙漏',   color:'#6fe3a0', max:3, desc:'怪物逼近 -8%' },
+  { id:'star',      name:'星符',   color:'#a06bff', max:3, desc:'连击加成更强' }
+];
+
+function gearDmgMul(){ return 1 + 0.12 * S.gear.blade; }
+function gearCritAdd(){ return 0.05 * S.gear.fist; }
+function gearSpeedMul(){ return Math.max(0.60, 1 - 0.08 * S.gear.hourglass); }
+function gearComboStep(){ return 0.05 + 0.012 * S.gear.star; }
+function gearTotal(){
+  var n = 0;
+  for (var i = 0; i < GEAR.length; i++) n += S.gear[GEAR[i].id] || 0;
+  return n;
+}
+
+function hexA(hex, a){
+  var h = hex.replace('#', '');
+  return 'rgba(' + parseInt(h.substr(0,2),16) + ',' +
+         parseInt(h.substr(2,2),16) + ',' +
+         parseInt(h.substr(4,2),16) + ',' + a + ')';
+}
+
+/* =========================================================
+   7. 怪物定义
+   ========================================================= */
+var KINDS = [
+  { id:'slime',  name:'史莱姆', hp:0.85, spd:0.92, color:'#6fe3a0', dark:'#2f7d52' },
+  { id:'bat',    name:'蝙蝠',   hp:0.72, spd:1.22, color:'#e879f9', dark:'#6b2075' },
+  { id:'skull',  name:'骷髅',   hp:1.05, spd:1.00, color:'#d8d2e8', dark:'#6f6885' },
+  { id:'eye',    name:'眼球',   hp:0.90, spd:1.10, color:'#4fd0e8', dark:'#1e6a7a' },
+  { id:'golem',  name:'石头人', hp:1.45, spd:0.72, color:'#8f88ab', dark:'#43405a' },
+  { id:'wisp',   name:'鬼火',   hp:0.66, spd:1.35, color:'#ffc94a', dark:'#8a6414' }
+];
+
+function makeMonster(isBoss){
+  var f = S.floor;
+  var kind;
+  if (isBoss){
+    kind = { id:'boss', name:'地牢守卫', hp:1, spd:1, color:'#ff6b73', dark:'#7a1e28' };
+  } else {
+    // 高层的怪种类也变重
+    var pool = f <= 2 ? [KINDS[0], KINDS[1]]
+             : f <= 4 ? [KINDS[0], KINDS[1], KINDS[2], KINDS[5]]
+             : f <= 7 ? [KINDS[1], KINDS[2], KINDS[3], KINDS[5], KINDS[4]]
+             : KINDS;
+    kind = pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  var hp;
+  if (isBoss){
+    hp = Math.round(160 + f * 52 + f * f * 1.6);
+  } else {
+    hp = Math.round((20 + f * 19 + f * f * 0.85) * kind.hp * (0.86 + Math.random() * 0.28));
+  }
+
+  var spd;
+  if (isBoss) spd = 5.4 + f * 0.55;
+  else spd = (4.2 + f * 0.55) * kind.spd;
+
+  // 体型缩放
+  var size = isBoss ? 1.5 : (0.9 + Math.random() * 0.28);
+
+  return {
+    kind: kind,
+    isBoss: !!isBoss,
+    hp: hp, hpMax: hp,
+    dist: 78,                // 78 = 出场位置，0 = 贴脸
+    spd: spd,
+    size: size,
+    x: FAR_X, y: GROUND,
+    isChest: false,
+    state: 'wait',           // wait | active | hit | dead
+    hitT: 0,
+    atkCd: 0,
+    bob: Math.random() * 6.28,
+    rage: false,
+    dying: 0,
+    wordObj: null
+  };
+}
+
+/* =========================================================
+   8. 存档
+   ========================================================= */
+var SAVE_KEY = 'wb_dungeon_v1';
+var SAVE_VER = 1;
+
+function checksum(str){
+  var h = 5381, i;
+  for (i = 0; i < str.length; i++){
+    h = ((h * 33) >>> 0) ^ str.charCodeAt(i);
+    h = h >>> 0;
+  }
+  var dg = '0123456789abcdefghijklmnopqrstuvwxyz', out = '';
+  if (h === 0) return '0';
+  while (h > 0){ out = dg[h % 36] + out; h = Math.floor(h / 36); }
+  return out;
+}
+
+var DB = {
+  best: { en: 1, py: 1, code: 1, daily: 1 },
+  bestDailyDay: '',
+  totalKills: 0,
+  totalRuns: 0,
+  sound: true
+};
+
+function loadDB(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    var o = JSON.parse(raw);
+    if (!o || !o.d) return;
+    if (o.h !== checksum(JSON.stringify(o.d))) return;   // 校验失败，丢弃
+    var d = o.d;
+    if (d.ver && d.ver > SAVE_VER) return;               // 未来版本，不覆盖
+    if (d.best) for (var k in d.best) if (DB.best[k] !== undefined) DB.best[k] = d.best[k] | 0;
+    DB.bestDailyDay = d.bestDailyDay || '';
+    DB.totalKills = d.totalKills | 0;
+    DB.totalRuns = d.totalRuns | 0;
+    if (typeof d.sound === 'boolean') DB.sound = d.sound;
+  }catch(e){}
+  // 今日换天 → 今日记录归零；首次运行补上日期，别把纪录冲掉
+  if (!DB.bestDailyDay) DB.bestDailyDay = dayKey();
+  if (DB.bestDailyDay !== dayKey()){
+    DB.bestDailyDay = dayKey();
+    DB.best.daily = 1;
+    saveDB();
+  }
+}
+
+function saveDB(){
+  try{
+    if (!DB.bestDailyDay) DB.bestDailyDay = dayKey();
+    var d = {
+      ver: SAVE_VER,
+      best: DB.best,
+      bestDailyDay: DB.bestDailyDay,
+      totalKills: DB.totalKills,
+      totalRuns: DB.totalRuns,
+      sound: DB.sound
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ h: checksum(JSON.stringify(d)), d: d }));
+  }catch(e){}
+}
+
+/* =========================================================
+   9. 渲染
+   ========================================================= */
+var cv = document.getElementById('cv');
+var g = cv.getContext('2d');
+var DPR = 1, cssW = VW, cssH = VH;
+
+function resize(){
+  var stage = document.getElementById('stage');
+  var box = stage.getBoundingClientRect();
+  if (box.width < 10 || box.height < 10) return;
+  var sc = Math.min(box.width / VW, box.height / VH);
+  cssW = VW * sc; cssH = VH * sc;
+  cv.style.width = cssW + 'px';
+  cv.style.height = cssH + 'px';
+  cv.style.left = ((box.width - cssW) / 2) + 'px';
+  cv.style.top = ((box.height - cssH) / 2) + 'px';
+
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(VW * DPR);
+  cv.height = Math.round(VH * DPR);
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.imageSmoothingEnabled = true;
+}
+window.addEventListener('resize', resize);
+
+/* ---------- 背景 ---------- */
+function drawBg(t){
+  var i, j, x, y;
+
+  // 天顶渐层
+  var sky = g.createLinearGradient(0, 0, 0, GROUND);
+  sky.addColorStop(0, '#0d0a18');
+  sky.addColorStop(0.55, '#150f24');
+  sky.addColorStop(1, '#1b1330');
+  g.fillStyle = sky;
+  g.fillRect(0, 0, VW, GROUND);
+
+  // 远景拱门剪影
+  g.fillStyle = '#0a0813';
+  for (i = 0; i < 3; i++){
+    var ax = 150 + i * 210;
+    g.beginPath();
+    g.moveTo(ax, GROUND);
+    g.lineTo(ax, GROUND - 150);
+    g.quadraticCurveTo(ax + 45, GROUND - 218, ax + 90, GROUND - 150);
+    g.lineTo(ax + 90, GROUND);
+    g.closePath();
+    g.fill();
+  }
+
+  // 砖墙
+  var bw = 54, bh = 26;
+  for (y = 30; y < GROUND - 18; y += bh){
+    var row = Math.floor((y - 30) / bh);
+    for (x = -bw + (row % 2 ? bw / 2 : 0); x < VW + bw; x += bw){
+      var n = rnd01(row * 131 + Math.floor(x / bw) * 17 + 5);
+      var shade = 0.055 + n * 0.055;
+      // 越靠下越亮一点（火光）
+      var depth = (y - 30) / (GROUND - 48);
+      g.fillStyle = 'rgba(' + Math.round(120 + n * 30) + ',' +
+                     Math.round(80 + n * 26) + ',' +
+                     Math.round(150 + n * 40) + ',' + (shade + depth * 0.035).toFixed(3) + ')';
+      g.fillRect(x + 1, y + 1, bw - 2, bh - 2);
+    }
+  }
+  // 墙面压暗
+  var vg = g.createLinearGradient(0, 0, 0, GROUND);
+  vg.addColorStop(0, 'rgba(6,5,12,0.56)');
+  vg.addColorStop(0.45, 'rgba(6,5,12,0.24)');
+  vg.addColorStop(1, 'rgba(6,5,12,0.52)');
+  g.fillStyle = vg;
+  g.fillRect(0, 0, VW, GROUND);
+
+  // 两侧火把
+  var f1 = 0.72 + Math.sin(t * 6.1) * 0.14 + Math.sin(t * 13.7) * 0.08;
+  var f2 = 0.70 + Math.sin(t * 5.3 + 2) * 0.15 + Math.sin(t * 11.1 + 1) * 0.07;
+  torch(64, 170, f1);
+  torch(VW - 64, 176, f2);
+
+  // 地面
+  var gr = g.createLinearGradient(0, GROUND - 8, 0, VH);
+  gr.addColorStop(0, '#241b33');
+  gr.addColorStop(0.25, '#1a1327');
+  gr.addColorStop(1, '#0d0916');
+  g.fillStyle = gr;
+  g.fillRect(0, GROUND - 6, VW, VH - GROUND + 6);
+
+  // 地砖透视
+  g.strokeStyle = 'rgba(120,95,180,0.10)';
+  g.lineWidth = 1;
+  for (i = -6; i <= 6; i++){
+    g.beginPath();
+    g.moveTo(VW / 2 + i * 52, GROUND - 6);
+    g.lineTo(VW / 2 + i * 148, VH);
+    g.stroke();
+  }
+  for (j = 0; j < 4; j++){
+    var yy = GROUND - 6 + Math.pow(j / 4, 1.7) * (VH - GROUND + 6);
+    g.globalAlpha = 0.5 - j * 0.06;
+    g.beginPath(); g.moveTo(0, yy); g.lineTo(VW, yy); g.stroke();
+    g.globalAlpha = 1;
+  }
+
+  // 地面碎屑与裂纹
+  for (i = 0; i < 34; i++){
+    var n2 = rnd01(i * 977 + 31);
+    var n3 = rnd01(i * 613 + 77);
+    var px = n2 * VW;
+    var py = GROUND + 8 + n3 * (VH - GROUND - 10);
+    var ps = 1.2 + n3 * 3.2;
+    g.fillStyle = 'rgba(166,146,215,' + (0.075 + n2 * 0.11).toFixed(3) + ')';
+    g.fillRect(px, py, ps, ps * 0.62);
+  }
+  g.strokeStyle = 'rgba(20,14,34,0.5)';
+  g.lineWidth = 1;
+  for (i = 0; i < 7; i++){
+    var c1 = rnd01(i * 313 + 5);
+    var c2 = rnd01(i * 719 + 11);
+    var sx0 = c1 * VW, sy0 = GROUND + 10 + c2 * 50;
+    g.beginPath();
+    g.moveTo(sx0, sy0);
+    g.lineTo(sx0 + 14 + c2 * 22, sy0 + 5);
+    g.lineTo(sx0 + 26 + c1 * 18, sy0 + 2);
+    g.stroke();
+  }
+
+  // 地平线亮边
+  g.fillStyle = 'rgba(150,110,220,0.16)';
+  g.fillRect(0, GROUND - 7, VW, 2);
+}
+
+function torch(x, y, f){
+  // 光晕
+  var rg = g.createRadialGradient(x, y - 14, 6, x, y - 14, 150 * f);
+  rg.addColorStop(0, 'rgba(255,170,70,' + (0.20 * f).toFixed(3) + ')');
+  rg.addColorStop(0.42, 'rgba(255,120,40,' + (0.075 * f).toFixed(3) + ')');
+  rg.addColorStop(1, 'rgba(255,90,20,0)');
+  g.fillStyle = rg;
+  g.beginPath(); g.arc(x, y - 14, 150 * f, 0, 6.2832); g.fill();
+
+  // 托架
+  g.fillStyle = '#2b2238';
+  g.fillRect(x - 5, y - 4, 10, 26);
+  g.fillStyle = '#3d3150';
+  g.fillRect(x - 8, y - 8, 16, 6);
+
+  // 火焰
+  var fh = 26 * f + 8;
+  g.fillStyle = 'rgba(255,120,30,0.85)';
+  g.beginPath();
+  g.moveTo(x - 7, y - 10);
+  g.quadraticCurveTo(x - 4, y - 10 - fh * 0.7, x, y - 10 - fh);
+  g.quadraticCurveTo(x + 4, y - 10 - fh * 0.7, x + 7, y - 10);
+  g.closePath(); g.fill();
+  g.fillStyle = 'rgba(255,220,120,0.9)';
+  g.beginPath();
+  g.moveTo(x - 3.5, y - 10);
+  g.quadraticCurveTo(x - 2, y - 12 - fh * 0.5, x, y - 10 - fh * 0.68);
+  g.quadraticCurveTo(x + 2, y - 12 - fh * 0.5, x + 3.5, y - 10);
+  g.closePath(); g.fill();
+  g.fillStyle = 'rgba(255,255,220,0.85)';
+  g.beginPath(); g.arc(x, y - 14, 2.6, 0, 6.2832); g.fill();
+}
+
+/* ---------- 怪物 ---------- */
+function monX(m){ return lerp(NEAR_X, FAR_X, m.dist / 100); }
+
+function drawMonster(m, index, t){
+  var x = monX(m) + (index > 0 ? index * 62 : 0);
+  var u = 6 * m.size * (m.isBoss ? 1.45 : 1);
+  var scaleBack = index === 0 ? 1 : Math.max(0.5, 1 - index * 0.16);
+  u *= scaleBack;
+
+  var bobY = Math.sin(t * 2.2 + m.bob) * (2.2 + (m.isBoss ? 1 : 0));
+  var y = GROUND + bobY;
+
+  // 影
+  g.fillStyle = 'rgba(0,0,0,0.42)';
+  g.beginPath();
+  g.ellipse(x, GROUND + 4, u * 5.2, u * 1.1, 0, 0, 6.2832);
+  g.fill();
+
+  var alpha = index === 0 ? 1 : (0.40 - index * 0.10);
+  var before = g.globalAlpha;
+  g.globalAlpha = Math.max(0.16, alpha);
+
+  // 受击闪白
+  var flashing = m.hitT > 0;
+  if (flashing) { try{ g.filter = 'brightness(2.4) saturate(0.35)'; }catch(e){} }
+
+  var c = m.kind.color, d = m.kind.dark;
+
+  if (m.kind.id === 'slime'){
+    g.fillStyle = d;
+    g.beginPath(); g.ellipse(x, y - u * 2.4, u * 5.4, u * 2.6, 0, 0, 6.2832); g.fill();
+    g.beginPath(); g.ellipse(x, y - u * 2.4, u * 5.4, u * 5.8, 0, Math.PI, Math.PI * 2); g.fill();
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x, y - u * 2.4, u * 4.9, u * 2.1, 0, 0, 6.2832); g.fill();
+    g.beginPath(); g.ellipse(x, y - u * 2.4, u * 4.9, u * 5.1, 0, Math.PI, Math.PI * 2); g.fill();
+    // 高光
+    g.fillStyle = 'rgba(255,255,255,0.34)';
+    g.beginPath(); g.ellipse(x - u * 2.0, y - u * 5.6, u * 1.2, u * 0.66, -0.45, 0, 6.2832); g.fill();
+    // 眼
+    g.fillStyle = '#0d1a12';
+    g.fillRect(x - u * 2.3, y - u * 4.0, u * 1.3, u * 1.5);
+    g.fillRect(x + u * 1.0, y - u * 4.0, u * 1.3, u * 1.5);
+  }
+  else if (m.kind.id === 'bat'){
+    var flap = Math.sin(t * 11 + m.bob) * u * 1.3;
+    // 翅膀
+    g.fillStyle = d;
+    g.beginPath();
+    g.moveTo(x - u * 1.6, y - u * 5.2);
+    g.lineTo(x - u * 7.4, y - u * 7.4 + flap);
+    g.lineTo(x - u * 5.2, y - u * 4.4);
+    g.lineTo(x - u * 7.0, y - u * 2.2 + flap);
+    g.lineTo(x - u * 1.6, y - u * 2.0);
+    g.closePath(); g.fill();
+    g.beginPath();
+    g.moveTo(x + u * 1.6, y - u * 5.2);
+    g.lineTo(x + u * 7.4, y - u * 7.4 + flap);
+    g.lineTo(x + u * 5.2, y - u * 4.4);
+    g.lineTo(x + u * 7.0, y - u * 2.2 + flap);
+    g.lineTo(x + u * 1.6, y - u * 2.0);
+    g.closePath(); g.fill();
+    // 翅膀骨架亮边
+    g.strokeStyle = 'rgba(255,255,255,0.20)';
+    g.lineWidth = Math.max(1, u * 0.17);
+    g.beginPath();
+    g.moveTo(x - u * 1.6, y - u * 5.2);
+    g.lineTo(x - u * 7.4, y - u * 7.4 + flap);
+    g.lineTo(x - u * 5.2, y - u * 4.4);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(x + u * 1.6, y - u * 5.2);
+    g.lineTo(x + u * 7.4, y - u * 7.4 + flap);
+    g.lineTo(x + u * 5.2, y - u * 4.4);
+    g.stroke();
+
+    // 身体
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x, y - u * 3.9, u * 1.85, u * 2.7, 0, 0, 6.2832); g.fill();
+    // 耳朵
+    g.beginPath();
+    g.moveTo(x - u * 1.5, y - u * 5.9);
+    g.lineTo(x - u * 2.6, y - u * 8.3);
+    g.lineTo(x - u * 0.3, y - u * 6.4);
+    g.closePath(); g.fill();
+    g.beginPath();
+    g.moveTo(x + u * 1.5, y - u * 5.9);
+    g.lineTo(x + u * 2.6, y - u * 8.3);
+    g.lineTo(x + u * 0.3, y - u * 6.4);
+    g.closePath(); g.fill();
+    // 眼
+    g.fillStyle = '#ff415c';
+    g.beginPath(); g.arc(x - u * 0.82, y - u * 4.5, u * 0.52, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(x + u * 0.82, y - u * 4.5, u * 0.52, 0, 6.2832); g.fill();
+    // 尖牙
+    g.fillStyle = '#fff';
+    g.beginPath();
+    g.moveTo(x - u * 0.52, y - u * 2.7); g.lineTo(x - u * 0.26, y - u * 1.95); g.lineTo(x, y - u * 2.7);
+    g.closePath(); g.fill();
+    g.beginPath();
+    g.moveTo(x + u * 0.08, y - u * 2.7); g.lineTo(x + u * 0.34, y - u * 1.95); g.lineTo(x + u * 0.6, y - u * 2.7);
+    g.closePath(); g.fill();
+  }
+  else if (m.kind.id === 'skull'){
+    g.fillStyle = d;
+    roundRect(g, x - u * 3.9, y - u * 7.6, u * 7.8, u * 6.4, u * 1.6); g.fill();
+    g.fillStyle = c;
+    roundRect(g, x - u * 3.6, y - u * 7.9, u * 7.2, u * 6.0, u * 1.5); g.fill();
+    // 下颚
+    g.fillStyle = c;
+    g.fillRect(x - u * 2.4, y - u * 2.4, u * 4.8, u * 2.0);
+    g.fillStyle = d;
+    g.fillRect(x - u * 1.9, y - u * 2.4, u * 0.5, u * 1.5);
+    g.fillRect(x - u * 0.25, y - u * 2.4, u * 0.5, u * 1.5);
+    g.fillRect(x + u * 1.4, y - u * 2.4, u * 0.5, u * 1.5);
+    // 眼窝
+    g.fillStyle = '#120a18';
+    g.beginPath(); g.ellipse(x - u * 1.7, y - u * 4.4, u * 1.2, u * 1.35, 0, 0, 6.2832); g.fill();
+    g.beginPath(); g.ellipse(x + u * 1.7, y - u * 4.4, u * 1.2, u * 1.35, 0, 0, 6.2832); g.fill();
+    // 瞳火
+    g.fillStyle = '#7bffb0';
+    g.beginPath(); g.arc(x - u * 1.7, y - u * 4.4, u * 0.42, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(x + u * 1.7, y - u * 4.4, u * 0.42, 0, 6.2832); g.fill();
+    // 鼻
+    g.fillStyle = '#120a18';
+    g.beginPath();
+    g.moveTo(x, y - u * 2.9); g.lineTo(x - u * 0.5, y - u * 2.0); g.lineTo(x + u * 0.5, y - u * 2.0);
+    g.closePath(); g.fill();
+  }
+  else if (m.kind.id === 'eye'){
+    g.fillStyle = d;
+    g.beginPath(); g.ellipse(x, y - u * 3.8, u * 4.0, u * 4.3, 0, 0, 6.2832); g.fill();
+    g.fillStyle = '#eef6f9';
+    g.beginPath(); g.ellipse(x, y - u * 3.8, u * 3.4, u * 3.7, 0, 0, 6.2832); g.fill();
+    // 血丝
+    g.strokeStyle = 'rgba(220,60,70,0.5)'; g.lineWidth = Math.max(1, u * 0.16);
+    for (var q = 0; q < 4; q++){
+      var ang = q * 1.6 + m.bob;
+      g.beginPath();
+      g.moveTo(x + Math.cos(ang) * u * 3.1, y - u * 3.8 + Math.sin(ang) * u * 3.4);
+      g.quadraticCurveTo(x + Math.cos(ang) * u * 2.2, y - u * 3.8 + Math.sin(ang) * u * 2.5,
+                         x + Math.cos(ang) * u * 1.6, y - u * 3.8 + Math.sin(ang) * u * 1.8);
+      g.stroke();
+    }
+    // 虹膜（盯着玩家）
+    var lookX = clamp((PLAYER_X - x) / 300, -1, 1);
+    g.fillStyle = c;
+    g.beginPath(); g.arc(x + lookX * u * 0.8, y - u * 3.8, u * 2.0, 0, 6.2832); g.fill();
+    g.fillStyle = '#0a1420';
+    g.beginPath(); g.arc(x + lookX * u * 1.1, y - u * 3.8, u * 1.0, 0, 6.2832); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    g.beginPath(); g.arc(x + lookX * u * 1.1 - u * 0.4, y - u * 4.2, u * 0.38, 0, 6.2832); g.fill();
+  }
+  else if (m.kind.id === 'golem'){
+    // 腿
+    g.fillStyle = d;
+    g.fillRect(x - u * 3.0, y - u * 2.8, u * 2.4, u * 2.8);
+    g.fillRect(x + u * 0.6, y - u * 2.8, u * 2.4, u * 2.8);
+    g.fillStyle = d;
+    g.fillRect(x - u * 3.6, y - u * 8.6, u * 7.2, u * 6.4);
+    g.fillStyle = c;
+    g.fillRect(x - u * 3.2, y - u * 8.2, u * 6.4, u * 5.6);
+    // 手臂
+    g.fillStyle = d;
+    g.fillRect(x - u * 5.6, y - u * 8.0, u * 2.2, u * 4.6);
+    g.fillRect(x + u * 3.4, y - u * 8.0, u * 2.2, u * 4.6);
+    // 头
+    g.fillStyle = c;
+    g.fillRect(x - u * 2.2, y - u * 10.6, u * 4.4, u * 2.6);
+    // 裂纹
+    g.strokeStyle = 'rgba(30,26,44,0.75)'; g.lineWidth = Math.max(1, u * 0.2);
+    g.beginPath();
+    g.moveTo(x - u * 1.2, y - u * 8.0); g.lineTo(x - u * 0.3, y - u * 5.6); g.lineTo(x + u * 1.1, y - u * 4.4);
+    g.stroke();
+    // 眼
+    g.fillStyle = '#ffb84a';
+    g.fillRect(x - u * 1.4, y - u * 9.8, u * 1.0, u * 0.8);
+    g.fillRect(x + u * 0.4, y - u * 9.8, u * 1.0, u * 0.8);
+  }
+  else if (m.kind.id === 'wisp'){
+    for (var k = 3; k >= 1; k--){
+      g.fillStyle = 'rgba(255,201,74,' + (0.06 * k).toFixed(3) + ')';
+      g.beginPath(); g.arc(x, y - u * 4.2, u * (1.6 + k * 1.4), 0, 6.2832); g.fill();
+    }
+    g.fillStyle = c;
+    g.beginPath(); g.arc(x, y - u * 4.2, u * 1.9, 0, 6.2832); g.fill();
+    g.fillStyle = '#fffbe0';
+    g.beginPath(); g.arc(x, y - u * 4.2, u * 0.85, 0, 6.2832); g.fill();
+    // 尾焰
+    g.fillStyle = 'rgba(255,160,60,0.55)';
+    for (var v = 0; v < 3; v++){
+      var off = Math.sin(t * 7 + v * 2 + m.bob) * u * 0.8;
+      g.beginPath();
+      g.arc(x + off, y - u * 1.4 + v * u * 0.9, u * (0.9 - v * 0.22), 0, 6.2832);
+      g.fill();
+    }
+  }
+  else if (m.kind.id === 'boss'){
+    var br = m.rage ? 1.0 + Math.sin(t * 14) * 0.05 : 1;
+    g.save();
+    g.translate(x, y); g.scale(br, br); g.translate(-x, -y);
+
+    // 腿
+    g.fillStyle = '#5e1620';
+    g.fillRect(x - u * 4.0, y - u * 2.6, u * 2.8, u * 2.6);
+    g.fillRect(x + u * 1.2, y - u * 2.6, u * 2.8, u * 2.6);
+
+    // 手臂
+    g.fillStyle = '#7a1e28';
+    roundRect(g, x - u * 7.4, y - u * 9.4, u * 2.5, u * 6.2, u * 0.9); g.fill();
+    roundRect(g, x + u * 4.9, y - u * 9.4, u * 2.5, u * 6.2, u * 0.9); g.fill();
+    // 爪
+    g.fillStyle = '#e8e0f0';
+    for (var cI = 0; cI < 3; cI++){
+      g.beginPath();
+      g.moveTo(x - u * 7.2 + cI * u * 0.82, y - u * 3.3);
+      g.lineTo(x - u * 6.9 + cI * u * 0.82, y - u * 1.6);
+      g.lineTo(x - u * 6.3 + cI * u * 0.82, y - u * 3.3);
+      g.closePath(); g.fill();
+      g.beginPath();
+      g.moveTo(x + u * 5.1 + cI * u * 0.82, y - u * 3.3);
+      g.lineTo(x + u * 5.4 + cI * u * 0.82, y - u * 1.6);
+      g.lineTo(x + u * 6.0 + cI * u * 0.82, y - u * 3.3);
+      g.closePath(); g.fill();
+    }
+
+    // 躯干
+    g.fillStyle = '#7a1e28';
+    roundRect(g, x - u * 5.2, y - u * 11.0, u * 10.4, u * 9.2, u * 2.0); g.fill();
+    g.fillStyle = '#ff6b73';
+    roundRect(g, x - u * 4.7, y - u * 10.5, u * 9.4, u * 8.2, u * 1.7); g.fill();
+
+    // 尖角（实心）
+    g.fillStyle = '#3a1420';
+    g.beginPath();
+    g.moveTo(x - u * 4.4, y - u * 10.0);
+    g.lineTo(x - u * 6.6, y - u * 15.2);
+    g.lineTo(x - u * 5.4, y - u * 9.4);
+    g.closePath(); g.fill();
+    g.beginPath();
+    g.moveTo(x + u * 4.4, y - u * 10.0);
+    g.lineTo(x + u * 6.6, y - u * 15.2);
+    g.lineTo(x + u * 5.4, y - u * 9.4);
+    g.closePath(); g.fill();
+    g.fillStyle = '#cdc4e0';
+    g.beginPath();
+    g.moveTo(x - u * 4.5, y - u * 10.3);
+    g.lineTo(x - u * 6.2, y - u * 14.4);
+    g.lineTo(x - u * 2.6, y - u * 10.5);
+    g.closePath(); g.fill();
+    g.beginPath();
+    g.moveTo(x + u * 4.5, y - u * 10.3);
+    g.lineTo(x + u * 6.2, y - u * 14.4);
+    g.lineTo(x + u * 2.6, y - u * 10.5);
+    g.closePath(); g.fill();
+
+    // 眼窝 + 发光眼
+    g.fillStyle = '#2a0a10';
+    roundRect(g, x - u * 3.5, y - u * 9.7, u * 2.7, u * 2.0, u * 0.4); g.fill();
+    roundRect(g, x + u * 0.8, y - u * 9.7, u * 2.7, u * 2.0, u * 0.4); g.fill();
+    var eg = 0.7 + Math.sin(t * 5) * 0.3;
+    g.fillStyle = 'rgba(255,222,100,' + (0.6 + eg * 0.4).toFixed(2) + ')';
+    roundRect(g, x - u * 3.2, y - u * 9.4, u * 2.1, u * 1.4, u * 0.3); g.fill();
+    roundRect(g, x + u * 1.1, y - u * 9.4, u * 2.1, u * 1.4, u * 0.3); g.fill();
+
+    // 嘴 + 锯齿牙
+    g.fillStyle = '#2a0a10';
+    roundRect(g, x - u * 3.1, y - u * 6.5, u * 6.2, u * 1.9, u * 0.5); g.fill();
+    g.fillStyle = '#f0e8ff';
+    for (var dI = 0; dI < 5; dI++){
+      var tx0 = x - u * 2.8 + dI * u * 1.15;
+      g.beginPath();
+      g.moveTo(tx0, y - u * 6.45);
+      g.lineTo(tx0 + u * 0.46, y - u * 5.3);
+      g.lineTo(tx0 + u * 0.92, y - u * 6.45);
+      g.closePath(); g.fill();
+    }
+
+    // 胸口裂痕
+    var pulse = 0.5 + Math.sin(t * 4) * 0.28;
+    g.strokeStyle = 'rgba(255,246,190,' + pulse.toFixed(2) + ')';
+    g.lineWidth = u * 0.44;
+    g.lineJoin = 'miter';
+    g.beginPath();
+    g.moveTo(x - u * 0.7, y - u * 5.1);
+    g.lineTo(x + u * 0.8, y - u * 3.6);
+    g.lineTo(x - u * 0.2, y - u * 3.3);
+    g.lineTo(x + u * 1.0, y - u * 1.8);
+    g.stroke();
+
+    g.restore();
+  }
+
+  else if (m.kind.id === 'chest'){
+    // 金光
+    var glw = 0.55 + Math.sin(t * 3 + m.bob) * 0.28;
+    var rg2 = g.createRadialGradient(x, y - u * 4.5, 4, x, y - u * 4.5, u * 12);
+    rg2.addColorStop(0, 'rgba(255,214,110,' + (0.44 * glw).toFixed(2) + ')');
+    rg2.addColorStop(0.42, 'rgba(255,170,50,' + (0.19 * glw).toFixed(2) + ')');
+    rg2.addColorStop(1, 'rgba(255,140,20,0)');
+    g.fillStyle = rg2;
+    g.beginPath(); g.arc(x, y - u * 4.5, u * 10, 0, 6.2832); g.fill();
+
+    // 箱体
+    g.fillStyle = '#8a5a10';
+    roundRect(g, x - u * 4.3, y - u * 6.4, u * 8.6, u * 6.4, u * 0.7); g.fill();
+    g.fillStyle = '#e0a021';
+    roundRect(g, x - u * 3.9, y - u * 6.0, u * 7.8, u * 5.6, u * 0.5); g.fill();
+    // 木纹
+    g.fillStyle = 'rgba(120,74,10,0.55)';
+    g.fillRect(x - u * 2.2, y - u * 5.6, u * 0.35, u * 4.8);
+    g.fillRect(x + u * 1.9, y - u * 5.6, u * 0.35, u * 4.8);
+
+    // 箱盖
+    g.fillStyle = '#ffc94a';
+    roundRect(g, x - u * 4.5, y - u * 8.4, u * 9.0, u * 2.8, u * 1.0); g.fill();
+    g.fillStyle = '#ffe08a';
+    roundRect(g, x - u * 4.1, y - u * 8.1, u * 8.2, u * 1.15, u * 0.5); g.fill();
+
+    // 盖与箱体之间的缝 + 眼睛
+    g.fillStyle = '#2a1a04';
+    g.fillRect(x - u * 4.3, y - u * 6.7, u * 8.6, u * 0.9);
+    var eyeO = Math.sin(t * 2.4 + m.bob) * u * 0.35;
+    g.fillStyle = '#fff6cf';
+    g.fillRect(x - u * 2.5 + eyeO, y - u * 6.55, u * 1.0, u * 0.62);
+    g.fillRect(x + u * 1.5 + eyeO, y - u * 6.55, u * 1.0, u * 0.62);
+
+    // 锁扣
+    g.fillStyle = '#6b3f05';
+    roundRect(g, x - u * 0.95, y - u * 7.2, u * 1.9, u * 2.6, u * 0.3); g.fill();
+    g.fillStyle = '#ffe9a8';
+    g.beginPath(); g.arc(x, y - u * 6.1, u * 0.34, 0, 6.2832); g.fill();
+
+    // 飘星
+    for (var sI = 0; sI < 4; sI++){
+      var ph = t * 1.5 + sI * 1.9 + m.bob;
+      var sx = x + Math.sin(ph) * u * 5.6;
+      var sy = y - u * 9.4 - (((ph * 12) % (u * 9)) + u * 9) % (u * 9);
+      var sa2 = 0.2 + Math.abs(Math.sin(ph * 1.7)) * 0.45;
+      g.fillStyle = 'rgba(255,236,160,' + sa2.toFixed(2) + ')';
+      g.fillRect(sx - u * 0.22, sy - u * 0.22, u * 0.44, u * 0.44);
+    }
+  }
+
+  if (flashing) { try{ g.filter = 'none'; }catch(e){} }
+  g.globalAlpha = before;
+}
+
+/* ---------- 玩家 ---------- */
+function drawPlayer(t){
+  var x = PLAYER_X, y = GROUND;
+  var hurt = S.playerHurt > 0;
+
+  // 影
+  g.fillStyle = 'rgba(0,0,0,0.45)';
+  g.beginPath(); g.ellipse(x, y + 4, 34, 8, 0, 0, 6.2832); g.fill();
+
+  var bob = Math.sin(t * 3) * 1.2;
+
+  // 斗篷
+  g.fillStyle = '#2b2340';
+  g.beginPath();
+  g.moveTo(x - 16, y - 4);
+  g.quadraticCurveTo(x - 22, y - 34, x - 8, y - 44);
+  g.lineTo(x + 8, y - 44);
+  g.quadraticCurveTo(x + 22, y - 34, x + 16, y - 4);
+  g.closePath(); g.fill();
+
+  // 躯干
+  g.fillStyle = hurt ? '#b8505e' : '#4c4170';
+  roundRect(g, x - 11, y - 42 + bob, 22, 26, 4); g.fill();
+  g.fillStyle = '#615390';
+  roundRect(g, x - 8, y - 39 + bob, 16, 9, 3); g.fill();
+
+  // 腿
+  g.fillStyle = '#332b4d';
+  g.fillRect(x - 9, y - 18, 7, 16);
+  g.fillRect(x + 2, y - 18, 7, 16);
+
+  // 头盔
+  g.fillStyle = '#8e86b8';
+  roundRect(g, x - 10, y - 58 + bob, 20, 18, 6); g.fill();
+  g.fillStyle = '#0e0b1a';
+  g.fillRect(x - 8, y - 52 + bob, 16, 5);      // 面罩缝
+  g.fillStyle = '#6fe3a0';
+  g.fillRect(x - 5, y - 51 + bob, 3, 3);        // 眼
+  g.fillRect(x + 2, y - 51 + bob, 3, 3);
+  // 红缨
+  g.fillStyle = '#e0424a';
+  g.beginPath();
+  g.moveTo(x - 2, y - 59 + bob);
+  g.quadraticCurveTo(x - 14, y - 66 + bob, x - 18, y - 54 + bob);
+  g.quadraticCurveTo(x - 10, y - 58 + bob, x + 2, y - 58 + bob);
+  g.closePath(); g.fill();
+
+  // 盾
+  g.fillStyle = '#3a3055';
+  roundRect(g, x - 26, y - 40, 12, 20, 4); g.fill();
+  g.fillStyle = '#6fe3a0';
+  roundRect(g, x - 23, y - 36, 6, 9, 2); g.fill();
+
+  // 剑
+  var swing = S.atkFx;
+  g.save();
+  g.translate(x + 12, y - 34);
+  g.rotate(-0.6 + swing * 1.9);
+  g.fillStyle = '#2b2340';
+  g.fillRect(-2, -3, 7, 6);
+  g.fillStyle = '#d8d2e8';
+  g.fillRect(5, -2, 30, 4);
+  g.fillStyle = 'rgba(255,255,255,0.65)';
+  g.fillRect(5, -2, 30, 1.4);
+  g.restore();
+}
+
+/* ---------- 刀光 ---------- */
+function drawSlash(){
+  if (S.atkFx <= 0.02) return;
+  var p = 1 - S.atkFx;            // 0 → 1
+  var m = S.queue[0];
+  var a = Math.sin(p * Math.PI);
+  if (a <= 0.01) return;
+
+  g.save();
+  g.globalCompositeOperation = 'lighter';
+  g.lineCap = 'round';
+
+  // 剑尖星芒
+  if (p < 0.72){
+    var sa = (1 - p / 0.72) * 0.95;
+    var sxp = PLAYER_X + 42, syp = GROUND - 56;
+    var rr = 3 + p * 7;
+    g.strokeStyle = 'rgba(215,240,255,' + sa.toFixed(2) + ')';
+    g.lineWidth = 2.2;
+    g.beginPath();
+    g.moveTo(sxp - rr, syp); g.lineTo(sxp + rr, syp);
+    g.moveTo(sxp, syp - rr); g.lineTo(sxp, syp + rr);
+    g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,' + (sa * 0.8).toFixed(2) + ')';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(sxp - rr * 0.55, syp); g.lineTo(sxp + rr * 0.55, syp);
+    g.moveTo(sxp, syp - rr * 0.55); g.lineTo(sxp, syp + rr * 0.55);
+    g.stroke();
+  }
+
+  // 怪物身上的斩击
+  if (m){
+    var tx = monX(m), ty = GROUND - 68 + (m.isBoss ? -26 : 0);
+    var len = 24 + p * 14;
+    var dx = Math.cos(-0.72) * len, dy = Math.sin(-0.72) * len;
+
+    g.strokeStyle = 'rgba(150,225,255,' + (a * 0.5).toFixed(3) + ')';
+    g.lineWidth = 13 * (1 - p * 0.72);
+    g.beginPath(); g.moveTo(tx - dx, ty - dy); g.lineTo(tx + dx, ty + dy); g.stroke();
+
+    g.strokeStyle = 'rgba(255,255,255,' + (a * 0.95).toFixed(3) + ')';
+    g.lineWidth = 3.2 * (1 - p * 0.6);
+    g.beginPath(); g.moveTo(tx - dx, ty - dy); g.lineTo(tx + dx, ty + dy); g.stroke();
+
+    g.fillStyle = 'rgba(255,255,255,' + (a * 0.26).toFixed(3) + ')';
+    g.beginPath(); g.arc(tx, ty, 7 + p * 26, 0, 6.2832); g.fill();
+  }
+
+  g.restore();
+}
+
+/* ---------- 单词框 ---------- */
+function drawWordBox(t){
+  var m = S.queue[0];
+  if (!m || !S.cur) return;
+
+  var word = S.cur.word;
+  var typed = S.cur.typed;
+
+  // ---- 尺寸自适应 ----
+  var bh = 52, pad = 34;
+  g.font = '700 26px ' + MONO;
+  var cw = g.measureText('M').width;
+  var fontSize = 26;
+  var textW = cw * word.length;
+  var boxW = clamp(textW + pad, 100, VW - 44);
+
+  if (textW + pad > boxW){
+    fontSize = Math.max(12, Math.floor(26 * (boxW - pad) / textW));
+    g.font = '700 ' + fontSize + 'px ' + MONO;
+    cw = g.measureText('M').width;
+    textW = cw * word.length;
+  }
+
+  var mx = monX(m);
+  var bx = clamp(mx - boxW / 2, 12, VW - 12 - boxW);
+  var by = (m.isBoss ? GROUND - 198 : GROUND - 138) + Math.sin(t * 3 + m.bob) * 2;
+
+  var danger = clamp(1 - m.dist / 55, 0, 1);
+  var pulse = 0.5 + Math.sin(t * (6 + danger * 10)) * 0.5;
+
+  // ---- 框 ----
+  g.save();
+  g.shadowColor = m.isChest
+    ? 'rgba(255,201,74,' + (0.55 + pulse * 0.35).toFixed(2) + ')'
+    : (danger > 0.4
+        ? 'rgba(224,66,74,' + (0.45 + pulse * 0.42).toFixed(2) + ')'
+        : 'rgba(150,100,255,0.45)');
+  g.shadowBlur = 15;
+  g.fillStyle = 'rgba(11,8,20,0.95)';
+  roundRect(g, bx, by, boxW, bh, 9); g.fill();
+  g.restore();
+
+  if (m.isChest){
+    g.strokeStyle = 'rgba(255,205,90,' + (0.75 + pulse * 0.25).toFixed(2) + ')';
+    g.lineWidth = 2;
+  } else {
+    g.strokeStyle = danger > 0.4
+      ? 'rgba(224,66,74,' + (0.6 + pulse * 0.4).toFixed(2) + ')'
+      : 'rgba(150,100,255,0.6)';
+    g.lineWidth = 1.5;
+  }
+  roundRect(g, bx, by, boxW, bh, 9); g.stroke();
+
+  // ---- 汉字小标签（贴在框上方，拼音模式）----
+  if (S.cur.cn){
+    g.font = '600 12px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+    var tw = g.measureText(S.cur.cn).width;
+    var tagW = tw + 16, tagH = 20;
+    var tagX = bx + boxW / 2 - tagW / 2;
+    var tagY = by - tagH - 8;
+    g.fillStyle = 'rgba(18,30,24,0.95)';
+    roundRect(g, tagX, tagY, tagW, tagH, 6); g.fill();
+    g.strokeStyle = 'rgba(111,227,160,0.4)';
+    g.lineWidth = 1;
+    roundRect(g, tagX, tagY, tagW, tagH, 6); g.stroke();
+    g.fillStyle = '#8ce9b6';
+    g.textAlign = 'center';
+    g.fillText(S.cur.cn, bx + boxW / 2, tagY + 14);
+    g.textAlign = 'left';
+  }
+
+  // ---- 字符 ----
+  var sx = bx + (boxW - textW) / 2;
+  var baseY = by + 31;
+
+  for (var i = 0; i < word.length; i++){
+    var ch = word[i];
+    var cx = sx + cw * i;
+    if (i < typed){
+      g.fillStyle = '#6fe3a0';
+      g.shadowColor = 'rgba(111,227,160,0.55)';
+      g.shadowBlur = 7;
+    } else if (i === typed){
+      g.fillStyle = '#ffc94a';
+      g.shadowColor = 'rgba(255,201,74,0.9)';
+      g.shadowBlur = 12;
+    } else {
+      g.fillStyle = 'rgba(162,154,192,0.75)';
+      g.shadowBlur = 0;
+    }
+    g.fillText(ch, cx, baseY);
+  }
+  g.shadowBlur = 0;
+
+  // ---- 光标 ----
+  if (typed < word.length){
+    var cx2 = sx + cw * typed;
+    var blink = 0.5 + Math.sin(t * 9) * 0.5;
+    g.fillStyle = 'rgba(255,201,74,' + (0.3 + blink * 0.62).toFixed(2) + ')';
+    g.fillRect(cx2, baseY + 5, Math.max(3, cw - 3), 2.5);
+  }
+
+  // ---- 框底双层：怪物血量 + 逼近进度 ----
+  var iw = boxW - 18, ix = bx + 9;
+  var hy = by + bh - 12;
+  g.fillStyle = 'rgba(255,255,255,0.07)';
+  roundRect(g, ix, hy, iw, 4.5, 2.2); g.fill();
+  var hpP = clamp(m.hp / m.hpMax, 0, 1);
+  if (hpP > 0.001){
+    g.fillStyle = hpP > 0.5 ? '#e0424a' : (hpP > 0.22 ? '#ff8a4a' : '#ffd05c');
+    roundRect(g, ix, hy, Math.max(2, iw * hpP), 4.5, 2.2); g.fill();
+  }
+
+  var py = by + bh - 4.5;
+  var pct = clamp(m.dist / 100, 0, 1);
+  g.fillStyle = 'rgba(255,255,255,0.05)';
+  g.fillRect(ix, py, iw, 1.5);
+  g.fillStyle = danger > 0.55 ? '#e0424a' : (danger > 0.25 ? '#ffc94a' : '#5b9e7a');
+  g.fillRect(ix, py, iw * pct, 1.5);
+}
+
+/* ---------- Boss 血条 ---------- */
+function drawBossBar(t){
+  var m = S.queue[0];
+  if (!m || !m.isBoss) return;
+  var w = VW - 200, x = 100, y = 16;
+  g.fillStyle = 'rgba(0,0,0,0.6)';
+  roundRect(g, x, y, w, 14, 7); g.fill();
+  var p = clamp(m.hp / m.hpMax, 0, 1);
+  var grd = g.createLinearGradient(x, 0, x + w, 0);
+  grd.addColorStop(0, '#ff6b73'); grd.addColorStop(0.5, '#c22a38'); grd.addColorStop(1, '#7a1e28');
+  g.fillStyle = grd;
+  roundRect(g, x + 1.5, y + 1.5, Math.max(0, (w - 3) * p), 11, 5.5); g.fill();
+
+  g.strokeStyle = 'rgba(255,120,130,0.34)';
+  g.lineWidth = 1;
+  roundRect(g, x, y, w, 14, 7); g.stroke();
+
+  g.font = '700 11px ' + MONO;
+  g.fillStyle = 'rgba(255,220,220,0.9)';
+  g.textAlign = 'center';
+  g.fillText('地 牢 守 卫 · BOSS', VW / 2, y + 30);
+  if (m.rage){
+    g.fillStyle = '#ffc94a';
+    g.fillText('狂 暴', VW / 2, y + 44);
+  }
+  g.textAlign = 'left';
+}
+
+/* ---------- 粒子 / 飘字 ---------- */
+function drawParticles(){
+  var i, p;
+  for (i = 0; i < S.particles.length; i++){
+    p = S.particles[i];
+    var a = clamp(p.life / p.max, 0, 1);
+    g.globalAlpha = a;
+    g.fillStyle = p.color;
+    var s = p.size * (0.4 + a * 0.6);
+    g.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+  }
+  g.globalAlpha = 1;
+}
+
+function drawFloats(){
+  var i, f;
+  for (i = 0; i < S.floats.length; i++){
+    f = S.floats[i];
+    var a = clamp(f.life / f.max, 0, 1);
+    g.globalAlpha = a;
+    g.font = '800 ' + f.size + 'px ' + MONO;
+    g.textAlign = 'center';
+    g.lineWidth = 3;
+    g.strokeStyle = 'rgba(0,0,0,0.7)';
+    g.strokeText(f.text, f.x, f.y);
+    g.fillStyle = f.color;
+    g.fillText(f.text, f.x, f.y);
+  }
+  g.globalAlpha = 1;
+  g.textAlign = 'left';
+}
+
+/* ---------- 装备图标 ---------- */
+function gearIcon(gd, cx, cy, s){
+  g.save();
+  if (gd.id === 'blade'){
+    g.strokeStyle = gd.color;
+    g.lineWidth = s * 0.14;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(cx - s * 0.36, cy + s * 0.36);
+    g.lineTo(cx + s * 0.36, cy - s * 0.36);
+    g.stroke();
+    g.lineWidth = s * 0.11;
+    g.beginPath();
+    g.moveTo(cx - s * 0.20, cy + s * 0.06);
+    g.lineTo(cx - s * 0.02, cy + s * 0.24);
+    g.stroke();
+    g.lineCap = 'butt';
+  }
+  else if (gd.id === 'fist'){
+    g.fillStyle = gd.color;
+    roundRect(g, cx - s * 0.34, cy - s * 0.26, s * 0.68, s * 0.5, s * 0.14); g.fill();
+    g.fillStyle = 'rgba(0,0,0,0.35)';
+    for (var k = 0; k < 3; k++){
+      g.fillRect(cx - s * 0.22 + k * s * 0.17, cy - s * 0.2, s * 0.08, s * 0.36);
+    }
+    g.fillStyle = gd.color;
+    roundRect(g, cx - s * 0.34, cy + s * 0.16, s * 0.68, s * 0.14, s * 0.06); g.fill();
+  }
+  else if (gd.id === 'heart'){
+    g.fillStyle = gd.color;
+    g.beginPath();
+    g.arc(cx - s * 0.17, cy - s * 0.1, s * 0.2, 0, 6.2832);
+    g.arc(cx + s * 0.17, cy - s * 0.1, s * 0.2, 0, 6.2832);
+    g.fill();
+    g.beginPath();
+    g.moveTo(cx - s * 0.36, cy - s * 0.04);
+    g.lineTo(cx, cy + s * 0.38);
+    g.lineTo(cx + s * 0.36, cy - s * 0.04);
+    g.closePath(); g.fill();
+  }
+  else if (gd.id === 'hourglass'){
+    g.fillStyle = gd.color;
+    // 上横梁
+    roundRect(g, cx - s * 0.38, cy - s * 0.44, s * 0.76, s * 0.13, s * 0.05); g.fill();
+    // 下横梁
+    roundRect(g, cx - s * 0.38, cy + s * 0.31, s * 0.76, s * 0.13, s * 0.05); g.fill();
+    // 上下三角
+    g.beginPath();
+    g.moveTo(cx - s * 0.30, cy - s * 0.30);
+    g.lineTo(cx + s * 0.30, cy - s * 0.30);
+    g.lineTo(cx, cy - s * 0.02);
+    g.closePath(); g.fill();
+    g.beginPath();
+    g.moveTo(cx - s * 0.30, cy + s * 0.30);
+    g.lineTo(cx + s * 0.30, cy + s * 0.30);
+    g.lineTo(cx, cy + s * 0.02);
+    g.closePath(); g.fill();
+    // 腰线
+    g.fillStyle = 'rgba(0,0,0,0.45)';
+    g.fillRect(cx - s * 0.04, cy - s * 0.05, s * 0.08, s * 0.1);
+  }
+  else if (gd.id === 'star'){
+    g.fillStyle = gd.color;
+    g.beginPath();
+    g.moveTo(cx, cy - s * 0.42);
+    g.quadraticCurveTo(cx + s * 0.1, cy - s * 0.1, cx + s * 0.42, cy);
+    g.quadraticCurveTo(cx + s * 0.1, cy + s * 0.1, cx, cy + s * 0.42);
+    g.quadraticCurveTo(cx - s * 0.1, cy + s * 0.1, cx - s * 0.42, cy);
+    g.quadraticCurveTo(cx - s * 0.1, cy - s * 0.1, cx, cy - s * 0.42);
+    g.fill();
+  }
+  g.restore();
+}
+
+/* ---------- 装备栏（右下角） ---------- */
+function drawGearBar(){
+  var n = 0, i, gd;
+  for (i = 0; i < GEAR.length; i++) if (S.gear[GEAR[i].id] > 0) n++;
+  if (!n) return;
+
+  var size = 26, gap = 4;
+  var total = n * size + (n - 1) * gap;
+  var x = VW - 14 - total;
+  var y = VH - 40;
+
+  for (i = 0; i < GEAR.length; i++){
+    gd = GEAR[i];
+    var lv = S.gear[gd.id];
+    if (!lv) continue;
+
+    g.fillStyle = 'rgba(8,6,14,0.78)';
+    roundRect(g, x, y, size, size, 7); g.fill();
+    g.strokeStyle = hexA(gd.color, 0.5);
+    g.lineWidth = 1;
+    roundRect(g, x, y, size, size, 7); g.stroke();
+
+    gearIcon(gd, x + size / 2, y + size / 2 - 2, size * 0.82);
+
+    // 等级点
+    for (var k = 0; k < lv; k++){
+      g.fillStyle = gd.color;
+      g.beginPath();
+      g.arc(x + size / 2 + (k - (lv - 1) / 2) * 6, y + size - 5.5, 2.3, 0, 6.2832);
+      g.fill();
+    }
+    x += size + gap;
+  }
+}
+
+/* ---------- 掉落横幅 ---------- */
+function drawLoot(){
+  if (!S.loot) return;
+  var t = S.loot.t;
+  var a = t > 1600 ? (1900 - t) / 300 : Math.min(1, t / 400);
+  a = clamp(a, 0, 1);
+  var pop = t > 1500 ? 1 + (1900 - t) / 400 * 0.18 : 1;
+
+  g.save();
+  g.globalAlpha = a;
+  g.translate(VW / 2, 118);
+  g.scale(pop, pop);
+
+  g.font = '800 17px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+  g.textAlign = 'center';
+  var tw = g.measureText(S.loot.name).width + 52;
+  g.fillStyle = 'rgba(10,8,18,0.9)';
+  roundRect(g, -tw / 2, -19, tw, 38, 10); g.fill();
+  g.strokeStyle = S.loot.color;
+  g.globalAlpha = a * 0.85;
+  g.lineWidth = 1.6;
+  roundRect(g, -tw / 2, -19, tw, 38, 10); g.stroke();
+  g.globalAlpha = a;
+
+  // 小图标
+  for (var i = 0; i < GEAR.length; i++){
+    if (S.loot.name.indexOf(GEAR[i].name) === 0){
+      gearIcon(GEAR[i], -tw / 2 + 22, 0, 26);
+      break;
+    }
+  }
+
+  g.fillStyle = S.loot.color;
+  g.fillText(S.loot.name, 10, 6);
+  g.restore();
+  g.textAlign = 'left';
+  g.globalAlpha = 1;
+}
+
+/* ---------- 提示飘带 ---------- */
+function drawMsg(){
+  if (!S.msg) return;
+  var a = clamp(S.msg.t / 400, 0, 1);
+  g.globalAlpha = a;
+  g.font = '800 15px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif';
+  g.textAlign = 'center';
+  var w = g.measureText(S.msg.text).width + 30;
+  g.fillStyle = 'rgba(10,8,18,0.85)';
+  roundRect(g, VW / 2 - w / 2, 62, w, 30, 8); g.fill();
+  g.strokeStyle = S.msg.color;
+  g.globalAlpha = a * 0.7;
+  g.lineWidth = 1.2;
+  roundRect(g, VW / 2 - w / 2, 62, w, 30, 8); g.stroke();
+  g.globalAlpha = a;
+  g.fillStyle = S.msg.color;
+  g.fillText(S.msg.text, VW / 2, 82);
+  g.textAlign = 'left';
+  g.globalAlpha = 1;
+}
+
+/* ---------- 主循环绘制 ---------- */
+function draw(t){
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.clearRect(0, 0, VW, VH);
+
+  // 屏幕震动
+  if (S.shake > 0.2){
+    g.save();
+    g.translate((Math.random() - 0.5) * S.shake, (Math.random() - 0.5) * S.shake);
+  } else {
+    g.save();
+  }
+
+  drawBg(t);
+
+  // 后排怪物先画（最多露 4 只）
+  var i, maxDraw = Math.min(S.queue.length, 4);
+  for (i = maxDraw - 1; i >= 1; i--){
+    drawMonster(S.queue[i], i, t);
+  }
+  // 活跃怪
+  if (S.queue[0]) drawMonster(S.queue[0], 0, t);
+
+  drawPlayer(t);
+  drawSlash();
+
+  drawParticles();
+  drawBossBar(t);
+  drawWordBox(t);
+  drawLoot();
+  drawFloats();
+  drawMsg();
+  drawGearBar();
+
+  g.restore();
+
+  // 受击红闪
+  if (S.flash > 0.01){
+    g.fillStyle = 'rgba(224,66,74,' + (S.flash * 0.42).toFixed(3) + ')';
+    g.fillRect(0, 0, VW, VH);
+  }
+  // Boss 狂暴氛围
+  if (S.bossFlash > 0.01){
+    var bg2 = g.createRadialGradient(VW / 2, VH / 2, 60, VW / 2, VH / 2, VW * 0.7);
+    bg2.addColorStop(0, 'rgba(255,40,60,0)');
+    bg2.addColorStop(1, 'rgba(200,20,40,' + (S.bossFlash * 0.3).toFixed(3) + ')');
+    g.fillStyle = bg2;
+    g.fillRect(0, 0, VW, VH);
+  }
+
+  // 未开始时压暗
+  if (S.phase !== 'play'){
+    g.fillStyle = 'rgba(6,5,12,0.35)';
+    g.fillRect(0, 0, VW, VH);
+  }
+}
+
+/* =========================================================
+   10. 战斗逻辑
+   ========================================================= */
+function msg(text, color){
+  S.msg = { text: text, color: color || '#ffc94a', t: MSG_T };
+}
+
+function syncHUD(){
+  document.getElementById('hFloor').textContent = S.floor;
+  var hpPct = clamp(S.hp / S.maxHp, 0, 1);
+  var bar = document.getElementById('hpHp');
+  bar.style.width = (hpPct * 100).toFixed(1) + '%';
+  bar.classList.toggle('low', hpPct <= 0.3);
+  document.getElementById('hpHpTxt').textContent =
+    Math.max(0, Math.ceil(S.hp)) + ' / ' + S.maxHp;
+  document.getElementById('hWave').textContent = S.waveLeft;
+  document.getElementById('hScore').textContent = S.score;
+
+  var acc = S.typedChars + S.missChars;
+  document.getElementById('hAcc').textContent =
+    acc ? Math.round(S.typedChars / acc * 100) + '%' : '100%';
+
+  var cb = document.getElementById('hCombo');
+  cb.querySelector('b').textContent = S.combo;
+  cb.classList.toggle('on', S.combo >= 3);
+
+  var mins = S.playMs / 60000;
+  var wpm = mins > 0.05 ? Math.round((S.typedChars / 5) / mins) : 0;
+  document.getElementById('hWpm').textContent = wpm;
+}
+
+function comboPop(){
+  var cb = document.getElementById('hCombo');
+  cb.classList.add('pop');
+  setTimeout(function(){ cb.classList.remove('pop'); }, 120);
+}
+
+/* ---------- 开新一波 ---------- */
+function startFloor(f){
+  S.floor = f;
+  S.queue = [];
+  S.particles = [];
+  S.floats = [];
+  S.cur = null;
+  S.isBossFloor = (f % 5 === 0);
+
+  var count;
+  if (S.isBossFloor){
+    count = 1;
+    var b = makeMonster(true);
+    b.size = 1.0;
+    b.x = FAR_X;
+    S.queue.push(b);
+    S.bossHpMax = b.hpMax;
+    S.bossFlash = 1;
+    SFX.boss();
+    msg('⚠ 地牢守卫出现了', '#ff6b73');
+  } else {
+    count = Math.min(8, 3 + Math.floor(f / 2));
+    for (var i = 0; i < count; i++){
+      var m = makeMonster(false);
+      m.x = FAR_X + i * 40;
+      S.queue.push(m);
+    }
+  }
+
+  // 非 Boss 层：45% 概率混进一只宝箱怪（放在前 3 位，很快能碰到）
+  if (!S.isBossFloor && Math.random() < 0.45){
+    var chest = makeMonster(false);
+    chest.kind = { id:'chest', name:'宝箱怪', color:'#ffc94a', dark:'#8a5a10' };
+    chest.isChest = true;
+    chest.hp = chest.hpMax = Math.round(12 + f * 3);
+    chest.spd = chest.spd * 0.7;
+    chest.size = 0.95;
+    var cpos = Math.floor(Math.random() * Math.min(S.queue.length, 3));
+    S.queue.splice(cpos, 0, chest);
+  }
+
+  S.waveTotal = S.queue.length;
+  S.waveLeft = S.queue.length;
+  activateNext(true);
+  syncHUD();
+}
+
+function activateNext(isFirst){
+  if (!S.queue.length){ floorClear(); return; }
+  var m = S.queue[0];
+  m.state = 'active';
+  m.dist = 78;
+  m.atkCd = 0;
+  // 其他怪归位
+  for (var i = 1; i < S.queue.length; i++){
+    S.queue[i].state = 'wait';
+    S.queue[i].dist = 100;
+  }
+  nextWord();
+}
+
+var recentWords = [];
+
+function nextWord(){
+  var m = S.queue[0];
+  if (!m) return;
+  var w, tries = 0;
+  do {
+    w = m.isBoss ? pickBossWord() : pickWord();
+    tries++;
+  } while (recentWords.indexOf(w.word) >= 0 && tries < 10);
+  recentWords.push(w.word);
+  if (recentWords.length > 10) recentWords.shift();
+
+  S.cur = { word: w.word, cn: w.cn || '', typed: 0, len: w.word.length };
+  m.wordObj = S.cur;
+  S.waveLeft = S.queue.length;
+}
+
+/* ---------- 输入 ---------- */
+function handleChar(ch){
+  if (S.phase !== 'play' || !S.cur) return;
+  ch = ch.toLowerCase();
+  if (!/[a-z0-9._]/.test(ch)) return;
+
+  var m = S.queue[0];
+  if (!m) return;
+
+  if (ch === S.cur.word[S.cur.typed]){
+    S.cur.typed++;
+    S.typedChars++;
+    S.lastTypeAt = performance.now();
+    SFX.key();
+
+    // 按键火花
+    addParticles(monX(m), GROUND - 70, 3, '#6fe3a0', 0.5);
+
+    if (S.cur.typed >= S.cur.len) onWordComplete();
+  } else {
+    onMiss();
+  }
+  syncHUD();
+}
+
+function onMiss(){
+  var m = S.queue[0];
+  S.cur.typed = 0;
+  S.missChars++;
+  S.combo = 0;
+  S.flash = Math.max(S.flash, 0.5);
+  S.shake = Math.max(S.shake, 5);
+  SFX.err();
+  if (m){
+    m.dist = Math.max(0, m.dist - 6);
+    m.hitT = 0.05;
+    addParticles(monX(m), GROUND - 78, 6, '#e0424a', 1.1);
+  }
+  syncHUD();
+}
+
+function onWordComplete(){
+  var m = S.queue[0];
+  if (!m) return;
+
+  S.combo++;
+  if (S.combo > S.maxCombo) S.maxCombo = S.combo;
+  if (S.combo > 1) comboPop();
+
+  // 伤害
+  var base = 8 + S.cur.len * 3.2;
+  var comboMul = 1 + Math.min(S.combo - 1, 40) * gearComboStep();
+  var critRate = Math.min(0.08 + (S.combo - 1) * 0.045 + gearCritAdd(), 0.8);
+  var isCrit = Math.random() < critRate;
+  var dmg = base * comboMul * (isCrit ? 2.2 : 1) * gearDmgMul();
+  dmg = Math.round(dmg);
+
+  m.hp -= dmg;
+  m.hitT = 0.16;
+
+  // 击退
+  m.dist = Math.min(92, m.dist + 3 + S.cur.len * 0.35);
+  S.atkFx = 1;
+
+  var mx = monX(m);
+  var fy = GROUND - 74;
+
+  if (isCrit){
+    SFX.crit();
+    S.shake = 12;
+    addParticles(mx, fy, 26, '#ffc94a', 2.4);
+    addParticles(mx, fy, 12, '#fff3c0', 1.8);
+    addFloat(mx + (Math.random() - 0.5) * 30, fy + 14, 'CRIT ' + dmg, '#ffc94a', 24);
+    S.score += dmg + 30;
+    msg(S.combo > 1 ? ('暴击！ ×' + S.combo + ' 连击') : '暴击！', '#ffc94a');
+  } else {
+    SFX.hit();
+    S.shake = 7;
+    addParticles(mx, fy, 14, m.kind.color, 1.8);
+    addFloat(mx + (Math.random() - 0.5) * 46, fy + 20 + (Math.random() - 0.5) * 16, '' + dmg, '#ffffff', 20);
+    S.score += dmg;
+  }
+  // 每正确字符也计分
+  S.score += S.cur.len;
+
+  if (S.combo > 0 && S.combo % 10 === 0){
+    SFX.combo();
+    msg('连击 ×' + S.combo + '　伤害加成 ' + Math.round((comboMul - 1) * 100) + '%', '#6fe3a0');
+  }
+
+  if (m.hp <= 0){
+    killMonster(m);
+  } else {
+    // Boss 狂暴
+    if (m.isBoss && !m.rage && m.hp <= m.hpMax * 0.5){
+      m.rage = true;
+      m.spd *= 1.45;
+      S.bossFlash = 1;
+      S.shake = 16;
+      SFX.boss();
+      msg('守卫狂暴了！它变快了', '#ff6b73');
+    }
+    nextWord();
+  }
+  syncHUD();
+}
+
+function killMonster(m){
+  if (m.isChest){
+    SFX.loot();
+    dropGear(m);
+  } else {
+    SFX.kill();
+  }
+  S.kills++;
+  S.score += 50 + Math.round(m.hpMax * 0.4);
+  addParticles(monX(m), GROUND - 60, m.isBoss ? 60 : 26, m.kind.color, m.isBoss ? 3.2 : 2.2);
+  addParticles(monX(m), GROUND - 60, m.isBoss ? 30 : 10, m.kind.dark, 2);
+  addFloat(monX(m), GROUND - 16, m.isBoss ? '击杀 BOSS' : '击杀', m.kind.color, m.isBoss ? 24 : 16);
+  S.shake = m.isBoss ? 22 : 9;
+
+  S.queue.shift();
+  S.waveLeft = S.queue.length;
+
+  if (!S.queue.length){
+    floorClear();
+  } else {
+    activateNext(false);
+  }
+  syncHUD();
+}
+
+/* ---------- 宝箱掉落 ---------- */
+function dropGear(m){
+  var avail = [], i;
+  for (i = 0; i < GEAR.length; i++){
+    if ((S.gear[GEAR[i].id] || 0) < GEAR[i].max) avail.push(GEAR[i]);
+  }
+
+  var cx = monX(m);
+
+  // 全满 → 换成血和分数
+  if (!avail.length){
+    S.score += 400;
+    S.hp = Math.min(S.maxHp, S.hp + 15);
+    S.loot = { name: '宝物已满 +400 分 +15 血', color: '#ffc94a', t: 1900 };
+    addFloat(cx, GROUND - 30, '+400', '#ffc94a', 20);
+    addParticles(cx, GROUND - 60, 26, '#ffc94a', 2.2);
+    return;
+  }
+
+  var gd = avail[Math.floor(Math.random() * avail.length)];
+  S.gear[gd.id] = (S.gear[gd.id] || 0) + 1;
+  var lv = S.gear[gd.id];
+
+  if (gd.id === 'heart'){
+    S.maxHp += 12;
+    S.hp = Math.min(S.maxHp, S.hp + 12);
+  }
+
+  S.loot = { name: gd.name + ' Lv.' + lv, color: gd.color, t: 1900 };
+  S.score += 120;
+  addParticles(cx, GROUND - 60, 34, gd.color, 2.4);
+  addParticles(cx, GROUND - 60, 16, '#fff3c0', 1.6);
+  addFloat(cx, GROUND - 30, gd.name + ' Lv.' + lv, gd.color, 21);
+  S.shake = 8;
+  msg(gd.name + ' · ' + gd.desc, gd.color);
+  setTimeout(function(){ SFX.equip(); }, 420);
+}
+
+/* ---------- 粒子 / 飘字 ---------- */
+function addParticles(x, y, n, color, power){
+  for (var i = 0; i < n; i++){
+    var ang = Math.random() * 6.2832;
+    var sp = (0.6 + Math.random() * 1.4) * (power || 1) * 60;
+    S.particles.push({
+      x: x, y: y,
+      vx: Math.cos(ang) * sp,
+      vy: Math.sin(ang) * sp - 40,
+      life: 0.5 + Math.random() * 0.5,
+      max: 1,
+      size: 2 + Math.random() * 4 * (power || 1) * 0.7,
+      color: color
+    });
+    S.particles[S.particles.length - 1].max = S.particles[S.particles.length - 1].life;
+  }
+  if (S.particles.length > 320) S.particles.splice(0, S.particles.length - 320);
+}
+
+function addFloat(x, y, text, color, size){
+  var off = (S.floats.length % 3) * 15;
+  S.floats.push({ x: x + (S.floats.length % 2 ? 18 : -18), y: y + off,
+                  text: text, color: color, size: size || 20,
+                  life: 1.0, max: 1.0, vy: -58 });
+  if (S.floats.length > 8) S.floats.shift();
+}
+
+/* ---------- 每帧推进 ---------- */
+function tick(dt){
+  var m = S.queue[0];
+
+  if (m){
+    // 逼近
+    m.dist -= m.spd * gearSpeedMul() * dt;
+    if (m.dist < 0) m.dist = 0;
+
+    // 贴脸攻击
+    if (m.dist <= 0.5){
+      m.atkCd -= dt;
+      if (m.atkCd <= 0){
+        m.atkCd = 1.5;
+        var dmg = 7 + Math.floor(S.floor * 0.5);
+        S.hp -= dmg;
+        S.playerHurt = 0.3;
+        S.flash = 1;
+        S.shake = 14;
+        SFX.hurt();
+        addParticles(PLAYER_X + 10, GROUND - 40, 12, '#e0424a', 1.6);
+        addFloat(PLAYER_X + 16, GROUND - 70, '-' + dmg, '#ff6b73', 20);
+        m.dist = 30;    // 攻击后退开，给你几秒反打
+        if (S.hp <= 0){ S.hp = 0; gameOver(); return; }
+        syncHUD();
+      }
+    }
+  }
+
+  // 连击超时
+  if (S.combo > 0 && S.lastTypeAt > 0 && performance.now() - S.lastTypeAt > COMBO_WINDOW){
+    S.combo = 0;
+    msg('连击中断', '#8f88ab');
+    syncHUD();
+  }
+
+  // 特效衰减
+  if (S.atkFx > 0) S.atkFx = Math.max(0, S.atkFx - dt * 4.2);
+  if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 46);
+  if (S.flash > 0) S.flash = Math.max(0, S.flash - dt * 2.4);
+  if (S.bossFlash > 0) S.bossFlash = Math.max(0, S.bossFlash - dt * 0.5);
+  if (S.playerHurt > 0) S.playerHurt = Math.max(0, S.playerHurt - dt);
+  if (S.msg){ S.msg.t -= dt * 1000; if (S.msg.t <= 0) S.msg = null; }
+  if (S.loot){ S.loot.t -= dt * 1000; if (S.loot.t <= 0) S.loot = null; }
+
+  if (m && m.hitT > 0) m.hitT = Math.max(0, m.hitT - dt);
+
+  // 粒子
+  var i, p;
+  for (i = S.particles.length - 1; i >= 0; i--){
+    p = S.particles[i];
+    p.life -= dt;
+    if (p.life <= 0){ S.particles.splice(i, 1); continue; }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 460 * dt;
+    p.vx *= (1 - 1.6 * dt);
+  }
+  // 飘字
+  for (i = S.floats.length - 1; i >= 0; i--){
+    var f = S.floats[i];
+    f.life -= dt * 0.85;
+    if (f.life <= 0){ S.floats.splice(i, 1); continue; }
+    f.y += f.vy * dt;
+    f.vy *= (1 - 1.2 * dt);
+  }
+}
+
+/* =========================================================
+   11. 流程
+   ========================================================= */
+var MODE_NAME = { en: '📖 英文单词', py: '🀄 中文拼音', code: '⌨️ 代码关键字', daily: '🌙 今日地牢' };
+
+function showOv(id){
+  ['ovStart','ovPause','ovClear','ovOver'].forEach(function(k){
+    document.getElementById(k).classList.toggle('show', k === id);
+  });
+}
+function hideOv(){ showOv(''); }
+
+function startGame(mode){
+  initAudio();
+  if (AC && AC.state === 'suspended') AC.resume();
+
+  S.mode = mode;
+  S.phase = 'play';
+  S.floor = 1;
+  S.maxHp = PLAYER_MAX_HP;
+  S.hp = S.maxHp;
+  S.gear = { blade:0, fist:0, heart:0, hourglass:0, star:0 };
+  S.loot = null;
+  S.score = 0;
+  S.combo = 0;
+  S.maxCombo = 0;
+  S.lastTypeAt = 0;
+  S.typedChars = 0;
+  S.missChars = 0;
+  S.kills = 0;
+  S.playMs = 0;
+  S.runStart = performance.now();
+  S.particles = [];
+  S.floats = [];
+  S.shake = 0; S.flash = 0; S.bossFlash = 0; S.atkFx = 0;
+  S.playerHurt = 0; S.msg = null;
+  S.cur = null;
+  S.queue = [];
+  recentWords = [];
+
+  if (mode === 'daily') buildDaily();
+
+  document.getElementById('hMode').textContent = MODE_NAME[mode];
+  hideOv();
+  resize();
+  startFloor(1);
+  syncHUD();
+}
+
+function floorClear(){
+  if (S.phase === 'over') return;
+  S.phase = 'clear';
+  SFX.floor();
+
+  var bonus = 100 * S.floor;
+  S.score += bonus;
+  S.hp = Math.min(S.maxHp, S.hp + FLOOR_HEAL);
+
+  document.getElementById('clFloor').textContent = S.floor;
+  var mins = Math.max(0.01, S.playMs / 60000);
+  var wpm = Math.round((S.typedChars / 5) / mins);
+  document.getElementById('clStats').innerHTML =
+    stHTML('本层奖励', '+' + bonus, '') +
+    stHTML('生命回复', '+' + FLOOR_HEAL, '') +
+    stHTML('当前速度', wpm, 'WPM') +
+    stHTML('最高连击', S.maxCombo, 'x');
+
+  showOv('ovClear');
+  setTimeout(syncHUD, 10);
+}
+
+function gameOver(){
+  S.phase = 'over';
+  SFX.over();
+  DB.totalRuns++;
+  DB.totalKills += S.kills;
+
+  var key = S.mode;
+  var isNew = S.floor > (DB.best[key] || 1);
+  if (isNew) DB.best[key] = S.floor;
+  saveDB();
+
+  var mins = Math.max(0.01, S.playMs / 60000);
+  var wpm = Math.round((S.typedChars / 5) / mins);
+  var acc = S.typedChars + S.missChars;
+  var accPct = acc ? Math.round(S.typedChars / acc * 100) : 100;
+
+  document.getElementById('overTitle').textContent = '倒在第 ' + S.floor + ' 层';
+  document.getElementById('overSub').innerHTML = isNew
+    ? '<b style="color:#ffc94a">新纪录！</b>你把这条地牢挖得更深了一点。'
+    : (S.floor >= 5 ? '已经很深了。地牢记得你来过。' : '再往下走一层试试？');
+
+  document.getElementById('overStats').innerHTML =
+    stHTML('到达层数', S.floor, '层', true) +
+    stHTML('总得分', S.score, '', true) +
+    stHTML('击杀', S.kills, '只') +
+    stHTML('最高连击', S.maxCombo, 'x') +
+    stHTML('打字速度', wpm, 'WPM') +
+    stHTML('准确率', accPct + '%', '') +
+    stHTML('装备收集', gearTotal() + '/15', '件', gearTotal() >= 10) +
+    stHTML('本局得分', S.score, '分');
+
+  showOv('ovOver');
+  syncHUD();
+}
+
+function stHTML(k, v, unit, hi){
+  return '<div class="st' + (hi ? ' hi' : '') + '">' +
+    '<div class="k">' + k + '</div>' +
+    '<div class="v">' + v + (unit ? '<small>' + unit + '</small>' : '') + '</div></div>';
+}
+
+function togglePause(){
+  if (S.phase === 'play'){
+    S.phase = 'pause';
+    showOv('ovPause');
+  } else if (S.phase === 'pause'){
+    S.phase = 'play';
+    S.lastTypeAt = performance.now();
+    hideOv();
+  }
+}
+
+function quitToMenu(){
+  S.phase = 'menu';
+  S.queue = [];
+  S.cur = null;
+  S.particles = [];
+  S.floats = [];
+  refreshBest();
+  showOv('ovStart');
+}
+
+function refreshBest(){
+  document.getElementById('bestEN').textContent = '最高 ' + (DB.best.en || 1) + ' 层';
+  document.getElementById('bestPY').textContent = '最高 ' + (DB.best.py || 1) + ' 层';
+  document.getElementById('bestCODE').textContent = '最高 ' + (DB.best.code || 1) + ' 层';
+  document.getElementById('bestDAILY').textContent = '今日 ' + (DB.best.daily || 1) + ' 层';
+  document.getElementById('dailyTag').textContent = dayKey().slice(5).replace('-', '/');
+}
+
+/* =========================================================
+   12. 主循环
+   ========================================================= */
+var lastT = 0, hudAcc = 0;
+
+function loop(ts){
+  requestAnimationFrame(loop);
+  if (!lastT) lastT = ts;
+  var dt = (ts - lastT) / 1000;
+  lastT = ts;
+  if (dt > 0.1) dt = 0.1;      // 切标签页回来别一口气掉血
+
+  if (S.phase === 'play'){
+    S.playMs += dt * 1000;
+    tick(dt);
+    hudAcc += dt;
+    if (hudAcc > 0.12){ hudAcc = 0; syncHUD(); }
+  }
+
+  draw(ts / 1000);
+}
+
+/* =========================================================
+   13. 输入
+   ========================================================= */
+var kbd = document.getElementById('kbd');
+var composing = false;
+
+function onKeyDown(e){
+  // 组合键不拦
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  if (e.key === 'Escape'){
+    if (S.phase === 'play' || S.phase === 'pause'){ e.preventDefault(); togglePause(); }
+    return;
+  }
+
+  if (S.phase !== 'play') return;
+
+  // 输入法组合中，交给 input 事件
+  if (e.isComposing || composing || e.keyCode === 229) return;
+
+  if (e.key === 'Backspace'){
+    e.preventDefault();
+    if (S.cur && S.cur.typed > 0) S.cur.typed--;
+    return;
+  }
+
+  if (typeof e.key !== 'string' || e.key.length !== 1) return;
+
+  // 处理了字符 → 阻止它落到隐藏 input 里
+  e.preventDefault();
+  handleChar(e.key);
+}
+
+window.addEventListener('keydown', onKeyDown, false);
+
+// 软键盘兜底：安卓/iOS 可能不发可用 keydown，只发 input
+kbd.addEventListener('input', function(){
+  var v = kbd.value;
+  kbd.value = '';
+  if (!v || S.phase !== 'play') return;
+  for (var i = 0; i < v.length; i++) handleChar(v[i]);
+}, false);
+
+kbd.addEventListener('compositionstart', function(){
+  composing = true;
+  if (S.phase === 'play'){
+    if (S.cur) S.cur.typed = 0;
+    msg('检测到你开了输入法 · 请切到英文状态', '#ff9a3c');
+  }
+}, false);
+kbd.addEventListener('compositionend', function(){
+  composing = false;
+  kbd.value = '';
+}, false);
+
+// 手机键盘会把可视区挤小，重新量一次
+window.addEventListener('orientationchange', function(){ setTimeout(resize, 260); });
+if (window.visualViewport){
+  window.visualViewport.addEventListener('resize', function(){ setTimeout(resize, 120); });
+}
+
+/* ---------- 切走自动暂停（不偷袭玩家） ---------- */
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden && S.phase === 'play'){
+    S.phase = 'pause';
+    showOv('ovPause');
+  }
+}, false);
+
+/* =========================================================
+   14. 界面绑定
+   ========================================================= */
+document.getElementById('modeList').addEventListener('click', function(e){
+  var card = e.target.closest ? e.target.closest('.mcard') : null;
+  if (!card) return;
+  var mode = card.getAttribute('data-mode');
+  if (!mode) return;
+  startGame(mode);
+}, false);
+
+document.getElementById('btnResume').addEventListener('click', function(){
+  S.phase = 'play';
+  S.lastTypeAt = performance.now();
+  hideOv();
+});
+document.getElementById('btnRestart').addEventListener('click', function(){
+  startGame(S.mode);
+});
+document.getElementById('btnQuit').addEventListener('click', function(){
+  quitToMenu();
+});
+document.getElementById('btnNextFloor').addEventListener('click', function(){
+  if (S.phase !== 'clear') return;
+  S.phase = 'play';
+  hideOv();
+  startFloor(S.floor + 1);
+});
+document.getElementById('btnAgain').addEventListener('click', function(){
+  startGame(S.mode);
+});
+document.getElementById('btnOverQuit').addEventListener('click', function(){
+  quitToMenu();
+});
+document.getElementById('btnPause').addEventListener('click', function(){
+  if (S.phase === 'play' || S.phase === 'pause') togglePause();
+});
+document.getElementById('btnSound').addEventListener('click', function(){
+  sfxOn = !sfxOn;
+  DB.sound = sfxOn;
+  saveDB();
+  this.textContent = sfxOn ? '🔊' : '🔇';
+  this.classList.toggle('act', sfxOn);
+  if (sfxOn){ initAudio(); if (AC && AC.state === 'suspended') AC.resume(); SFX.key(); }
+});
+document.getElementById('btnKbd').addEventListener('click', function(){
+  initAudio();
+  if (AC && AC.state === 'suspended') AC.resume();
+  kbd.focus();
+  kbd.value = '';
+  msg('系统键盘已唤起 · 请在英文状态输入', '#4fd0e8');
+});
+document.getElementById('btnShare').addEventListener('click', function(){
+  var mins = Math.max(0.01, S.playMs / 60000);
+  var wpm = Math.round((S.typedChars / 5) / mins);
+  var txt = '单词地牢 · ' + MODE_NAME[S.mode] + '\n' +
+            '到达第 ' + S.floor + ' 层 · 击杀 ' + S.kills + ' 只 · 最高连击 x' + S.maxCombo +
+            ' · ' + wpm + ' WPM · ' + S.score + ' 分';
+  var btn = this;
+  var done = function(){
+    btn.textContent = '✓ 已复制';
+    setTimeout(function(){ btn.textContent = '复制战报'; }, 1400);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done, function(){
+      btn.textContent = '复制失败';
+    });
+  } else {
+    try{
+      var ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      done();
+    }catch(e){ btn.textContent = '复制失败'; }
+  }
+});
+
+/* =========================================================
+   15. 启动
+   ========================================================= */
+loadDB();
+sfxOn = DB.sound !== false;
+document.getElementById('btnSound').textContent = sfxOn ? '🔊' : '🔇';
+document.getElementById('btnSound').classList.toggle('act', sfxOn);
+refreshBest();
+
+resize();
+setTimeout(resize, 60);
+requestAnimationFrame(loop);
+
+// 首屏先画一张空场景
+S.phase = 'menu';
+showOv('ovStart');
+
+})();
+</script>
+</body>
+</html>
+

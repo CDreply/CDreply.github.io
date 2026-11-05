@@ -1,0 +1,435 @@
+---
+layout: default
+title: 我的音乐
+description: 余风清韵音乐作品 - 25 首，分六组，点开即听
+---
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0a0a1a;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    min-height: 100vh;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 60px 20px 10px;
+    position: relative;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 3px;
+  }
+
+  .page-sub {
+    font-size: 12px;
+    color: rgba(255,255,255,0.18);
+    margin-top: 10px;
+    letter-spacing: 1px;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255,255,255,0.2);
+    text-decoration: none;
+    font-size: 12px;
+    margin-top: 12px;
+    transition: color 0.2s;
+  }
+  .back-link:hover { color: rgba(255,255,255,0.4); }
+
+  .content-area {
+    max-width: 560px;
+    margin: 40px auto;
+    padding: 0 24px 80px;
+  }
+
+  .music-intro {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.28);
+    line-height: 1.9;
+    margin-bottom: 30px;
+    padding-left: 2px;
+  }
+  .music-intro b { color: rgba(255,255,255,0.52); font-weight: 600; }
+
+  .music-group { margin-bottom: 26px; }
+
+  .music-group-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.28);
+    margin-bottom: 12px;
+    padding-left: 2px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .music-group-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.05);
+  }
+
+  .song {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .song:hover {
+    background: rgba(255,255,255,0.045);
+    border-color: rgba(255,255,255,0.12);
+  }
+  .song.is-on {
+    background: rgba(88,166,255,0.06);
+    border-color: rgba(88,166,255,0.25);
+  }
+
+  .song-idx {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.16);
+    flex: none;
+    width: 20px;
+  }
+  .song-name {
+    flex: 1;
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.6);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .song-dur {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+    flex: none;
+  }
+  .song-btn {
+    font-size: 11px;
+    color: rgba(255,255,255,0.28);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 3px 10px;
+    flex: none;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .song:hover .song-btn {
+    color: rgba(255,255,255,0.6);
+    border-color: rgba(255,255,255,0.2);
+  }
+  .song.is-on .song-btn {
+    color: rgba(88,166,255,0.8);
+    border-color: rgba(88,166,255,0.3);
+  }
+
+  .song-slot { margin: -2px 0 10px 32px; }
+  .song-slot:empty { display: none; }
+  .song-slot iframe {
+    display: block;
+    width: 100%;
+    max-width: 330px;
+    height: 86px;
+    border: 0;
+    border-radius: 8px;
+  }
+  .song-ext {
+    display: inline-block;
+    margin-top: 7px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .song-ext:hover { color: rgba(255,255,255,0.45); }
+
+  .music-note {
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.18);
+    line-height: 1.9;
+    margin-top: 4px;
+    padding-left: 2px;
+  }
+  .music-note b { color: rgba(255,255,255,0.35); font-weight: 600; }
+
+  .divider {
+    text-align: center;
+    color: rgba(255,255,255,0.08);
+    font-size: 11px;
+    margin: 34px 0 20px;
+    letter-spacing: 4px;
+  }
+
+  .page-footer {
+    text-align: center;
+    color: rgba(255,255,255,0.1);
+    font-size: 11px;
+    line-height: 2;
+  }
+
+  @media (max-width: 480px) {
+    .content-area { padding: 0 16px 60px; }
+    .page-header { padding: 40px 16px 10px; }
+    .song { padding: 11px 12px; gap: 8px; }
+    .song-slot { margin-left: 0; }
+  }
+</style>
+
+<header class="page-header">
+  <h1 class="page-title">我的歌</h1>
+  <div class="page-sub">余风清韵 · 25 首</div>
+  <a class="back-link" href="./index.html">← 返回夹带私货</a>
+</header>
+
+<main class="content-area">
+
+  <p class="music-intro">
+    全部是我自己写或指导Ai生成的，按风格分成六组。对于资深创作者和听众可能不值一提，但我认为品鉴自己的作品感觉还不错，像喵喵大晴天这种阳光的歌完全不像是阴郁的我能创作出的（是我的agent子模块小喵作词）。这也见证着我用ai本地创作的发展之路，一开始错别字，变调，乐器什么的都还是很棘手的。不同模型效果也不太一样，总体是更好更强了，我搓很久的原创纯音乐雨落天台，现在已经能被模型几分钟生成的纯音乐轻松超越了（心情复杂.jpg）<b>点「试听」就播，不需要登录，也不用装客户端。</b>
+  </p>
+
+  <div class="music-group">
+    <div class="music-group-title">Ⅰ 星海归航系列</div>
+
+    <button class="song" data-id="3451625331">
+      <span class="song-idx">01</span><span class="song-name">星海归航</span>
+      <span class="song-dur">2:20</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3451621242">
+      <span class="song-idx">02</span><span class="song-name">星火纪元</span>
+      <span class="song-dur">2:22</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3451622527">
+      <span class="song-idx">03</span><span class="song-name">殿后</span>
+      <span class="song-dur">1:45</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3451624047">
+      <span class="song-idx">04</span><span class="song-name">归寂</span>
+      <span class="song-dur">1:44</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+  </div>
+
+  <div class="music-group">
+    <div class="music-group-title">Ⅱ 科幻与史诗</div>
+
+    <button class="song" data-id="3442789227">
+      <span class="song-idx">05</span><span class="song-name">星火黎明</span>
+      <span class="song-dur">3:08</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3437959905">
+      <span class="song-idx">06</span><span class="song-name">钢铁洪流</span>
+      <span class="song-dur">2:46</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3439094291">
+      <span class="song-idx">07</span><span class="song-name">第七夜</span>
+      <span class="song-dur">2:42</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3455308638">
+      <span class="song-idx">08</span><span class="song-name">星垂野阔</span>
+      <span class="song-dur">2:23</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+  </div>
+
+  <div class="music-group">
+    <div class="music-group-title">Ⅲ 生活与室内</div>
+
+    <button class="song" data-id="3446755679">
+      <span class="song-idx">09</span><span class="song-name">雨落天台</span>
+      <span class="song-dur">2:47</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3452107064">
+      <span class="song-idx">10</span><span class="song-name">雨落进深秋</span>
+      <span class="song-dur">3:00</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3440876669">
+      <span class="song-idx">11</span><span class="song-name">夜还没完</span>
+      <span class="song-dur">2:29</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3453667534">
+      <span class="song-idx">12</span><span class="song-name">光落在木桌上</span>
+      <span class="song-dur">2:16</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3454867107">
+      <span class="song-idx">13</span><span class="song-name">再亮一点</span>
+      <span class="song-dur">2:11</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3440646703">
+      <span class="song-idx">14</span><span class="song-name">六楼的晚风</span>
+      <span class="song-dur">1:56</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3437721848">
+      <span class="song-idx">15</span><span class="song-name">喵喵大晴天</span>
+      <span class="song-dur">1:36</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3440248509">
+      <span class="song-idx">16</span><span class="song-name">你吃饭了吗</span>
+      <span class="song-dur">1:16</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+  </div>
+
+  <div class="music-group">
+    <div class="music-group-title">Ⅳ 古意与东方</div>
+
+    <button class="song" data-id="3439528469">
+      <span class="song-idx">17</span><span class="song-name">惊鸿引</span>
+      <span class="song-dur">2:35</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3441974424">
+      <span class="song-idx">18</span><span class="song-name">山河无言</span>
+      <span class="song-dur">2:04</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3445991895">
+      <span class="song-idx">19</span><span class="song-name">大漠絮语</span>
+      <span class="song-dur">2:05</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3442388909">
+      <span class="song-idx">20</span><span class="song-name">异域絮语</span>
+      <span class="song-dur">2:32</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+  </div>
+
+  <div class="music-group">
+    <div class="music-group-title">Ⅴ 氛围与实验</div>
+
+    <button class="song" data-id="3438445873">
+      <span class="song-idx">21</span><span class="song-name">晨光絮语</span>
+      <span class="song-dur">3:27</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3449412581">
+      <span class="song-idx">22</span><span class="song-name">深海絮语</span>
+      <span class="song-dur">2:08</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3455689483">
+      <span class="song-idx">23</span><span class="song-name">暮色絮语</span>
+      <span class="song-dur">2:09</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+
+    <button class="song" data-id="3445556390">
+      <span class="song-idx">24</span><span class="song-name">从人工智障到人工智能</span>
+      <span class="song-dur">3:15</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+  </div>
+
+  <div class="music-group">
+    <div class="music-group-title">Ⅵ 翻奏</div>
+
+    <button class="song" data-id="3439881123">
+      <span class="song-idx">25</span><span class="song-name">Radioactive</span>
+      <span class="song-dur">3:40</span><span class="song-btn">试听</span>
+    </button>
+    <div class="song-slot"></div>
+  </div>
+
+  <div class="music-note">
+    共 25 首，全部来自网易云音乐「余风清韵」。<b>试听走的是网易云官方外链播放器，不需要登录。</b>再点一次「试听」可以收起。
+  </div>
+
+  <div class="divider">· · ·</div>
+
+  <div class="page-footer">
+    歌还在写。新的一首放在最前面。
+  </div>
+
+</main>
+
+<script>
+/* 点「试听」展开网易云官方外链播放器。
+   注意：本地用 file:// 直接打开时，部分浏览器会拒绝加载远程 iframe，
+   表现为空白框；部署到 https 后就正常了。
+   所以额外附了一条「在网易云打开」的链接兜底。 */
+(function () {
+  var songs = document.querySelectorAll('.song');
+  for (var i = 0; i < songs.length; i++) {
+    songs[i].addEventListener('click', function () {
+      var slot = this.nextElementSibling;
+      if (!slot || slot.className.indexOf('song-slot') === -1) return;
+
+      if (slot.firstChild) {
+        while (slot.firstChild) slot.removeChild(slot.firstChild);
+        this.classList.remove('is-on');
+        return;
+      }
+
+      var id = this.getAttribute('data-id');
+
+      var frame = document.createElement('iframe');
+      frame.src = 'https://music.163.com/outchain/player?type=2&id=' +
+        id + '&auto=0&height=66';
+      frame.setAttribute('frameborder', '0');
+      frame.setAttribute('allow', 'autoplay');
+      slot.appendChild(frame);
+
+      var link = document.createElement('a');
+      link.href = 'https://music.163.com/song?id=' + id;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.className = 'song-ext';
+      link.textContent = '在网易云打开';
+      slot.appendChild(link);
+
+      this.classList.add('is-on');
+    });
+  }
+})();
+</script>

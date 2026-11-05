@@ -1,0 +1,2615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080a10">
+<title>后台剧场 v1.1 · 你看着我，我就不动</title>
+<!-- 后台剧场 v1.0 · 单文件 · 无外部依赖 · Page Visibility + 时间差推演 · 像素 Canvas -->
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;height:100%;}
+body{
+  background:#080a10;
+  color:#c3cedd;
+  font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;overflow:hidden;
+  overscroll-behavior:none;
+}
+.app{width:100%;max-width:520px;display:flex;flex-direction:column;}
+
+/* ---------- 头部 ---------- */
+.top{
+  display:flex;align-items:baseline;justify-content:space-between;
+  padding:0 2px 10px;
+}
+.brand{
+  font-size:15px;font-weight:600;letter-spacing:.14em;color:#dfe7f2;
+}
+.brand i{
+  font-style:normal;display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:#7ce0a8;margin-right:8px;vertical-align:middle;
+  box-shadow:0 0 8px rgba(124,224,168,.7);
+  animation:beat 2.6s ease-in-out infinite;
+}
+@keyframes beat{0%,100%{opacity:.35;}50%{opacity:1;}}
+.sub{font-size:10.5px;color:#4d5866;letter-spacing:.08em;}
+.topRight{display:flex;align-items:center;gap:9px;}
+.sceneChip{
+  padding:4px 10px;border-radius:20px;cursor:pointer;
+  border:1px solid #23303f;background:rgba(255,255,255,.03);
+  color:#9fb0c4;font:500 11px/1.3 inherit;letter-spacing:.06em;
+  transition:.15s;white-space:nowrap;
+}
+.sceneChip:hover{border-color:#3a4d66;color:#dfe7f2;background:rgba(255,255,255,.06);}
+.sceneChip i{font-style:normal;color:#6a7a90;margin-left:4px;}
+
+/* ---------- 场景选择 ---------- */
+.pickList{display:flex;flex-direction:column;gap:8px;}
+.pick{
+  display:flex;align-items:center;gap:11px;padding:11px 13px;
+  border-radius:11px;border:1px solid #1e2634;
+  background:rgba(255,255,255,.02);cursor:pointer;transition:.15s;
+}
+.pick:hover{border-color:#33415a;background:rgba(255,255,255,.045);}
+.pick.on{border-color:rgba(124,224,168,.42);background:rgba(124,224,168,.06);}
+.pick .pv{width:50px;height:33px;border-radius:6px;flex:none;border:1px solid #2a3444;}
+.pick .pt{font:600 12.5px/1.3 inherit;color:#dfe7f2;}
+.pick .pd{font:400 10.5px/1.4 inherit;color:#6a7789;margin-top:3px;}
+.pick .ps{margin-left:auto;font:600 10px/1 inherit;color:#7ce0a8;flex:none;}
+
+/* ---------- 舞台 ---------- */
+.stage{
+  position:relative;width:100%;aspect-ratio:8/5;
+  border-radius:14px;overflow:hidden;
+  background:#0b0e15;
+  border:1px solid #1c222e;
+  box-shadow:0 20px 50px -20px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.02) inset;
+}
+#cv{display:block;width:100%;height:100%;image-rendering:pixelated;}
+.stage .glare{
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 0%,rgba(140,180,255,.05),transparent 60%);
+}
+.stage .scan{
+  position:absolute;inset:0;pointer-events:none;opacity:.35;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px);
+}
+
+/* ---------- 状态条 ---------- */
+.bar{
+  display:flex;align-items:center;gap:10px;
+  margin-top:10px;padding:9px 12px;border-radius:11px;
+  border:1px solid #1b2230;background:rgba(255,255,255,.018);
+  font-size:12px;color:#8a97a8;
+}
+.bar b{color:#dfe7f2;font-weight:600;}
+.bar .dot{
+  width:5px;height:5px;border-radius:50%;background:#5a6a7e;flex:none;
+}
+.bar .dot.on{background:#7ce0a8;box-shadow:0 0 7px rgba(124,224,168,.8);}
+.bar .spacer{flex:1;}
+.bar .looked{color:#5a6678;font-variant-numeric:tabular-nums;}
+
+/* ---------- 工具 ---------- */
+.tools{display:flex;gap:8px;margin-top:9px;}
+.tools button{
+  flex:1;padding:10px 0;border-radius:10px;cursor:pointer;
+  border:1px solid #1e2634;background:rgba(255,255,255,.02);
+  color:#8a97a8;font:500 12px/1 inherit;letter-spacing:.05em;
+  transition:.15s;
+}
+.tools button:hover{border-color:#33415a;color:#c3cedd;background:rgba(255,255,255,.04);}
+.tools button:active{transform:scale(.985);}
+.tools button.gold{color:#d8b070;border-color:rgba(216,176,112,.28);}
+.tools button.gold:hover{background:rgba(216,176,112,.08);border-color:rgba(216,176,112,.5);}
+
+.foot{
+  margin-top:10px;text-align:center;font-size:10px;color:#39424f;
+  letter-spacing:.05em;
+}
+
+/* ---------- 弹层 ---------- */
+.sheet{
+  position:fixed;inset:0;z-index:40;display:none;
+  align-items:center;justify-content:center;padding:18px;
+  /* 遮罩别太实：第一眼要能看见后面的房间，否则不知道这是个房间 */
+  background:rgba(4,6,11,.62);backdrop-filter:blur(2px);
+}
+.sheet.on{display:flex;}
+.sc{
+  width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;
+  border-radius:16px;border:1px solid #232c3c;
+  background:linear-gradient(180deg,#11161f,#0d1119);
+  box-shadow:0 30px 70px -20px #000;
+  animation:pop .22s ease both;
+}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98);}to{opacity:1;transform:none;}}
+.sc h3{
+  margin:0;padding:16px 18px 5px;
+  font-size:14px;font-weight:600;color:#e6edf6;letter-spacing:.06em;
+}
+.sc .meta{
+  padding:0 18px 10px;font-size:11px;color:#6a7789;
+  border-bottom:1px solid #1a212c;
+}
+.sc .meta b{color:#d8b070;font-weight:600;}
+.sc .body .pickList{margin:2px 0 4px;}
+.sc .body{
+  padding:12px 18px;overflow-y:auto;flex:1;
+  font-size:12.5px;line-height:1.95;color:#a9b6c6;
+}
+.sc .body .ev{
+  display:flex;gap:9px;padding:2px 0;
+}
+.sc .body .ev i{
+  font-style:normal;color:#3f4d60;font-size:10px;flex:none;width:26px;
+  font-variant-numeric:tabular-nums;text-align:right;padding-top:2px;
+}
+.sc .body .ev span{flex:1;}
+.sc .body .ev.new span{color:#e6edf6;}
+.sc .body .empty{color:#4e5a6a;font-style:normal;}
+.sc .body .noteItem{
+  margin:9px 0;padding:10px 12px;border-radius:9px;
+  background:rgba(216,208,190,.05);border:1px solid rgba(216,208,190,.12);
+  color:#cfc7b4;font-size:12px;line-height:1.8;white-space:pre-wrap;
+}
+.sc .body .noteItem em{
+  display:block;font-style:normal;font-size:10px;color:#6a6353;margin-top:5px;
+}
+.sc .foot{
+  padding:11px 18px 15px;display:flex;gap:8px;border-top:1px solid #1a212c;
+}
+.sc .foot button{
+  flex:1;padding:11px 0;border-radius:10px;cursor:pointer;
+  border:1px solid #2a3446;background:rgba(255,255,255,.035);
+  color:#c3cedd;font:500 12.5px/1 inherit;
+}
+.sc .foot button:hover{background:rgba(255,255,255,.06);}
+.sc .foot button.main{
+  border-color:rgba(216,176,112,.4);background:rgba(216,176,112,.11);color:#d8b070;
+}
+.sc .foot button.main:hover{background:rgba(216,176,112,.18);}
+.sc .foot button.narrow{flex:0 1 170px;margin:0 auto;}
+
+/* ---------- 引导 ---------- */
+.intro .sc{max-width:400px;}
+.intro .sc h3{padding-top:20px;}
+.intro .sc .body{font-size:13px;line-height:2.05;color:#98a5b6;}
+.intro .sc .body b{color:#dfe7f2;font-weight:600;}
+.intro .sc .body .k{
+  display:inline-block;padding:1px 6px;margin:0 2px;border-radius:5px;
+  background:#1b2331;border:1px solid #2a3446;color:#a9b6c6;font-size:11.5px;
+}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;left:50%;bottom:34px;transform:translate(-50%,14px);
+  padding:9px 15px;border-radius:9px;z-index:60;
+  background:rgba(20,26,36,.95);border:1px solid #2a3446;
+  color:#c3cedd;font-size:12px;opacity:0;pointer-events:none;
+  transition:.22s;white-space:nowrap;
+}
+.toast.on{opacity:1;transform:translate(-50%,0);}
+
+@media (max-width:420px){
+  body{padding:11px;}
+  .brand{font-size:14px;}
+  .sub{display:none;}
+  .bar{font-size:11.5px;padding:8px 10px;}
+  .tools button{font-size:11.5px;padding:9px 0;}
+}
+@media (max-height:640px){
+  .foot{display:none;}
+  .top{padding-bottom:7px;}
+  .bar{margin-top:7px;padding:7px 10px;}
+  .tools{margin-top:7px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand"><i></i>后台剧场</div>
+    <div class="topRight">
+      <span class="sub">它只在你看不见的时候生活</span>
+      <button class="sceneChip" id="sceneChip" data-act="scene">房间<i>▾</i></button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <canvas id="cv" width="240" height="150"></canvas>
+    <div class="glare"></div>
+    <div class="scan"></div>
+  </div>
+
+  <div class="bar">
+    <span class="dot" id="dot"></span>
+    <span id="barMain">它一动不动</span>
+    <span class="spacer"></span>
+    <span class="looked" id="barLooked">注视 0s</span>
+  </div>
+
+  <div class="tools">
+    <button data-act="log">它做过的事</button>
+    <button data-act="notes">墙上的字条</button>
+    <button data-act="reset" class="gold">重新开始</button>
+  </div>
+
+  <div class="foot">关掉标签页它也在继续 —— 下次打开按时间差补算</div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="sc">
+    <h3 id="shTitle">标题</h3>
+    <div class="meta" id="shMeta"></div>
+    <div class="body" id="shBody"></div>
+    <div class="foot" id="shFoot"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   常量
+   ============================================================ */
+var VW = 240, VH = 150;
+var STEP_MS   = 7000;     // 每 7 秒推进 1 步
+var MAX_STEPS = 48;       // 单次最多推演 48 步（约 5.6 分钟）
+var MIN_AWAY  = 2500;     // 不到 2.5 秒当没走
+var STARE_HOLD = 30000;   // 盯 30 秒：停止呼吸、出汗
+var STARE_LOOK = 60000;   // 盯 60 秒：抬头看你
+var NOTE_MAX  = 6;        // 墙上最多 6 张
+var LOG_MAX   = 40;
+
+var SAVE_KEY = 'backstage_v1';
+var SAVE_VER = 2;   // v2：多场景，存档分 bag 存
+
+/* ============================================================
+   确定性伪随机：同一个 seed 永远给同一个结果，
+   所以它的行为可复现、可预测，也不会每次刷新就变卦
+   ============================================================ */
+function hash32(n){
+  n = n >>> 0;
+  n = (n ^ 61) ^ (n >>> 16);
+  n = (n + (n << 3)) >>> 0;
+  n = n ^ (n >>> 4);
+  n = Math.imul(n, 0x27d4eb2d) >>> 0;
+  n = n ^ (n >>> 15);
+  return n >>> 0;
+}
+function rand01(seed){ return hash32(seed) / 4294967296; }
+function pickIdx(seed, len){
+  return Math.floor(rand01(seed) * len) % len;
+}
+
+/* ============================================================
+   状态
+   ============================================================ */
+var DEFAULTS_ROOM = {
+  dust: 3,        // 桌上灰尘 0..3（初始脏）
+  lamp: 1,        // 台灯（一开始亮着，否则第一眼全黑）
+  curtain: 0,     // 窗帘 0 合 / 1 开
+  papers: 1,      // 桌上纸堆 0..5
+  balls: 0,       // 地上纸团 0..4
+  planes: 0,      // 折好的纸飞机 0..2
+  chair: 1,       // 椅子位置 0 左 / 1 中 / 2 右
+  books: 6,       // 书架上剩余的书
+  deskBook: 0,    // 桌上摊开的书
+  cup: 0,         // 杯子 0 无 / 1 在桌上 / 2 被推到角落
+  coat: 0         // 外套挂在椅背
+};
+
+/* 鱼缸：一条很大的鱼。它不写字，只会在玻璃上啄印子 */
+var DEFAULTS_FISH = {
+  pos: 1,        // 水平位置 0 左 / 1 中 / 2 右
+  depth: 1,      // 深度 0 上 / 1 中 / 2 底
+  fat: 1,        // 胖瘦 0..3（吃出来的）
+  food: 2,       // 水里现成的鱼食颗粒 0..5
+  bubbles: 1,    // 正在上升的气泡串 0..4
+  plants: 0,     // 被拱倒的水草 0..3
+  rock: 1,       // 石头位置 0..2
+  murky: 0,      // 浑浊度 0..3
+  hiding: 0,     // 躲在水草后
+  dir: 0         // 朝向 0 朝右 / 1 朝左
+};
+
+function sceneDefaults(k){
+  return (k === 'fish') ? DEFAULTS_FISH : DEFAULTS_ROOM;
+}
+
+function cloneDefaults(k){
+  var d = sceneDefaults(k), o = {}, key;
+  for (key in d) if (d.hasOwnProperty(key)) o[key] = d[key];
+  return o;
+}
+
+var S = {
+  ver: SAVE_VER,
+  scene: 'room',    // 当前在哪个场景
+  step: 0,          // 当前场景累计推进的步数
+  props: {},
+  logs: [],         // [{s: 步序号, t: 文本}]
+  notes: [],        // [{s, txt}]
+  lastAway: 0,      // 上次离开时长 ms
+  totalAway: 0,     // 累计离开时长
+  bag: {},          // 其它场景的快照（切场景时不丢进度）
+  plays: 0,         // 打开次数
+  n: 0              // 存档序号
+};
+
+function freshState(){
+  return {
+    ver: SAVE_VER,
+    scene: 'room',
+    step: 0,
+    props: cloneDefaults('room'),
+    logs: [],
+    notes: [],
+    lastAway: 0,
+    totalAway: 0,
+    bag: {},
+    plays: 0,
+    n: 0
+  };
+}
+
+/* 顶层永远是「当前场景」的工作副本；其余场景暂存在 bag 里。
+   切场景 = 把顶层收进 bag，再把目标场景从 bag 摊回顶层。
+   这样所有绘制/活动代码只认 S.props / S.step，一行都不用改。 */
+function stow(){
+  if (!S.bag || typeof S.bag !== 'object') S.bag = {};
+  S.bag[S.scene] = {
+    step: S.step, props: S.props, logs: S.logs, notes: S.notes,
+    lastAway: S.lastAway, totalAway: S.totalAway
+  };
+}
+
+function unpack(k){
+  var b = (S.bag && S.bag[k]) || null;
+  if (b && b.props && typeof b.props === 'object'){
+    S.step = clampInt(b.step, 0, 1e9, 0);
+    S.props = b.props;
+    S.logs = b.logs || [];
+    S.notes = b.notes || [];
+    S.lastAway = clampInt(b.lastAway, 0, 1e12, 0);
+    S.totalAway = clampInt(b.totalAway, 0, 1e12, 0);
+  } else {
+    S.step = 0;
+    S.props = cloneDefaults(k);
+    S.logs = [];
+    S.notes = [];
+    S.lastAway = 0;
+    S.totalAway = 0;
+  }
+}
+
+/* ============================================================
+   存档（单键 + 校验和 + 版本号 + 时间倒退保护）
+   ============================================================ */
+var memStore = null;
+var storeLost = false;
+
+function checksum(str){
+  // 必须用 >>>0 强制无符号：& 0xFFFFFFFF 在 JS 里返回有符号 int32，
+  // 哈希一旦超过 2^31 就成了负数，而 Math.floor(-1/36) 永远等于 -1 → 死循环。
+  var h = 5381, i;
+  for (i = 0; i < str.length; i++){
+    h = (((h * 33) >>> 0) ^ str.charCodeAt(i)) >>> 0;
+  }
+  var dg = '0123456789abcdefghijklmnopqrstuvwxyz', out = '';
+  if (h === 0) return '0';
+  while (h > 0){ out = dg[h % 36] + out; h = Math.floor(h / 36); }
+  return out;
+}
+
+function clampInt(v, lo, hi, dft){
+  v = parseInt(v, 10);
+  if (!isFinite(v)) return dft;
+  if (v < lo) return lo;
+  if (v > hi) return hi;
+  return v;
+}
+
+/* 一个场景的存档清洗：字段逐个 clamp，坏值回落默认 */
+function sanitizeScene(k, o){
+  o = o || {};
+  var defs = sceneDefaults(k);
+  var props = cloneDefaults(k);
+  var p = (o.props && typeof o.props === 'object') ? o.props : {};
+
+  if (k === 'fish'){
+    props.pos     = clampInt(p.pos, 0, 2, defs.pos);
+    props.depth   = clampInt(p.depth, 0, 2, defs.depth);
+    props.fat     = clampInt(p.fat, 0, 3, defs.fat);
+    props.food    = clampInt(p.food, 0, 5, defs.food);
+    props.bubbles = clampInt(p.bubbles, 0, 4, defs.bubbles);
+    props.plants  = clampInt(p.plants, 0, 3, defs.plants);
+    props.rock    = clampInt(p.rock, 0, 2, defs.rock);
+    props.murky   = clampInt(p.murky, 0, 3, defs.murky);
+    props.hiding  = clampInt(p.hiding, 0, 1, defs.hiding);
+    props.dir     = clampInt(p.dir, 0, 1, defs.dir);
+  } else {
+    props.dust     = clampInt(p.dust, 0, 3, 3);
+    props.lamp     = clampInt(p.lamp, 0, 1, 1);
+    props.curtain  = clampInt(p.curtain, 0, 1, 0);
+    props.papers   = clampInt(p.papers, 0, 5, 1);
+    props.balls    = clampInt(p.balls, 0, 4, 0);
+    props.planes   = clampInt(p.planes, 0, 2, 0);
+    props.chair    = clampInt(p.chair, 0, 2, 1);
+    props.books    = clampInt(p.books, 0, 8, 6);
+    props.deskBook = clampInt(p.deskBook, 0, 3, 0);
+    props.cup      = clampInt(p.cup, 0, 2, 0);
+    props.coat     = clampInt(p.coat, 0, 1, 0);
+  }
+
+  var logs = [], i;
+  if (Object.prototype.toString.call(o.logs) === '[object Array]'){
+    var L = Math.min(o.logs.length, LOG_MAX);
+    for (i = 0; i < L; i++){
+      var e = o.logs[i];
+      if (e && typeof e.t === 'string'){
+        logs.push({ s: clampInt(e.s, 0, 1e9, 0), t: String(e.t).slice(0, 60) });
+      }
+    }
+  }
+
+  var notes = [];
+  if (Object.prototype.toString.call(o.notes) === '[object Array]'){
+    var M = Math.min(o.notes.length, NOTE_MAX);
+    for (i = 0; i < M; i++){
+      var nt = o.notes[i];
+      if (nt && typeof nt.txt === 'string'){
+        notes.push({ s: clampInt(nt.s, 0, 1e9, 0), txt: String(nt.txt).slice(0, 120) });
+      }
+    }
+  }
+
+  return {
+    step: clampInt(o.step, 0, 1e9, 0),
+    props: props,
+    logs: logs,
+    notes: notes,
+    lastAway: clampInt(o.lastAway, 0, 1e12, 0),
+    totalAway: clampInt(o.totalAway, 0, 1e12, 0)
+  };
+}
+
+function migrate(raw){
+  var o = raw, base = freshState(), k;
+  if (!o || typeof o !== 'object') return base;
+
+  base.plays = clampInt(o.plays, 0, 1e9, 0);
+  base.n = clampInt(o.n, 0, 1e9, 0);
+
+  // v1 老档：场景态直接摊在顶层 → 整体搬进 bag.room，进度不丢
+  var bag = (o.bag && typeof o.bag === 'object') ? o.bag : null;
+  if (!bag && (o.props || typeof o.step === 'number')){
+    bag = { room: {
+      step: o.step, props: o.props, logs: o.logs, notes: o.notes,
+      lastAway: o.lastAway, totalAway: o.totalAway
+    } };
+  }
+
+  base.bag = {};
+  if (bag){
+    if (bag.room) base.bag.room = sanitizeScene('room', bag.room);
+    if (bag.fish) base.bag.fish = sanitizeScene('fish', bag.fish);
+  }
+
+  var sc = (o.scene === 'fish') ? 'fish' : 'room';
+  base.scene = sc;
+  if (!base.bag[sc]) base.bag[sc] = sanitizeScene(sc, {});
+
+  // 顶层工作副本 = 当前场景
+  var cur = base.bag[sc];
+  base.step = cur.step;
+  base.props = cur.props;
+  base.logs = cur.logs;
+  base.notes = cur.notes;
+  base.lastAway = cur.lastAway;
+  base.totalAway = cur.totalAway;
+
+  return base;
+}
+
+function load(){
+  var raw = null;
+  try { raw = window.localStorage.getItem(SAVE_KEY); }
+  catch (e){ storeLost = true; }
+
+  if (!raw && memStore) raw = memStore;
+  if (!raw) return null;
+
+  try {
+    var box = JSON.parse(raw);
+    if (box && typeof box === 'object' && typeof box.d === 'string'){
+      if (box.h && checksum(box.d) !== box.h) return null;   // 校验不过 = 坏档
+      var inner = JSON.parse(box.d);
+      if (!inner || typeof inner !== 'object') return null;
+      return inner;
+    }
+    // 裸档兼容
+    if (box && typeof box === 'object' && typeof box.step === 'number') return box;
+  } catch (e){}
+  return null;
+}
+
+var lastSaveAt = 0;
+function save(force){
+  var now = Date.now();
+  if (!force && now - lastSaveAt < 1800) return;   // 写入节流
+  lastSaveAt = now;
+
+  stow();                       // 顶层 → bag，否则切过场景后另一个场景的进度会丢
+  S.n = (S.n || 0) + 1;
+  var d = JSON.stringify(S);
+  var box = JSON.stringify({ h: checksum(d), d: d });
+
+  try {
+    window.localStorage.setItem(SAVE_KEY, box);
+    storeLost = false;
+  } catch (e){
+    // 写不进去：删旧槽再试一次
+    try {
+      window.localStorage.removeItem(SAVE_KEY);
+      window.localStorage.setItem(SAVE_KEY, box);
+      storeLost = false;
+    } catch (e2){
+      storeLost = true;
+      memStore = box;
+    }
+  }
+  paintBar();
+}
+
+/* ============================================================
+   活动表
+   ============================================================ */
+/* 每个活动：dur = 需要几步；run = 对房间的改动；txt = 日志措辞 */
+var ACTS_ROOM = {
+  wipe: {
+    dur: 2, name: '擦了擦桌子',
+    ok: function(){ return S.props.dust > 0; },
+    run: function(){ S.props.dust--; }
+  },
+  lampOn: {
+    dur: 1, name: '打开台灯',
+    ok: function(){ return false; },      // 台灯常亮：房间必须一直看得见
+    run: function(){ S.props.lamp = 1; }
+  },
+  lampOff: {
+    dur: 1, name: '关掉台灯',
+    ok: function(){ return false; },      // 不做：全黑会让人以为页面坏了
+    run: function(){ S.props.lamp = 0; }
+  },
+  write: {
+    dur: 2, name: '低头写了点什么',
+    ok: function(){ return S.props.papers < 5 && !S.props.deskBook; },
+    run: function(){ S.props.papers++; }
+  },
+  note: {
+    dur: 3, name: '往墙上贴了一张字条',
+    // 不设上限：满了就让旧的滚下去，否则墙上贴满 6 张后这件活就永远不能做了
+    ok: function(){ return S.props.papers >= 2; },
+    run: function(){ S.props.papers--; addNote(); }   // 贴出去的纸要扣掉，否则能连贴四张
+  },
+  plane: {
+    dur: 3, name: '折了一只纸飞机',
+    ok: function(){ return S.props.papers >= 2 && S.props.planes < 2; },
+    run: function(){ S.props.papers--; S.props.planes++; }
+  },
+  ball: {
+    dur: 1, name: '把一张纸揉成了团',
+    ok: function(){ return S.props.papers >= 3 && S.props.balls < 4; },
+    run: function(){ S.props.papers--; S.props.balls++; }
+  },
+  sweep: {
+    dur: 2, name: '把地上的纸团扫走了',
+    ok: function(){ return S.props.balls >= 4; },
+    run: function(){ S.props.balls = 0; }
+  },
+  tidy: {
+    dur: 2, name: '把桌上写满的纸摞成一叠',
+    ok: function(){ return S.props.papers >= 5; },
+    run: function(){ S.props.papers = 1; }
+  },
+  book: {
+    dur: 2, name: '从书架上抽了一本书',
+    ok: function(){ return S.props.books > 0 && !S.props.deskBook; },
+    // deskBook 存「还剩几次读完」：3 → 读三次 → 1 → 还书
+    run: function(){ S.props.books--; S.props.deskBook = 3; }
+  },
+  read: {
+    dur: 4, name: '读了一阵子书',
+    ok: function(){ return S.props.deskBook > 1; },
+    run: function(){ S.props.deskBook--; }
+  },
+  back: {
+    dur: 2, name: '把书放回书架',
+    ok: function(){ return S.props.deskBook === 1; },
+    run: function(){ S.props.deskBook = 0; S.props.books++; }
+  },
+  curtain: {
+    dur: 2, name: '把窗帘拉开了',
+    // 只从"合着"到"拉开"，不做来回拉 —— 反复拉三次会很怪
+    ok: function(){ return S.step > 8 && S.props.curtain === 0; },
+    run: function(){ S.props.curtain = 1; }
+  },
+  chair: {
+    dur: 2, name: '挪了挪椅子',
+    ok: function(){ return true; },
+    run: function(){ S.props.chair = (S.props.chair + 1) % 3; }
+  },
+  cup: {
+    dur: 2, name: '端来一杯水',
+    ok: function(){ return S.props.cup === 0 && S.step > 5; },
+    run: function(){ S.props.cup = 1; }
+  },
+  coat: {
+    dur: 2, name: '把外套脱下来挂在椅背上',
+    ok: function(){ return S.props.coat === 0 && S.step > 10; },
+    run: function(){ S.props.coat = 1; }
+  },
+  stretch: {
+    dur: 2, name: '站起来伸了个懒腰',
+    ok: function(){ return true; },
+    run: function(){ /* 姿势会还原，只留记录 */ }
+  }
+};
+
+/* ---------------- 鱼缸 ----------------
+   它做的事全部围绕「水里」，且都能在画面上留痕：
+   吃→胖 / 拱草→草倒 / 甩尾→水浑 / 啄玻璃→留印子。
+   食物来源靠自动喂食器（advanceBy 里每 9 步掉一粒），
+   所以它不会被饿死，但吃多了会自己停一顿。
+*/
+var ACTS_FISH = {
+  eat: {
+    dur: 2, name: '吞了一口鱼食',
+    ok: function(){ return S.props.food > 0 && S.props.fat < 3; },
+    run: function(){ S.props.food--; S.props.fat++; }
+  },
+  diet: {
+    dur: 3, name: '决定不吃这一顿',
+    // 胖到底就停一顿，否则 food 会一直堆着没人吃，eat 永远做不了
+    ok: function(){ return S.props.fat >= 2 && S.props.food > 0; },
+    run: function(){ S.props.fat--; }
+  },
+  bubble: {
+    dur: 1, name: '吐了一串泡泡',
+    ok: function(){ return S.props.bubbles < 4; },
+    run: function(){ S.props.bubbles++; }
+  },
+  pop: {
+    dur: 2, name: '泡泡浮到水面破了',
+    ok: function(){ return S.props.bubbles >= 3; },
+    run: function(){ S.props.bubbles = 0; }
+  },
+  dig: {
+    dur: 2, name: '把一丛水草拱倒了',
+    ok: function(){ return S.props.plants < 3 && !S.props.hiding; },
+    run: function(){ S.props.plants++; }
+  },
+  swish: {
+    dur: 2, name: '甩了甩尾巴，水草又立起来了',
+    ok: function(){ return S.props.plants >= 3; },
+    run: function(){ S.props.plants = 0; if (S.props.murky < 3) S.props.murky++; }
+  },
+  push: {
+    dur: 3, name: '用鼻子把石头拱到别处',
+    ok: function(){ return !S.props.hiding; },
+    run: function(){ S.props.rock = (S.props.rock + 1) % 3; }
+  },
+  swim: {
+    dur: 3, name: '游到了鱼缸另一头',
+    ok: function(){ return !S.props.hiding; },
+    // 游过去之后要掉头，否则会出现"鱼倒退着走"
+    run: function(){ S.props.pos = (S.props.pos + 1) % 3; S.props.dir = S.props.dir ? 0 : 1; }
+  },
+  sink: {
+    dur: 2, name: '沉到缸底待着',
+    ok: function(){ return S.props.depth < 2 && !S.props.hiding; },
+    run: function(){ S.props.depth = 2; }
+  },
+  rise: {
+    dur: 2, name: '浮回水中间',
+    ok: function(){ return S.props.depth > 0 && !S.props.hiding; },
+    run: function(){ S.props.depth = 1; }
+  },
+  hide: {
+    dur: 2, name: '钻进草丛里不见了',
+    ok: function(){ return S.props.hiding === 0 && S.props.plants < 3; },
+    run: function(){ S.props.hiding = 1; S.props.depth = 2; }
+  },
+  show: {
+    dur: 2, name: '从水草里游出来',
+    ok: function(){ return S.props.hiding === 1; },
+    run: function(){ S.props.hiding = 0; }
+  },
+  mark: {
+    dur: 3, name: '在玻璃上啄了个印子',
+    ok: function(){ return true; },
+    run: function(){ addNote(); }
+  },
+  cloud: {
+    dur: 2, name: '尾巴一甩，水浑了一点',
+    ok: function(){ return S.props.murky < 3; },
+    run: function(){ S.props.murky++; }
+  },
+  settle: {
+    dur: 4, name: '水慢慢又清了',
+    ok: function(){ return S.props.murky > 0; },
+    run: function(){ S.props.murky = 0; }
+  },
+  roll: {
+    dur: 2, name: '侧过身子打了个滚',
+    ok: function(){ return true; },
+    run: function(){ /* 只是消磨时间 */ }
+  }
+};
+
+var ORDER_ROOM = ['wipe', 'write', 'note', 'plane', 'book', 'read', 'back',
+                  'sweep', 'tidy', 'ball', 'cup', 'coat', 'chair', 'curtain'];
+
+var ORDER_FISH = ['eat', 'dig', 'swim', 'bubble', 'push', 'mark', 'sink',
+                  'rise', 'hide', 'show', 'pop', 'swish', 'cloud', 'settle',
+                  'roll', 'diet'];
+
+var GAP_ROOM = {
+  chair: 14, curtain: 999, cup: 999, coat: 999, stretch: 999,
+  read: 4, write: 3, note: 5, plane: 8, ball: 4, sweep: 6, tidy: 8,
+  book: 6, back: 6, wipe: 3
+};
+
+var GAP_FISH = {
+  eat: 2, diet: 10, dig: 5, swish: 4, push: 8, swim: 3, bubble: 4, pop: 6,
+  sink: 7, rise: 6, hide: 11, show: 4, mark: 7, cloud: 9, settle: 6, roll: 9
+};
+
+/* 当前场景的活动表 / 顺序 / 冷却 —— switchScene 会整体换掉 */
+var ACTS = ACTS_ROOM;
+var ACT_ORDER = ORDER_ROOM;
+var ACT_GAP = GAP_ROOM;
+
+/* 最近做过的活动记在这里，避免连着做同一件事 */
+var recentAct = {};
+
+/* 按"当前房间状态"挑一件最该做的事 —— 让它看起来有目的，而不是乱点 */
+function chooseAct(){
+  var P = S.props;
+  var pool = [];
+  // stretch 不进候选池：它只在真的没事可做时兜底。
+  // 不然「离开后的第一件事是伸懒腰」会显得它很闲。
+  // 注意 back 必须在这里 —— 漏了它书就永远还不回去，deskBook 卡住把 write 也堵死，
+  // 最后只剩挪椅子可做（实测会连挪 15 次）。
+  var order = ACT_ORDER;
+  var i, id, a;
+  for (i = 0; i < order.length; i++){
+    id = order[i];
+    a = ACTS[id];
+    if (!a.ok()) continue;
+    // 3 步内做过的不重复 —— 同一个 S.step 种子会选出同一件事，看起来像卡住了
+    if (recentAct[id] !== undefined &&
+        S.step - recentAct[id] < (ACT_GAP[id] || 3)) continue;
+    pool.push(id);
+  }
+  if (!pool.length){
+    // 全部在冷却里：放宽间隔，但至少排除"刚刚才做过的那件"，
+    // 否则会退化成连做同一件事（挪椅子 ×15 就是这么来的）
+    for (i = 0; i < order.length; i++){
+      id = order[i];
+      if (!ACTS[id].ok()) continue;
+      if (recentAct[id] !== undefined && S.step - recentAct[id] < 2) continue;
+      pool.push(id);
+    }
+  }
+  if (!pool.length) return 'stretch';
+
+  // 前三个优先（越靠前越"该做"），后面靠确定性随机
+  var head = pool.slice(0, 3);
+  var tail = pool.slice(3);
+  if (!tail.length) return head[pickIdx(S.step * 7919 + 13, head.length)];
+  if (rand01(S.step * 4231 + 97) < 0.72) return head[pickIdx(S.step * 7919 + 13, head.length)];
+  return tail[pickIdx(S.step * 6673 + 41, tail.length)];
+}
+
+function addLog(txt){
+  S.logs.push({ s: S.step, t: txt });
+  if (S.logs.length > LOG_MAX) S.logs.shift();
+}
+
+/* 鱼缸版：它说不出话，但会在玻璃上留下意思 */
+function fishNoteText(m){
+  if (m < 1){
+    return [
+      '你才走了一下下。\n我刚把尾巴摆起来。',
+      '水都没晃。\n你回来得太快了。',
+      '刚张开嘴，你就回来了。'
+    ];
+  }
+  if (m < 6){
+    return [
+      '你走了 ' + m + ' 分钟。\n我吃了点东西。',
+      m + ' 分钟。\n我在数气泡，数到第三个就忘了。',
+      '我贴着玻璃等你。\n' + m + ' 分钟，玻璃有点凉。'
+    ];
+  }
+  if (m < 45){
+    return [
+      '你离开了 ' + m + ' 分钟。\n我绕着缸游了好几圈。',
+      m + ' 分钟很长。\n我把石头拱到别的地方了。',
+      '你不在的时候，\n水一直响。'
+    ];
+  }
+  if (m < 300){
+    return [
+      '快两个钟头了。\n我沉到缸底待了很久。',
+      '水草被我拱倒了好几回。\n没事干。',
+      '这么久。\n我以为你换了个鱼缸。'
+    ];
+  }
+  return [
+    '你去了很久。\n我趴在沙子上睡了一会儿。',
+    '玻璃上全是我的印子。\n你数数看。',
+    '我不确定你还会不会回来。\n现在知道了。'
+  ];
+}
+
+/* 字条内容：按离开时长分档，让它"记得"你走了多久 */
+function noteTextFor(awayMs){
+  var m = Math.round(awayMs / 60000);
+  var pool;
+
+  if (S.scene === 'fish'){
+    var fp = fishNoteText(m);
+    return fp[pickIdx(S.step * 3121 + 7, fp.length)];
+  }
+
+  if (m < 1){
+    pool = [
+      '才一下下。\n我还没来得及做什么。',
+      '你走得太快了。',
+      '刚起个头，你就回来了。'
+    ];
+  } else if (m < 6){
+    pool = [
+      '你走了 ' + m + ' 分钟。\n桌上有灰，我擦了。',
+      m + ' 分钟。\n够我写点东西了。',
+      '我数着秒。\n' + m + ' 分钟，数到一半就忘了。'
+    ];
+  } else if (m < 45){
+    pool = [
+      '你离开了 ' + m + ' 分钟。\n我一直在等。',
+      m + ' 分钟很长。\n我把椅子换了个方向。',
+      '你不在这会儿，\n我折了个东西。你看看地上。'
+    ];
+  } else if (m < 300){
+    pool = [
+      '快两个小时了。\n我把灯关了一会儿又打开。',
+      '我读了几页书。\n你回来的时候我正好合上。',
+      '这么久了。\n我以为你今天不来了。'
+    ];
+  } else {
+    pool = [
+      '你去了很久。\n我睡了一觉，醒来还是没人。',
+      '窗外的光换了一遍又一遍。\n我一直坐在这儿。',
+      '我不确定你还会不会回来。\n现在知道了。'
+    ];
+  }
+  return pool[pickIdx(S.step * 3121 + 7, pool.length)];
+}
+
+function addNote(){
+  var txt = noteTextFor(S.lastAway || 60000);
+  S.notes.push({ s: S.step, txt: txt });
+  if (S.notes.length > NOTE_MAX) S.notes.shift();
+}
+
+/* ============================================================
+   推演：把「离开的时长」换成「它做了几步」
+   ============================================================ */
+function advanceBy(steps, awayMs){
+  var done = [];
+  var guard = 0;
+  while (steps > 0 && guard++ < 300){
+    var id = chooseAct();
+    var act = ACTS[id];
+
+    // 整段完成
+    act.run();
+    S.step++;
+    // 自动喂食器：每 9 步掉一粒食。鱼不会饿死，但吃多了会自己停一顿
+    if (S.scene === 'fish' && S.step % 9 === 0 && S.props.food < 5){
+      S.props.food++;
+      addLog('喂食器掉下来几粒食');
+    }
+    recentAct[id] = S.step;
+    steps -= act.dur;
+    addLog(act.name);
+    done.push(act.name);
+    if (done.length > 40) break;   // 只是防跑飞，正常推演用不到
+  }
+  return done;
+}
+
+/* ============================================================
+   视觉
+   ============================================================ */
+var cv = document.getElementById('cv');
+var ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+var C = {
+  wall:      '#232b3a',
+  wallLine:  '#1f2634',
+  wainscot:  '#2c3547',
+  wainTop:   '#38445c',
+  floor:     '#191321',
+  floorLine: '#221a2a',
+  deskTop:   '#4a3626',
+  deskLit:   '#63492f',
+  deskDark:  '#2a1d13',
+  deskLeg:   '#33241a',
+  skin:      '#e8bc94',
+  skinDark:  '#cfa078',
+  hair:      '#241c16',
+  cloth:     '#8a6a52',
+  clothLit:  '#a08066',
+  clothDark: '#6e5340',
+  paper:     '#d8d2c0',
+  ink:       '#8a8270',
+  frame:     '#39445a',
+  glassN:    '#0d1526',
+  glassD:    '#8fb8d8',
+  shelf:     '#2c2220',
+  shelfLine: '#4a3a33'
+};
+
+function px(x, y, w, h, c){
+  ctx.fillStyle = c;
+  ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+}
+
+function isNight(){
+  var h = new Date().getHours();
+  return (h >= 19 || h < 6);
+}
+
+/* ---------- 墙 ---------- */
+function drawWall(){
+  px(0, 0, VW, 102, C.wall);
+  var x;
+  for (x = 0; x < VW; x += 8) px(x, 0, 1, 102, C.wallLine);
+  px(0, 102, VW, 10, C.wainscot);
+  px(0, 102, VW, 1, C.wainTop);
+  px(0, 111, VW, 1, '#151b26');
+}
+
+/* ---------- 地板 ---------- */
+function drawFloor(){
+  px(0, 112, VW, VH - 112, C.floor);
+  var y, x;
+  for (y = 112; y < VH; y += 6) px(0, y, VW, 1, C.floorLine);
+  for (x = 0; x < VW; x += 26) px(x, 112, 1, VH - 112, '#1e1826');
+}
+
+/* ---------- 地毯 ---------- */
+function drawRug(){
+  px(44, 122, 154, 22, '#2c2030');
+  px(44, 122, 154, 1, '#3a2b40');
+  px(48, 126, 146, 14, '#33253a');
+  var i;
+  for (i = 0; i < 7; i++) px(52 + i * 21, 128, 13, 1, '#2a1f2e');
+}
+
+/* ---------- 窗 ---------- */
+function drawWindow(){
+  var night = isNight();
+
+  // 玻璃
+  px(8, 13, 56, 66, C.frame);
+  px(10, 15, 52, 62, night ? C.glassN : C.glassD);
+
+  if (night){
+    var i;
+    for (i = 0; i < 10; i++){
+      var sx = 12 + (hash32(i * 97 + 7) % 46);
+      var sy = 18 + (hash32(i * 61 + 3) % 30);
+      px(sx, sy, 1, 1, i % 3 === 0 ? '#b8cce2' : '#7f95b0');
+    }
+    // 月亮
+    px(45, 24, 9, 9, '#e8e0c8');
+    px(47, 26, 5, 5, '#f8f2de');
+    px(43, 26, 1, 4, '#d8cfb4');
+  } else {
+    px(10, 15, 52, 34, '#8fb8d8');
+    px(10, 49, 52, 28, '#6f9ec4');
+    px(18, 21, 18, 9, '#a8cde6');
+    px(38, 32, 14, 7, '#a8cde6');
+  }
+
+  // 窗棂
+  px(34, 15, 2, 62, C.frame);
+  px(10, 45, 52, 2, C.frame);
+
+  // 窗帘
+  if (!S.props.curtain){
+    // 合上：整幅遮住，但留褶皱和一点透光，否则像钉了一块板
+    px(8, 13, 56, 64, '#3a2c3c');
+    var k;
+    for (k = 0; k < 7; k++){
+      var fx = 9 + k * 8;
+      px(fx, 13, 3, 64, k % 2 ? '#443447' : '#312637');
+      px(fx + 1, 13, 1, 64, k % 2 ? '#4e3d52' : '#3a2e40');
+    }
+    // 底部垂坠感
+    px(8, 72, 56, 5, '#312637');
+    px(8, 72, 56, 1, '#2a2030');
+    px(8, 13, 2, 64, '#241a28');
+    px(62, 13, 2, 64, '#241a28');
+    // 透进来的一点光
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var mg = ctx.createRadialGradient(36, 44, 2, 36, 44, 40);
+    mg.addColorStop(0, 'rgba(150,170,210,.10)');
+    mg.addColorStop(1, 'rgba(150,170,210,0)');
+    ctx.fillStyle = mg;
+    ctx.beginPath();
+    ctx.ellipse(36, 44, 40, 34, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.restore();
+  } else {
+    // 拉开：两侧各一束
+    px(0, 13, 10, 64, '#3a2c3c');
+    px(2, 13, 1, 64, '#4a3a4e');
+    px(62, 13, 10, 64, '#3a2c3c');
+    px(66, 13, 1, 64, '#4a3a4e');
+    px(0, 13, 10, 1, '#4a3a4e');
+    px(62, 13, 10, 1, '#4a3a4e');
+  }
+
+  // 窗帘杆
+  px(0, 11, 72, 2, '#4a4550');
+  px(0, 11, 72, 1, '#5e5866');
+
+  // 窗台
+  px(6, 79, 60, 4, '#46536b');
+  px(6, 79, 60, 1, '#5a6a86');
+}
+
+/* ---------- 书架 ---------- */
+function drawShelf(){
+  px(184, 26, 52, 86, C.shelf);
+  px(183, 26, 54, 1, '#3d2f2a');
+  px(183, 26, 1, 86, '#3d2f2a');
+
+  var i, b;
+  for (i = 0; i < 4; i++){
+    var y = 44 + i * 17;
+    px(186, y, 48, 1, C.shelfLine);
+    var n = Math.min(7, Math.max(0, S.props.books - i * 2));
+    for (b = 0; b < n; b++){
+      var bx = 187 + b * 6;
+      var cols = ['#5a4a7a', '#7a4a4a', '#4a6a5a', '#6a5a3a', '#4a5a7a', '#6a4a5a', '#5a6a4a'];
+      px(bx, y - 11, 4, 11, cols[(i * 3 + b) % 7]);
+      px(bx, y - 11, 4, 1, 'rgba(255,255,255,.16)');
+    }
+  }
+  px(184, 110, 52, 3, '#1e1714');
+}
+
+/* ---------- 椅子（在人后面） ---------- */
+function drawChair(){
+  var cx = 118 + (S.props.chair - 1) * 8;
+
+  // 椅背两侧立柱
+  px(cx - 15, 70, 3, 30, '#3d2c1f');
+  px(cx + 12, 70, 3, 30, '#3d2c1f');
+  // 椅背横档
+  px(cx - 15, 70, 30, 3, '#463324');
+  px(cx - 15, 70, 30, 1, '#5a4430');
+  px(cx - 13, 78, 26, 1, '#33251a');
+  px(cx - 13, 86, 26, 1, '#33251a');
+
+  // 外套挂椅背
+  if (S.props.coat){
+    px(cx + 12, 72, 10, 20, '#41525f');
+    px(cx + 12, 72, 10, 1, '#526575');
+    px(cx + 14, 76, 1, 14, '#35444f');
+    px(cx + 19, 76, 1, 14, '#35444f');
+    px(cx + 13, 90, 8, 2, '#35444f');
+  }
+}
+
+/* ---------- 人 ----------
+   坐姿、低头写字。头顶 60，桌面 100。整个人 40px 高。
+   姿势永远不变 —— 变的只有房间。
+*/
+function drawPerson(t, stare){
+  var cx = 118;
+  var P = S.props;
+
+  // 呼吸：极轻，1px，周期 3.4 秒；盯久了就停
+  var breathe = 0;
+  if (stare < STARE_HOLD) breathe = (Math.sin(t / 1700) > 0.5) ? 1 : 0;
+
+  var lookUp = (stare >= STARE_LOOK);
+  // 抬头时整个头抬 1px，配合眉毛，才看得出它在看你
+  var headY = 60 + breathe - (lookUp ? 1 : 0);
+
+  // 脖子
+  px(cx - 3, headY + 11, 6, 4, C.skinDark);
+
+  // 躯干
+  px(cx - 10, headY + 14, 20, 100 - (headY + 14), C.cloth);
+  // 肩线
+  px(cx - 11, headY + 14, 22, 4, C.clothLit);
+  px(cx - 11, headY + 14, 22, 1, '#b08a6c');
+  // 衣褶
+  px(cx - 4, headY + 26, 1, 12, C.clothDark);
+  px(cx + 3, headY + 26, 1, 12, C.clothDark);
+  // 领口
+  px(cx - 4, headY + 15, 8, 3, '#6b5a48');
+
+  // 手臂：从肩到桌面
+  px(cx - 13, headY + 18, 4, 100 - (headY + 18) - 3, C.cloth);
+  px(cx + 9, headY + 18, 4, 100 - (headY + 18) - 3, C.cloth);
+  px(cx - 13, headY + 18, 1, 100 - (headY + 18) - 3, C.clothLit);
+  px(cx + 12, headY + 18, 1, 100 - (headY + 18) - 3, C.clothLit);
+
+  // 手（搭在桌面上，底边贴桌面）
+  px(cx - 13, 96, 4, 4, C.skin);
+  px(cx + 9, 96, 4, 4, C.skin);
+  px(cx - 13, 96, 4, 1, '#f4cba4');
+  px(cx + 9, 96, 4, 1, '#f4cba4');
+
+  // 头
+  px(cx - 6, headY, 12, 12, C.skin);
+  px(cx - 6, headY, 1, 12, '#f2c8a0');      // 左侧受光
+  px(cx - 6, headY + 9, 12, 2, C.skinDark);  // 低头：下颌一片阴影
+  px(cx - 5, headY + 11, 10, 1, '#b08a66');
+
+  // 头发：覆盖上半 + 两侧
+  px(cx - 6, headY - 1, 12, 4, C.hair);
+  px(cx - 7, headY, 2, 7, C.hair);
+  px(cx + 5, headY, 2, 7, C.hair);
+  px(cx - 5, headY + 3, 10, 1, C.hair);
+  px(cx - 3, headY - 2, 4, 1, C.hair);
+
+  // 耳朵
+  px(cx - 7, headY + 6, 1, 3, C.skinDark);
+  px(cx + 6, headY + 6, 1, 3, C.skinDark);
+
+  // 眼睛（眨眼 110ms，放在周期末尾）
+  var bph = t % 8600;
+  var blink = (bph > 8400 && bph < 8510);
+  if (lookUp){
+    // 抬头：眼睛睁大 + 眉毛压下来，摆明了在盯着你
+    px(cx - 5, headY + 4, 3, 1, C.hair);
+    px(cx + 2, headY + 4, 3, 1, C.hair);
+    if (blink){
+      px(cx - 4, headY + 7, 2, 1, '#1a1410');
+      px(cx + 2, headY + 7, 2, 1, '#1a1410');
+    } else {
+      px(cx - 5, headY + 6, 3, 3, '#241c16');
+      px(cx + 2, headY + 6, 3, 3, '#241c16');
+      px(cx - 4, headY + 7, 2, 2, '#0e0a08');
+      px(cx + 2, headY + 7, 2, 2, '#0e0a08');
+      px(cx - 4, headY + 7, 1, 1, '#6a6258');
+      px(cx + 2, headY + 7, 1, 1, '#6a6258');
+    }
+  } else {
+    // 低头写字：眼睛压成一条缝，视线朝下
+    if (blink){
+      px(cx - 4, headY + 8, 2, 1, '#1a1410');
+      px(cx + 2, headY + 8, 2, 1, '#1a1410');
+    } else {
+      px(cx - 5, headY + 7, 3, 2, '#241c16');
+      px(cx + 2, headY + 7, 3, 2, '#241c16');
+      px(cx - 4, headY + 8, 2, 1, '#0e0a08');
+      px(cx + 2, headY + 8, 2, 1, '#0e0a08');
+    }
+  }
+
+  // 嘴
+  px(cx - 1, headY + 10, 3, 1, '#b8825e');
+
+  // 出汗：盯 30 秒后，一颗汗从鬓角往下滑
+  if (stare >= STARE_HOLD && !lookUp){
+    var drip = Math.floor((stare - STARE_HOLD) / 900) % 9;
+    var hx = cx + 8, hy = headY + 3 + drip;
+    px(hx, hy, 2, 4, '#7cc8e8');
+    px(hx, hy, 1, 2, '#a8e2f8');
+    px(hx, hy + 2, 1, 2, '#5fb0d4');
+    px(hx + 1, hy + 3, 1, 1, '#4a9cc0');
+  }
+
+  // 桌前摊开的书
+  if (P.deskBook){
+    px(cx - 11, 94, 22, 6, '#cfc6ae');
+    px(cx, 94, 1, 6, '#9a9280');
+    px(cx - 10, 95, 8, 4, '#ded6be');
+    px(cx + 2, 95, 8, 4, '#ded6be');
+    var li;
+    for (li = 1; li < 3; li++){
+      px(cx - 9, 95 + li * 2, 6, 1, '#a89e88');
+      px(cx + 3, 95 + li * 2, 6, 1, '#a89e88');
+    }
+  }
+}
+
+/* ---------- 桌子（前景，遮住人物下半身） ---------- */
+function drawDesk(){
+  // 桌腿
+  px(62, 110, 5, 26, C.deskLeg);
+  px(172, 110, 5, 26, C.deskLeg);
+  px(62, 110, 1, 26, '#412f22');
+  px(172, 110, 1, 26, '#412f22');
+
+  // 抽屉
+  px(94, 112, 54, 13, '#3a2a1d');
+  px(95, 113, 52, 1, '#4a3626');
+  px(114, 116, 14, 1, '#5a452f');
+  px(118, 118, 6, 2, '#8a7048');
+
+  // 桌面
+  px(56, 100, 126, 10, C.deskTop);
+  px(56, 100, 126, 2, C.deskLit);
+  px(56, 108, 126, 2, C.deskDark);
+
+  // 木纹
+  var x;
+  for (x = 60; x < 178; x += 14) px(x, 103, 1, 5, '#41301f');
+  px(56, 100, 1, 10, '#5a422e');
+  px(181, 100, 1, 10, '#33251a');
+}
+
+/* ---------- 桌上物件（底边都贴 y=100 的桌面） ---------- */
+function drawDeskItems(){
+  var P = S.props;
+  var i;
+
+  // 纸堆
+  if (P.papers > 0){
+    for (i = 0; i < P.papers; i++){
+      var yy = 99 - i * 2;
+      px(84, yy, 16, 2, i % 2 ? '#cfc9b8' : C.paper);
+      px(84, yy, 16, 1, '#e8e2d2');
+      px(84, yy + 1, 16, 1, '#b6b0a0');
+    }
+  }
+
+  // 笔
+  if (P.papers > 0 && !P.deskBook){
+    px(126, 98, 7, 1, '#3a3a44');
+    px(133, 97, 3, 1, '#c8a050');
+  }
+
+  // 杯子
+  if (P.cup === 1){
+    px(140, 89, 8, 11, '#c8ccd4');
+    px(140, 89, 8, 1, '#e8ecf2');
+    px(148, 92, 2, 5, '#b0b6c0');
+    px(141, 92, 6, 1, '#8a9098');
+    px(141, 95, 6, 1, '#a8aeb8');
+  } else if (P.cup === 2){
+    px(168, 92, 7, 8, '#c8ccd4');
+    px(168, 92, 7, 1, '#e8ecf2');
+  }
+
+  // 纸飞机
+  var j;
+  for (j = 0; j < P.planes; j++){
+    var ax = 92 + j * 11;
+    px(ax, 96, 9, 1, '#e8e2d2');
+    px(ax, 97, 7, 1, '#d8d2c0');
+    px(ax + 2, 98, 5, 1, '#c0baa8');
+    px(ax + 8, 96, 2, 1, '#f2ecdc');
+  }
+
+  // 地上纸团
+  var k;
+  for (k = 0; k < P.balls; k++){
+    var bx = 76 + k * 13 + (hash32(k * 31 + 5) % 7);
+    var by = 128 + (hash32(k * 17 + 11) % 10);
+    px(bx, by, 5, 5, '#c8c2b0');
+    px(bx, by, 5, 1, '#e0dac8');
+    px(bx, by + 4, 5, 1, '#a8a292');
+    px(bx + 1, by + 2, 1, 1, '#b0aa9a');
+    px(bx + 3, by + 1, 1, 1, '#d8d2c0');
+  }
+}
+
+/* ---------- 台灯 ---------- */
+function drawLamp(){
+  // 底座
+  px(148, 96, 26, 4, '#3a3a46');
+  px(148, 96, 26, 1, '#54545f');
+  // 杆
+  px(160, 72, 3, 24, '#4a4a58');
+  px(160, 72, 1, 24, '#66667c');
+  // 灯罩
+  px(145, 62, 32, 3, '#c9902e');
+  px(145, 62, 32, 1, '#eaaa4c');
+  px(147, 65, 28, 7, S.props.lamp ? '#f2c258' : '#a87838');
+  px(147, 65, 28, 1, S.props.lamp ? '#ffe89a' : '#c08c44');
+  px(147, 71, 28, 1, S.props.lamp ? '#c99a34' : '#7a5a2c');
+  // 灯泡口
+  px(158, 72, 8, 1, S.props.lamp ? '#fff4c8' : '#8a7040');
+}
+
+/* ---------- 光照 ---------- */
+function drawLight(){
+  var on = S.props.lamp;
+
+  if (!on){
+    ctx.fillStyle = 'rgba(6,8,16,.5)';
+    ctx.fillRect(0, 0, VW, VH);
+    if (!S.props.curtain){
+      var g0 = ctx.createLinearGradient(34, 15, 34, 110);
+      g0.addColorStop(0, 'rgba(140,180,240,.13)');
+      g0.addColorStop(1, 'rgba(140,180,240,0)');
+      ctx.fillStyle = g0;
+      ctx.beginPath();
+      ctx.moveTo(10, 80);
+      ctx.lineTo(62, 80);
+      ctx.lineTo(100, 140);
+      ctx.lineTo(-28, 140);
+      ctx.closePath();
+      ctx.fill();
+    }
+    return;
+  }
+
+  ctx.fillStyle = 'rgba(6,8,16,.12)';
+  ctx.fillRect(0, 0, VW, VH);
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  // 光锥
+  var g = ctx.createLinearGradient(161, 72, 161, 122);
+  g.addColorStop(0, 'rgba(255,208,120,.36)');
+  g.addColorStop(1, 'rgba(255,176,72,.03)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(148, 71);
+  ctx.lineTo(174, 71);
+  ctx.lineTo(204, 124);
+  ctx.lineTo(118, 124);
+  ctx.closePath();
+  ctx.fill();
+
+  // 桌面光斑
+  var g2 = ctx.createRadialGradient(161, 104, 0, 161, 104, 40);
+  g2.addColorStop(0, 'rgba(255,204,116,.30)');
+  g2.addColorStop(1, 'rgba(255,204,116,0)');
+  ctx.fillStyle = g2;
+  ctx.beginPath();
+  ctx.ellipse(161, 104, 40, 10, 0, 0, 6.2832);
+  ctx.fill();
+
+  // 灯罩自身发光
+  var g3 = ctx.createRadialGradient(161, 68, 0, 161, 68, 30);
+  g3.addColorStop(0, 'rgba(255,228,158,.34)');
+  g3.addColorStop(1, 'rgba(255,228,158,0)');
+  ctx.fillStyle = g3;
+  ctx.beginPath();
+  ctx.arc(161, 68, 30, 0, 6.2832);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/* ---------- 墙上字条 ---------- */
+var noteRects = [];
+var NOTE_POS = [
+  [78, 16], [100, 12], [122, 20], [144, 14], [86, 36], [110, 32]
+];
+
+function drawNotes(){
+  noteRects = [];
+  var i;
+  for (i = 0; i < S.notes.length && i < NOTE_POS.length; i++){
+    var p = NOTE_POS[i];
+    var x = p[0], y = p[1];
+
+    px(x, y, 16, 14, C.paper);
+    px(x, y, 16, 1, '#eae5d6');
+    px(x + 15, y, 1, 14, '#b8b2a0');
+    px(x, y + 13, 16, 1, '#b8b2a0');
+
+    var l;
+    for (l = 0; l < 4; l++){
+      var lw = 11 - (l === 3 ? 5 : 0);
+      px(x + 2, y + 4 + l * 2, lw, 1, C.ink);
+    }
+
+    // 图钉
+    px(x + 7, y - 2, 2, 2, '#c85a4a');
+    px(x + 7, y - 2, 1, 1, '#ec8272');
+
+    noteRects.push({ x: x, y: y, w: 16, h: 14, i: i });
+  }
+}
+
+/* ---------- 浮尘 ---------- */
+function drawDust(t){
+  if (!S.props.lamp) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  var i;
+  for (i = 0; i < 16; i++){
+    var seed = i * 977 + 31;
+    var bx = 122 + (hash32(seed) % 78);
+    var by = 74 + (hash32(seed + 7) % 34);
+    var drift = Math.sin(t / 2600 + i) * 2;
+    var a = 0.05 + 0.09 * (0.5 + 0.5 * Math.sin(t / 1800 + i * 1.7));
+    ctx.fillStyle = 'rgba(255,220,150,' + a.toFixed(3) + ')';
+    ctx.fillRect(Math.round(bx + drift), Math.round(by + (t / 900 + i * 5) % 14 - 7), 1, 1);
+  }
+  ctx.restore();
+}
+
+/* ---------- 主绘制 ---------- */
+function render(t, stare){
+  if (S.scene === 'fish'){ renderFish(t, stare); return; }
+  renderRoom(t, stare);
+}
+
+function renderRoom(t, stare){
+  ctx.clearRect(0, 0, VW, VH);
+
+  drawWall();
+  drawWindow();
+  drawShelf();
+  drawNotes();
+  drawFloor();
+  drawRug();
+
+  drawChair();
+  drawPerson(t, stare);
+
+  drawDesk();
+  drawDeskItems();
+  drawLamp();
+
+  drawLight();
+  drawDust(t);
+}
+
+/* ============================================================
+   鱼缸场景
+   ============================================================ */
+var F = {
+  glassD:  '#103039',
+  sand:    '#c8b48a',
+  sandD:   '#a8916a',
+  sandL:   '#ded0a8',
+  plant:   '#3f8f4a',
+  plantL:  '#5cb85c',
+  plantD:  '#2c6b38',
+  rock:    '#5a5f68',
+  rockL:   '#767c86',
+  rockD:   '#3e434c',
+  fish:    '#e8703a',
+  fishL:   '#f59060',
+  fishD:   '#b84a1e',
+  belly:   '#f5d6b0',
+  fin:     '#d95a28',
+  eyeW:    '#f8f4ec',
+  eyeB:    '#141014',
+  frame:   '#191920',
+  frameL:  '#33333e'
+};
+
+var WATER_BANDS = ['#2c6679', '#296074', '#265a6e', '#225568', '#1e4f62',
+                   '#1a4a5c', '#164455', '#133e4f'];
+
+var FISH_X = [56, 120, 184];
+var FISH_Y = [50, 80, 106];
+var MARK_POS = [[88, 28], [136, 22], [180, 34], [98, 56], [152, 50], [196, 44]];
+
+/* 水体底色：横向分带，近看有层次，远看不花 */
+function tankWater(){
+  var top = 7, bot = 124, h = (bot - top) / WATER_BANDS.length;
+  for (var i = 0; i < WATER_BANDS.length; i++){
+    px(7, top + i * h, VW - 14, Math.ceil(h), WATER_BANDS[i]);
+  }
+}
+
+/* 水面：几条随时间左右飘的亮线 */
+function tankSurface(t){
+  px(7, 7, VW - 14, 6, '#2f7085');
+  px(7, 7, VW - 14, 1, '#5aa8bd');
+  var i;
+  for (i = 0; i < 5; i++){
+    var y = 9 + (i % 3) * 2;
+    var off = Math.sin(t / 1400 + i * 1.3) * 10;
+    var x = 10 + i * 46 + off;
+    px(x, y, 22, 1, 'rgba(150,220,235,.28)');
+    px(x + 26, y + 1, 14, 1, 'rgba(150,220,235,.14)');
+  }
+}
+
+/* 沙底 */
+function tankSand(){
+  px(7, 124, VW - 14, 19, F.sand);
+  px(7, 124, VW - 14, 1, F.sandL);
+  px(7, 138, VW - 14, 5, F.sandD);
+
+  var i;
+  for (i = 0; i < 46; i++){
+    var sx = 9 + (hash32(i * 131 + 7) % (VW - 20));
+    var sy = 126 + (hash32(i * 97 + 13) % 14);
+    var c = (i % 4 === 0) ? '#8f7a5a' : ((i % 3 === 0) ? '#e8dcb8' : '#b8a47c');
+    px(sx, sy, (i % 5 === 0) ? 2 : 1, 1, c);
+  }
+
+  // 小陶罐：上窄下宽，别画成方块
+  px(198, 118, 20, 8, '#8a6a4a');       // 罐肚
+  px(200, 115, 16, 4, '#96714e');       // 收口
+  px(203, 112, 10, 3, '#a8825e');       // 罐颈
+  px(202, 111, 12, 1, '#c09a70');       // 罐口
+  px(199, 118, 2, 8, '#a8825e');        // 左侧受光
+  px(216, 120, 2, 6, '#6e5238');        // 右侧阴影
+  px(203, 119, 10, 1, '#7a5a3e');
+  px(196, 125, 24, 2, 'rgba(60,40,25,.28)');  // 落地阴影
+}
+
+/* 石头：位置由 rock 决定，另外两块固定不动 */
+function tankRocks(){
+  var pos = S.props.rock;
+  var bx = 40 + pos * 46;
+
+  px(bx, 118, 26, 8, F.rock);
+  px(bx + 2, 115, 22, 4, F.rock);
+  px(bx + 5, 113, 16, 3, F.rockL);
+  px(bx, 118, 26, 1, F.rockD);
+  px(bx + 1, 121, 24, 1, F.rockD);
+  px(bx + 7, 116, 7, 2, 'rgba(255,255,255,.10)');
+
+  // 两块小的
+  px(96, 122, 12, 5, F.rockD);
+  px(98, 120, 8, 3, F.rock);
+  px(154, 123, 9, 4, F.rockD);
+  px(156, 121, 6, 3, F.rock);
+}
+
+/* 水草：3 丛；前 plants 丛被拱倒（压弯的矮草，不是躺成一条横线） */
+function tankPlants(t){
+  var xs = [26, 118, 176];
+  var i, j, k;
+
+  for (i = 0; i < 3; i++){
+    var fallen = (i < S.props.plants);
+    var cx = xs[i];
+    var sway = t / 900 + i * 1.7;
+    // 鱼钻进中间那丛时草会被挤密 —— 这样"藏"才有遮挡效果
+    var nb = (i === 1 && S.props.hiding) ? 10 : 6;
+    var span = 14 / nb;
+
+    for (j = 0; j < nb; j++){
+      if (fallen){
+        // 倒伏：矮、向右弯，末端还翘一点
+        var bh2 = 5 + (j % 4) * 2;
+        var segs2 = Math.ceil(bh2 / 3);
+        for (k = 0; k < segs2; k++){
+          var bend = k * 1.8 + (j - 3) * 0.6;
+          px(cx + (j - (nb - 1) / 2) * span + bend, 121 - k * 3, 2, 3,
+             (k === 0) ? F.plantD : ((k === segs2 - 1) ? F.plantL : F.plant));
+        }
+        // 末端一撮
+        px(cx + (j - (nb - 1) / 2) * span + segs2 * 1.8 - 1, 121 - segs2 * 3 + 1, 3, 2, F.plantL);
+      } else {
+        var baseH = 17 + (j * 7 % 11);
+        var segs = Math.ceil(baseH / 3);
+        for (k = 0; k < segs; k++){
+          var t01 = segs <= 1 ? 1 : k / (segs - 1);
+          var ox = Math.sin(sway + j * 0.8 + t01 * 2.2) * 3.4 * t01;
+          px(cx + (j - (nb - 1) / 2) * span + ox, 122 - k * 3, 2, 3,
+             (t01 > 0.55) ? F.plantL : F.plant);
+        }
+        // 叶尖
+        px(cx + (j - (nb - 1) / 2) * span + Math.sin(sway + j * 0.8 + 2.2) * 3.4,
+           122 - segs * 3 + 1, 2, 2, F.plantL);
+      }
+    }
+
+    // 根部
+    px(cx - 6, 122, 13, 2, F.plantD);
+  }
+}
+
+/* 自动喂食器：挂在缸内顶部，食物就从这儿掉 */
+function tankFeeder(){
+  px(150, 7, 26, 7, '#2b2b33');
+  px(150, 7, 26, 1, '#4a4a56');
+  px(151, 13, 24, 1, '#141418');
+  px(156, 11, 12, 2, '#0e0e12');          // 出料口
+  // 指示灯：有食是绿的，没食是暗红
+  px(171, 9, 2, 2, (S.props.food > 0) ? '#7ce0a8' : '#6a3434');
+}
+
+/* 鱼食颗粒 */
+function tankFood(t){
+  var n = S.props.food, i;
+  for (i = 0; i < n; i++){
+    var fx = 152 + (i * 9 % 24) - 6;
+    var fy = 16 + i * 6 + Math.sin(t / 1100 + i) * 2;
+    px(fx, fy, 2, 2, '#e0bc7c');
+    px(fx, fy, 2, 1, '#f5dca8');
+    px(fx + 1, fy + 1, 1, 1, '#a8863f');
+  }
+}
+
+/* 气泡：从底部升起，循环 */
+function tankBubbles(t){
+  var n = S.props.bubbles, b, k;
+  for (b = 0; b < n; b++){
+    var x0 = 34 + b * 48;
+    for (k = 0; k < 5; k++){
+      var prog = ((t / 2400) + k * 0.2 + b * 0.11) % 1;
+      var by = 120 - prog * 104;
+      var bx = x0 + Math.sin(prog * 5 + b * 2) * 4;
+      var sz = (prog < 0.4) ? 3 : ((prog < 0.75) ? 2 : 1);
+      px(bx, by, sz, sz, 'rgba(180,232,246,.55)');
+      px(bx, by, sz, 1, 'rgba(232,250,255,.85)');
+      if (sz > 1) px(bx + sz - 1, by + sz - 1, 1, 1, 'rgba(140,200,220,.7)');
+    }
+  }
+}
+
+/* ---------- 大肥鱼 ---------- */
+var fishCx = 120, fishCy = 80, fishDir = 1;
+
+function pxr(off, w){
+  return fishDir > 0 ? fishCx + off : fishCx - off - w;
+}
+
+function fishBody(fat, light){
+  var bh = 14 + fat * 4;      // 14 / 18 / 22 / 26
+  var bw = 40 + fat * 3;
+  var rows = Math.round(bh);
+  for (var i = 0; i < rows; i++){
+    var ty = (i + 0.5) / rows * 2 - 1;
+    var ww = Math.round(bw * Math.sqrt(Math.max(0, 1 - ty * ty)));
+    if (ww < 2) continue;
+    var c;
+    if (ty > 0.42) c = F.belly;
+    else if (ty < -0.5) c = F.fishL;
+    else c = F.fish;
+    if (light) c = (ty > 0.42) ? '#fff0dc' : '#ffa070';
+    px(fishCx - ww / 2, fishCy - bh / 2 + i, ww, 1, c);
+  }
+  return bh;
+}
+
+/* 侧视：正常状态。
+   顺序：身体 → 尾柄尾鳍 → 背鳍腹鳍 → 胸鳍 → 鳞片鳃 → 眼睛 → 嘴
+   尾巴必须贴在身体正后方，否则会像"胶囊后面挂了个方块" */
+function drawFishSide(t, stare, fat){
+  var bh = fishBody(fat, false);
+  var bw = 42 + fat * 2;
+  var half = bw / 2;
+  // 被盯着超过 30 秒：尾巴和鳍全部停摆 —— 静态截图看不出来，真机上很直观
+  var frozen = (stare >= STARE_HOLD);
+  var wag = frozen ? 0 : Math.round(Math.sin(t / 230) * 2);
+  var i, k;
+
+  // ---- 尾柄 ----
+  px(pxr(-half - 4, 12), fishCy - 4, 12, 8, F.fish);
+  px(pxr(-half - 4, 12), fishCy - 4, 12, 1, F.fishL);
+
+  // ---- 尾鳍：从尾柄一张开到末端的扇形（不要上下留缝，否则像挂了两个方块）----
+  for (k = 0; k < 5; k++){
+    var tw = 4;                       // 每段宽
+    var th = 6 + k * 2.4;             // 越往外张得越高
+    var tx = -half - 5 - k * 4;
+    var ty = fishCy - th / 2 + (k > 0 && !frozen ? (Math.sin(t / 230) * k * 0.5) : 0);
+    px(pxr(tx, tw), ty, tw, Math.round(th),
+       k < 2 ? F.fish : F.fin);
+  }
+  // 上下缘的暗线，让扇形有厚度
+  px(pxr(-half - 22, 6), fishCy - 11, 6, 1, F.fishD);
+  px(pxr(-half - 22, 6), fishCy + 10, 6, 1, F.fishD);
+
+  // ---- 背鳍：一段带起伏的弧，颜色比身体深一档 ----
+  for (k = 0; k < 7; k++){
+    var fh2 = 7 - Math.abs(k - 3) * 1.5;
+    if (fh2 < 1) fh2 = 1;
+    var fx2 = -half * 0.46 + k * (half * 0.22);
+    var fw2 = Math.round(half * 0.24);
+    px(pxr(fx2, fw2), fishCy - bh / 2 - Math.round(fh2), fw2, Math.round(fh2) + 1, F.fin);
+  }
+  px(pxr(-half * 0.44, Math.round(half * 1.3)), fishCy - bh / 2 - 1,
+     Math.round(half * 1.3), 1, F.fishD);
+
+  // ---- 腹鳍 ----
+  px(pxr(-half * 0.18, 8), fishCy + bh / 2 - 1, 8, 4, F.fin);
+  px(pxr(-half * 0.18, 8), fishCy + bh / 2 - 1, 8, 1, F.fishD);
+
+  // ---- 胸鳍：鳃后的一小片，轻轻扇 ----
+  var flap = frozen ? 0 : Math.round(Math.sin(t / 300));
+  px(pxr(half * 0.1, 9), fishCy + 3 + flap, 9, 4, F.fin);
+  px(pxr(half * 0.1, 9), fishCy + 3 + flap, 9, 1, F.fishL);
+
+  // ---- 背脊亮线（一点体积感）----
+  px(pxr(-half * 0.7, Math.round(half * 1.3)), fishCy - Math.round(bh * 0.30),
+     Math.round(half * 1.3), 1, 'rgba(255,190,150,.32)');
+  px(pxr(-half * 0.8, Math.round(half * 1.2)), fishCy + Math.round(bh * 0.36),
+     Math.round(half * 1.2), 1, 'rgba(150,70,30,.16)');
+
+  // ---- 鳞片 ----
+  px(pxr(-half * 0.44, 6), fishCy - 2, 6, 1, 'rgba(255,205,165,.22)');
+  px(pxr(-half * 0.24, 7), fishCy, 7, 1, 'rgba(255,205,165,.22)');
+  px(pxr(-half * 0.5, 5), fishCy + 4, 5, 1, 'rgba(110,45,15,.14)');
+
+  // ---- 鳃 ----
+  px(pxr(half * 0.14, 1), Math.round(fishCy - bh * 0.26),
+     1, Math.round(bh * 0.6), 'rgba(150,60,25,.30)');
+
+  // ---- 眼睛：一圈深色描边 + 白眼 + 黑瞳 + 高光 ----
+  var ex = pxr(half - 15, 9);
+  var ey = Math.round(fishCy - bh * 0.3);
+  px(ex, ey, 9, 9, 'rgba(90,35,15,.55)');
+  px(ex + 1, ey + 1, 7, 7, F.eyeW);
+  px(ex + 2, ey + 2, 5, 5, '#fbf6ec');
+  px(ex + 3, ey + 3, 4, 4, F.eyeB);
+  px(ex + 3, ey + 3, 2, 2, '#ffffff');
+
+  // ---- 嘴：身体前端的一个小豁口，别凸出去 ----
+  px(pxr(half - 4, 4), fishCy + 3, 4, 2, F.fishD);
+  px(pxr(half - 3, 3), fishCy + 3, 3, 1, '#6e2610');
+}
+
+/* 正视：它转过身看你。
+   注意别把尾鳍画到头顶 —— 转身之后尾巴在身后，最多从身体下缘露一点 */
+function drawFishFront(t, fat){
+  var rx = 13 + fat * 1.5;          // 横向半径
+  var ry = 12 + fat * 1.4;          // 纵向半径（略扁，显得胖）
+  var hh = Math.round(ry * 2);
+  var i;
+
+  // 尾鳍：转身后尾巴在身后，只从两侧下缘露出一点边
+  px(fishCx - Math.round(rx * 0.9), fishCy + ry - 3, 6, 5, F.fin);
+  px(fishCx + Math.round(rx * 0.9) - 6, fishCy + ry - 3, 6, 5, F.fin);
+
+  // 背鳍：正面对着你的鱼，背鳍就在头顶上方
+  px(fishCx - 5, fishCy - ry - 6, 11, 7, F.fin);
+  px(fishCx - 3, fishCy - ry - 8, 7, 3, F.fin);
+  px(fishCx - 5, fishCy - ry - 6, 11, 1, F.fishD);
+  px(fishCx - 3, fishCy - ry - 8, 7, 1, F.fishD);
+
+  // 两侧胸鳍：斜向下，别画成平伸的手臂
+  px(fishCx - rx - 5, fishCy + 4, 4, 3, F.fin);
+  px(fishCx - rx - 7, fishCy + 6, 3, 3, F.fin);
+  px(fishCx + rx + 1, fishCy + 4, 4, 3, F.fin);
+  px(fishCx + rx + 4, fishCy + 6, 3, 3, F.fin);
+
+  // 身体（略扁的圆）
+  for (i = 0; i < hh; i++){
+    var ty = (i + 0.5) / hh * 2 - 1;
+    var ww = Math.round(rx * 2 * Math.sqrt(Math.max(0, 1 - ty * ty)));
+    if (ww < 2) continue;
+    var c = (ty > 0.45) ? F.belly : ((ty < -0.62) ? F.fishL : F.fish);
+    px(fishCx - ww / 2, fishCy - ry + i, ww, 1, c);
+  }
+
+  // 头顶的一点暗，压住轮廓
+  px(fishCx - Math.round(rx * 0.55), fishCy - ry, Math.round(rx * 1.1), 1, F.fishD);
+
+  // 两只眼睛
+  var ey = Math.round(fishCy - ry * 0.26);
+  var ex = Math.round(rx * 0.54);
+  var blink2 = ((t % 4200) > 4000 && (t % 4200) < 4130);
+  if (blink2){
+    px(fishCx - ex - 3, ey + 4, 7, 1, F.fishD);
+    px(fishCx + ex - 4, ey + 4, 7, 1, F.fishD);
+  } else {
+    px(fishCx - ex - 4, ey, 8, 8, 'rgba(90,35,15,.5)');
+    px(fishCx + ex - 4, ey, 8, 8, 'rgba(90,35,15,.5)');
+    px(fishCx - ex - 3, ey + 1, 6, 6, F.eyeW);
+    px(fishCx + ex - 3, ey + 1, 6, 6, F.eyeW);
+    px(fishCx - ex - 2, ey + 2, 4, 4, F.eyeB);
+    px(fishCx + ex - 2, ey + 2, 4, 4, F.eyeB);
+    px(fishCx - ex - 2, ey + 2, 2, 1, '#ffffff');
+    px(fishCx + ex - 2, ey + 2, 2, 1, '#ffffff');
+  }
+
+  // 嘴：一张一合的小圆口
+  var open = (Math.floor(t / 700) % 2);
+  var my = fishCy + Math.round(ry * 0.5);
+  px(fishCx - 2, my, 5, open ? 4 : 3, '#8a3418');
+  px(fishCx - 1, my + 1, 3, open ? 2 : 1, '#4a1a0a');
+
+  // 腮红：眼睛正下方
+  px(fishCx - Math.round(rx * 0.8), fishCy + Math.round(ry * 0.1), 3, 2, 'rgba(220,110,90,.34)');
+  px(fishCx + Math.round(rx * 0.8) - 3, fishCy + Math.round(ry * 0.1), 3, 2, 'rgba(220,110,90,.34)');
+}
+
+function tankFish(t, stare){
+  var P = S.props;
+  var fat = P.fat;
+
+  if (P.hiding){
+    // 躲在中间那丛水草后面：整条鱼照画，水草会盖住中段，
+    // 头和尾巴露在外面 —— 完全看不见会让玩家以为它没了
+    fishCx = 118;
+    fishCy = 112;
+    fishDir = 1;
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+    drawFishSide(t, stare, fat);
+    ctx.restore();
+    return;
+  }
+
+  fishCx = FISH_X[P.pos];
+  fishCy = FISH_Y[P.depth];
+  fishDir = P.dir ? -1 : 1;
+
+  // 悬停：极轻的上下浮 1px。盯着超过 30 秒就彻底不动
+  if (stare < STARE_HOLD) fishCy += Math.round(Math.sin(t / 1500));
+
+  if (stare >= STARE_LOOK){
+    // 转过身，正对着你
+    fishCy -= 1;
+    drawFishFront(t, fat);
+  } else {
+    drawFishSide(t, stare, fat);
+    if (stare >= STARE_HOLD){
+      // 紧张：鳃动得快一点
+      px(pxr(13, 1), fishCy - 5, 1, 9, 'rgba(150,60,25,.55)');
+    }
+  }
+}
+
+/* 浑浊：整层叠色 + 悬浮颗粒 */
+function tankMurk(t){
+  var m = S.props.murky;
+  if (!m) return;
+  ctx.save();
+  ctx.fillStyle = 'rgba(146,168,104,' + (0.075 * m).toFixed(3) + ')';
+  ctx.fillRect(7, 7, VW - 14, 137);
+  ctx.restore();
+
+  var i;
+  for (i = 0; i < m * 16; i++){
+    var mx2 = 12 + (hash32(i * 71 + 3) % (VW - 26));
+    var my = 16 + ((hash32(i * 53 + 11) + t / 55) % 104);
+    px(mx2, my, 1, 1, 'rgba(224,230,190,' + (0.22 + (i % 3) * 0.08) + ')');
+  }
+}
+
+/* 玻璃反光 */
+function tankGlass(){
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  ctx.fillStyle = 'rgba(190,235,250,.055)';
+  ctx.beginPath();
+  ctx.moveTo(34, 7); ctx.lineTo(74, 7);
+  ctx.lineTo(24, 124); ctx.lineTo(-6, 124);
+  ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = 'rgba(190,235,250,.032)';
+  ctx.beginPath();
+  ctx.moveTo(150, 7); ctx.lineTo(168, 7);
+  ctx.lineTo(118, 124); ctx.lineTo(100, 124);
+  ctx.closePath(); ctx.fill();
+
+  // 水面附近的一层柔光
+  var g = ctx.createLinearGradient(0, 7, 0, 46);
+  g.addColorStop(0, 'rgba(140,220,240,.10)');
+  g.addColorStop(1, 'rgba(140,220,240,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(7, 7, VW - 14, 40);
+
+  ctx.restore();
+}
+
+/* 玻璃上的啄痕（= 这个场景的"字条"） */
+function tankMarks(){
+  noteRects = [];
+  var i;
+  for (i = 0; i < S.notes.length && i < MARK_POS.length; i++){
+    var p = MARK_POS[i];
+    var x = p[0], y = p[1];
+
+    // 雾状擦痕：几道横向的淡痕叠出来，比一个大椭圆自然
+    px(x + 2, y + 2, 11, 1, 'rgba(232,250,255,.16)');
+    px(x + 1, y + 4, 13, 1, 'rgba(232,250,255,.11)');
+    px(x + 3, y + 6, 9, 1, 'rgba(232,250,255,.15)');
+
+    // 啄出来的印子：几个挨着的小凹点，读起来像字，又不是字
+    px(x + 4, y + 3, 2, 2, 'rgba(255,255,255,.40)');
+    px(x + 7, y + 5, 2, 2, 'rgba(255,255,255,.32)');
+    px(x + 6, y + 2, 1, 2, 'rgba(255,255,255,.28)');
+    px(x + 10, y + 4, 2, 1, 'rgba(255,255,255,.22)');
+
+    noteRects.push({ x: x, y: y, w: 22, h: 16, i: i });
+  }
+}
+
+/* 外框 */
+function tankFrame(){
+  px(0, 0, VW, 7, F.frame);
+  px(0, VH - 7, VW, 7, F.frame);
+  px(0, 0, 7, VH, F.frame);
+  px(VW - 7, 0, 7, VH, F.frame);
+
+  // 内侧高光 / 阴影
+  px(7, 7, VW - 14, 1, '#3c5660');
+  px(0, 0, VW, 1, F.frameL);
+  px(0, 0, 1, VH, F.frameL);
+  px(0, VH - 1, VW, 1, '#0c0c10');
+  px(VW - 1, 0, 1, VH, '#0c0c10');
+
+  // 顶部缸灯
+  px(16, 2, 92, 2, '#3a3a46');
+  px(20, 3, 84, 1, 'rgba(200,240,255,.45)');
+}
+
+function renderFish(t, stare){
+  ctx.clearRect(0, 0, VW, VH);
+
+  tankWater();
+  tankSurface(t);
+  tankSand();
+  tankRocks();
+
+  // 躲在草丛里的时候，鱼要画在水草之前（被水草盖住），否则"躲"就不成立
+  if (S.props.hiding) tankFish(t, stare);
+  tankPlants(t);
+
+  tankFeeder();
+  tankFood(t);
+  tankBubbles(t);
+
+  if (!S.props.hiding) tankFish(t, stare);
+
+  tankMurk(t);
+  tankGlass();
+  tankMarks();
+  tankFrame();
+}
+
+/* ============================================================
+   时钟 / 循环
+   ============================================================ */
+var t0 = 0;
+var stareStart = 0;
+var inFront = true;
+
+function loop(ts){
+  if (!t0) t0 = ts;
+  var t = ts - t0;
+  rafTicks++;                      // 每帧自增，兜底定时器靠它判断 rAF 是否在跑
+
+  var stare = 0;
+  if (inFront && stareStart) stare = Date.now() - stareStart;
+
+  render(t, stare);
+  requestAnimationFrame(loop);
+}
+
+/* rAF 兜底：无头/省电环境可能不回调，用定时器顶上 */
+var rafTicks = 0;
+
+var lastPaint = 0;
+setInterval(function(){
+  if (rafTicks > 0) return;
+  var t = Date.now() - t0;
+  var stare = (inFront && stareStart) ? Date.now() - stareStart : 0;
+  render(t, stare);
+}, 60);
+
+/* ============================================================
+   UI
+   ============================================================ */
+var elBarMain = document.getElementById('barMain');
+var elBarLooked = document.getElementById('barLooked');
+var elDot = document.getElementById('dot');
+var elSheet = document.getElementById('sheet');
+var elShTitle = document.getElementById('shTitle');
+var elShMeta = document.getElementById('shMeta');
+var elShBody = document.getElementById('shBody');
+var elShFoot = document.getElementById('shFoot');
+var elToast = document.getElementById('toast');
+
+var toastTimer = 0;
+function toast(msg){
+  elToast.textContent = msg;
+  elToast.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ elToast.classList.remove('on'); }, 1900);
+}
+
+function fmtDur(ms){
+  if (ms < 1000) return '0 秒';
+  var s = Math.floor(ms / 1000);
+  if (s < 60) return s + ' 秒';
+  var m = Math.floor(s / 60);
+  var rs = s % 60;
+  if (m < 60) return m + ' 分' + (rs ? ' ' + rs + ' 秒' : '');
+  var h = Math.floor(m / 60);
+  var rm = m % 60;
+  return h + ' 小时' + (rm ? ' ' + rm + ' 分' : '');
+}
+
+function paintBar(){
+  if (!elBarMain) return;
+  var M = sceneMeta();
+
+  if (!inFront){
+    elBarMain.innerHTML = '<b>' + M.awayWord + '</b> · 别看';
+    elDot.classList.add('on');
+    elDot.style.background = '#d8b070';
+    elDot.style.boxShadow = '0 0 7px rgba(216,176,112,.8)';
+    elBarLooked.textContent = '你不在';
+    return;
+  }
+
+  elDot.style.background = '';
+  elDot.style.boxShadow = '';
+
+  var stare = stareStart ? Date.now() - stareStart : 0;
+
+  if (stare >= STARE_LOOK){
+    elBarMain.innerHTML = '<b>' + M.lookWord + '</b>';
+    elDot.classList.add('on');
+  } else if (stare >= STARE_HOLD){
+    elBarMain.innerHTML = '<b>' + M.idleWord + '</b> · 比刚才更用力';
+    elDot.classList.add('on');
+  } else if (S.step === 0){
+    elBarMain.innerHTML = M.idleWord;
+    elDot.classList.remove('on');
+  } else {
+    elBarMain.innerHTML = '<b>' + M.idleWord + '</b> · 你不在时它做了 ' + S.step + ' 件事';
+    elDot.classList.add('on');
+  }
+
+  elBarLooked.textContent = '注视 ' + Math.floor(stare / 1000) + 's';
+}
+
+/* ============================================================
+   场景切换
+   ============================================================ */
+var SCENE_META = {
+  room: {
+    label: '房间',
+    notesBtn: '墙上的字条',
+    notesTitle: '墙上的字条',
+    awayWord: '它开始活动了',
+    lookWord: '它抬头看着你',
+    holdWord: '它一动不动 · 比刚才更用力',
+    idleWord: '它一动不动',
+    emptyWord: '房间',
+    foot: '关掉标签页它也在继续 —— 下次打开按时间差补算'
+  },
+  fish: {
+    label: '鱼缸',
+    notesBtn: '玻璃上的痕迹',
+    notesTitle: '玻璃上的痕迹',
+    awayWord: '它游起来了',
+    lookWord: '它转过身看着你',
+    holdWord: '它悬在那儿 · 比刚才更用力',
+    idleWord: '它悬在水里',
+    emptyWord: '鱼缸',
+    foot: '关掉标签页它也在继续游 —— 下次打开按时间差补算'
+  }
+};
+
+function sceneMeta(){
+  return SCENE_META[S.scene] || SCENE_META.room;
+}
+
+/* 把活动表 / 顺序 / 冷却 / 界面文案都切到当前场景 */
+function applyScene(){
+  var k = S.scene;
+  ACTS = (k === 'fish') ? ACTS_FISH : ACTS_ROOM;
+  ACT_ORDER = (k === 'fish') ? ORDER_FISH : ORDER_ROOM;
+  ACT_GAP = (k === 'fish') ? GAP_FISH : GAP_ROOM;
+  recentAct = {};
+  noteRects = [];
+
+  var M = sceneMeta();
+  var chip = document.getElementById('sceneChip');
+  if (chip) chip.innerHTML = M.label + '<i>▾</i>';
+
+  var nb = document.querySelector('[data-act="notes"]');
+  if (nb) nb.textContent = M.notesBtn;
+
+  var ft = document.querySelector('.app > .foot');
+  if (ft) ft.textContent = M.foot;
+}
+
+function switchScene(k){
+  if (k !== 'room' && k !== 'fish') return;
+  if (k === S.scene) { closeSheet(); return; }
+
+  var firstTime = !(S.bag && S.bag[k] && S.bag[k].props);
+
+  stow();
+  S.scene = k;
+  unpack(k);
+  applyScene();
+
+  try {
+    window.localStorage.setItem(SAVE_KEY + '_left', String(Date.now()));
+  } catch (e){}
+
+  // 注视时长必须归零：否则在房间盯了 65 秒再切过来，
+  // 鱼会立刻转身盯着你、还顺手僵住，像卡住了
+  stareStart = Date.now();
+
+  save(true);
+  paintBar();
+  closeSheet();
+
+  if (firstTime){
+    setTimeout(function(){
+      openSheet('换了个地方',
+        '它现在在<b>' + sceneMeta().label + '</b>里。',
+        '规则和刚才一样：<br>' +
+        '你看着它的时候，它<b>一动不动</b>。<br><br>' +
+        '切走、锁屏、切 App —— 回来才会看到它做过什么。<br>' +
+        '<span style="color:#5a6678;font-size:11.5px;">' +
+        '两个地方的进度是分开算的，互不影响。' +
+        '</span>',
+        '<button class="main" data-sheet="close">知道了</button>');
+    }, 260);
+  } else {
+    toast('换到了' + sceneMeta().label);
+  }
+}
+
+function pickCard(k, name, desc){
+  var on = (S.scene === k);
+  var thumb = (k === 'fish')
+    ? 'background:radial-gradient(circle at 30% 40%,rgba(180,240,255,.35) 0 2px,transparent 5px),'
+      + 'linear-gradient(180deg,#2a6376 0%,#164049 62%,#c8b48a 62%,#a8916a 100%);'
+    : 'background:radial-gradient(circle at 64% 56%,rgba(255,205,125,.95) 0 2px,'
+      + 'rgba(255,190,105,.22) 3px,transparent 10px),'
+      + 'linear-gradient(180deg,#232b3a 0%,#1b2230 55%,#191321 100%);';
+
+  return '<div class="pick' + (on ? ' on' : '') + '" data-scene="' + k + '">'
+    + '<div class="pv" style="' + thumb + '"></div>'
+    + '<div><div class="pt">' + name
+    + (on ? ' <span style="color:#7ce0a8;font-size:10px">现在在这儿</span>' : '')
+    + '</div><div class="pd">' + desc + '</div></div>'
+    + '<span class="ps">' + (on ? '●' : '') + '</span>'
+    + '</div>';
+}
+
+function showScenePick(){
+  var body = '<div class="pickList">'
+    + pickCard('room', '房间', '一张桌子，一盏台灯，一个坐着的人')
+    + pickCard('fish', '鱼缸', '水、水草，和一条很大的鱼')
+    + '</div>';
+
+  openSheet('换个地方', '两个地方都有它，各算各的',
+    body, '<button class="narrow" data-sheet="close">取消</button>');
+}
+
+/* ---------- 弹层 ---------- */
+var sheetMode = null;
+
+function openSheet(title, meta, bodyHTML, footHTML, cls){
+  elShTitle.textContent = title;
+  elShMeta.innerHTML = meta || '';
+  elShBody.innerHTML = bodyHTML;
+  elShFoot.innerHTML = footHTML || '<button data-sheet="close">知道了</button>';
+  elSheet.className = 'sheet on' + (cls ? ' ' + cls : '');
+}
+
+function closeSheet(){
+  elSheet.className = 'sheet';
+  sheetMode = null;
+}
+
+function escHTML(s){
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ---------- 离开 / 回来 ---------- */
+var leftAt = 0;
+
+/* 离开超过 2 小时的额外一条记录。文案和副作用都跟场景有关，
+   不能在鱼缸里说"把窗帘拉开了" */
+function applySpecial(away){
+  if (away < 2 * 3600 * 1000) return '';
+
+  if (away >= 8 * 3600 * 1000){
+    if (S.scene === 'fish'){
+      addLog('在缸底睡了一整夜，刚浮上来');
+      S.props.pos = 1;
+      S.props.depth = 1;
+      return '它在缸底睡了一整夜，刚浮上来';
+    }
+    addLog('睡了很久，醒来把窗帘拉开了');
+    S.props.curtain = 1;
+    return '它睡了很久，醒来把窗帘拉开了';
+  }
+
+  if (S.scene === 'fish'){
+    addLog('沉在缸底睡了一觉');
+    return '它沉在缸底睡了一觉';
+  }
+  addLog('趴在桌上睡了一觉');
+  return '它趴在桌上睡了一觉';
+}
+
+function onLeave(){
+  if (!inFront) return;
+  inFront = false;
+  leftAt = Date.now();
+  stareStart = 0;
+  paintBar();
+
+  // 保存离开时刻，防止直接关页面
+  try {
+    window.localStorage.setItem(SAVE_KEY + '_left', String(leftAt));
+  } catch (e){}
+
+  document.title = '● ' + sceneMeta().awayWord;
+}
+
+function onReturn(){
+  if (inFront) return;
+  inFront = true;
+  stareStart = Date.now();
+
+  var now = Date.now();
+  var away = leftAt ? (now - leftAt) : 0;
+
+  // 页面可能被直接关闭后重开：用之前存的离开时刻
+  if (!away){
+    try {
+      var stored = parseInt(window.localStorage.getItem(SAVE_KEY + '_left'), 10);
+      if (isFinite(stored) && stored > 0) away = now - stored;
+    } catch (e){}
+  }
+  if (away < 0) away = 0;                    // 时间倒流：当没离开
+  if (away > 1000 * 60 * 60 * 24 * 30) away = 0;  // 离谱值也不认
+
+  document.title = '后台剧场 · 你看着我，我就不动';
+  paintBar();
+
+  if (away < MIN_AWAY) return;
+
+  var before = S.step;
+  var steps = Math.min(MAX_STEPS, Math.floor(away / STEP_MS));
+
+  S.lastAway = away;
+  S.totalAway += away;
+
+  var done = advanceBy(steps, away);
+
+  // 离开太久：补一条特殊记录
+  var special = applySpecial(away);
+
+  save(true);
+  paintBar();
+  sfxReturn();
+  showReport(away, done, special, S.step - before);
+}
+
+/* ---------- 归来报告 ---------- */
+/* 同名活动聚合成一条，不然「擦了三次桌子」会刷三行 */
+function collapseActs(list){
+  var out = [], idx = {}, i, n;
+  for (i = 0; i < list.length; i++){
+    n = list[i];
+    if (idx[n] !== undefined){
+      out[idx[n]].c++;
+    } else {
+      idx[n] = out.length;
+      out.push({ n: n, c: 1 });
+    }
+  }
+  return out;
+}
+
+function showReport(away, acts, special, stepCount){
+  var grouped = collapseActs(acts);
+  var shown = grouped.slice(0, 8);
+  var body = '';
+  var i, g;
+
+  if (!shown.length && !special){
+    body = '<div class="empty">它什么也没做成 —— 你走得太短了。</div>';
+  } else {
+    for (i = 0; i < shown.length; i++){
+      g = shown[i];
+      body += '<div class="ev"><i>' + (i + 1) + '</i><span>' + escHTML(g.n) +
+        (g.c > 1 ? ' <em style="font-style:normal;color:#d8b070;font-size:11px">×' +
+          g.c + '</em>' : '') + '</span></div>';
+    }
+    if (special){
+      body += '<div class="ev"><i>＋</i><span>' + escHTML(special) + '</span></div>';
+    }
+    if (grouped.length > 8){
+      body += '<div class="ev"><i>…</i><span style="color:#5a6678">还有 ' +
+        (grouped.length - 8) + ' 类小事</span></div>';
+    }
+  }
+
+  var meta = '你离开了 <b>' + fmtDur(away) + '</b>　·　它做了 <b>' +
+    (acts.length + (special ? 1 : 0)) + '</b> 件事';
+
+  openSheet('你不在的时候', meta, body,
+    '<button class="main" data-sheet="close">看看房间</button>');
+}
+
+/* ---------- 日志 / 字条 / 重置 ---------- */
+function showLog(){
+  var body = '';
+  var i;
+  var list = S.logs.slice(-26).reverse();
+
+  if (!list.length){
+    body = '<div class="empty">还没有记录。切到别的标签页，过一会儿再回来。</div>';
+  } else {
+    for (i = 0; i < list.length; i++){
+      body += '<div class="ev' + (i < 6 ? ' new' : '') + '"><i>' + (i + 1) +
+        '</i><span>' + escHTML(list[i].t) + '</span></div>';
+    }
+  }
+
+  openSheet('它做过的事', '共 <b>' + S.step + '</b> 步　·　最近 ' +
+    list.length + ' 条', body,
+    '<button data-sheet="close">关闭</button>');
+}
+
+function showNotes(){
+  var body = '';
+  var i;
+
+  var M = sceneMeta();
+
+  if (!S.notes.length){
+    body = '<div class="empty">' + (S.scene === 'fish'
+      ? '玻璃还是干净的。它无聊了会在上面啄印子。'
+      : '墙上还是空的。它写完一张会贴上去。') + '</div>';
+  } else {
+    for (i = S.notes.length - 1; i >= 0; i--){
+      body += '<div class="noteItem">' + escHTML(S.notes[i].txt) +
+        '<em>第 ' + S.notes[i].s + ' 步</em></div>';
+    }
+  }
+
+  openSheet(M.notesTitle, '共 <b>' + S.notes.length + '</b> / ' + NOTE_MAX + ' 张',
+    body, '<button data-sheet="close">关闭</button>');
+}
+
+function doReset(){
+  openSheet('重新开始？', '两个地方都会清空，它做过的事全部忘掉。',
+    '<div class="empty">这一步不可撤销。视角会留在这里，只是里面空了。</div>',
+    '<button data-sheet="close">算了</button>' +
+    '<button class="main" data-sheet="reset-yes">确定清空</button>');
+}
+
+/* ============================================================
+   音效
+   ============================================================ */
+var AC = null;
+var soundOn = true;
+
+function sfxReturn(){
+  if (!soundOn) return;
+  try {
+    if (!AC){
+      var Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) return;
+      AC = new Ctor();
+    }
+    if (AC.state === 'suspended') AC.resume();
+    var now = AC.currentTime;
+    var o = AC.createOscillator();
+    var g = AC.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(520, now);
+    o.frequency.exponentialRampToValueAtTime(380, now + 0.16);
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.045, now + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+    o.connect(g);
+    g.connect(AC.destination);
+    o.start(now);
+    o.stop(now + 0.26);
+  } catch (e){}
+}
+
+/* ============================================================
+   事件绑定
+   ============================================================ */
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden || document.visibilityState === 'hidden') onLeave();
+  else onReturn();
+});
+
+window.addEventListener('blur', function(){
+  // 浏览器窗口失焦也算"你没在看"，但标签页切换走 visibilitychange 就行
+  if (document.hidden) return;
+  onLeave();
+});
+
+window.addEventListener('focus', function(){
+  if (document.hidden) return;
+  onReturn();
+});
+
+window.addEventListener('pagehide', function(){
+  try {
+    window.localStorage.setItem(SAVE_KEY + '_left', String(Date.now()));
+  } catch (e){}
+  save(true);
+});
+
+window.addEventListener('beforeunload', function(){ save(true); });
+
+// 弹层按钮
+document.addEventListener('click', function(e){
+  var t = e.target;
+  if (!t || !t.closest) return;
+
+  // 一律用 closest：按钮里有 <i>、卡片里有缩略图和文字，
+  // 直接拿 e.target 的属性会漏掉点中这些子元素的情况
+  var dsEl = t.closest('[data-sheet]');
+  var ds = dsEl ? dsEl.getAttribute('data-sheet') : null;
+
+  if (ds === 'close'){ closeSheet(); return; }
+  if (ds === 'reset-yes'){
+    var keep = S.scene;          // 清空归清空，别把视角也强行拽回房间
+    S = freshState();
+    S.scene = keep;
+    S.bag = {};
+    unpack(keep);
+    S.plays = 1;
+    applyScene();
+    noteRects = [];
+    try {
+      window.localStorage.removeItem(SAVE_KEY);
+      window.localStorage.removeItem(SAVE_KEY + '_left');
+    } catch (err){}
+    save(true);
+    closeSheet();
+    paintBar();
+    toast('清空了');
+    return;
+  }
+
+  if (t === elSheet){ closeSheet(); return; }
+
+  var scEl = t.closest('[data-scene]');
+  if (scEl){ switchScene(scEl.getAttribute('data-scene')); return; }
+
+  var actEl = t.closest('[data-act]');
+  var act = actEl ? actEl.getAttribute('data-act') : null;
+  if (act === 'scene'){ showScenePick(); return; }
+  if (act === 'log'){ showLog(); return; }
+  if (act === 'notes'){ showNotes(); return; }
+  if (act === 'reset'){ doReset(); return; }
+});
+
+// 点墙上的字条
+cv.addEventListener('click', function(e){
+  var r = cv.getBoundingClientRect();
+  var x = (e.clientX - r.left) / r.width * VW;
+  var y = (e.clientY - r.top) / r.height * VH;
+
+  var i;
+  for (i = noteRects.length - 1; i >= 0; i--){
+    var n = noteRects[i];
+    if (x >= n.x - 2 && x <= n.x + n.w + 2 && y >= n.y - 2 && y <= n.y + n.h + 2){
+      var note = S.notes[n.i];
+      if (note){
+        var isFish = (S.scene === 'fish');
+        openSheet(isFish ? '一处啄痕' : '一张字条',
+          '第 ' + note.s + ' 步　·　' + (isFish ? '它啄出来的' : '它写给你的'),
+          '<div class="noteItem">' + escHTML(note.txt) + '</div>',
+          '<button data-sheet="close">' + (isFish ? '退开一点' : '放回去') + '</button>');
+      }
+      return;
+    }
+  }
+});
+
+/* ============================================================
+   启动
+   ============================================================ */
+function boot(){
+  var raw = load();
+  var isNew = !raw;
+
+  if (raw){
+    S = migrate(raw);
+    S.plays = (S.plays || 0) + 1;
+  } else {
+    S = freshState();
+    S.plays = 1;
+  }
+
+  applyScene();
+
+  // 从上次的离开时刻补算（页面被直接关掉的情况）
+  var away = 0;
+  try {
+    var stored = parseInt(window.localStorage.getItem(SAVE_KEY + '_left'), 10);
+    if (isFinite(stored) && stored > 0){
+      away = Date.now() - stored;
+      if (away < 0) away = 0;
+      if (away > 1000 * 60 * 60 * 24 * 30) away = 0;
+    }
+  } catch (e){}
+
+  if (away >= MIN_AWAY){
+    S.lastAway = away;
+    S.totalAway += away;
+    var steps = Math.min(MAX_STEPS, Math.floor(away / STEP_MS));
+    var done = advanceBy(steps, away);
+    var special = applySpecial(away);
+    save(true);
+
+    setTimeout(function(){ showReport(away, done, special, S.step); }, 420);
+  } else {
+    save(true);
+  }
+
+  // 首次引导
+  if (isNew && away < MIN_AWAY){
+    setTimeout(function(){
+      openSheet('它现在没动', '因为你正看着它。',
+        '这是一个安静的小房间。<br>' +
+        '你盯着它的时候，它<b>永远保持同一个姿势</b>。<br><br>' +
+        '切到别的标签页，或者<b>锁屏、切 App</b>，过一会儿再回来 ——<br>' +
+        '房间会变。它做过什么，你只能看到结果。<br><br>' +
+        '<span style="color:#5a6678;font-size:11.5px;">' +
+        '提示：可以一直盯着它，看它会不会露馅。<br>' +
+        '右上角「房间」可以换到别处 —— 另一个场景里也有一条命。' +
+        '</span>',
+        '<button class="main" data-sheet="close">我试试</button>', 'intro');
+    }, 500);
+  }
+
+  stareStart = Date.now();
+  paintBar();
+  requestAnimationFrame(function(ts){
+    t0 = ts;
+    requestAnimationFrame(loop);
+  });
+}
+
+boot();
+
+/* 每秒刷新状态栏 */
+setInterval(function(){
+  if (inFront){
+    var stare = stareStart ? Date.now() - stareStart : 0;
+    elBarLooked.textContent = '注视 ' + Math.floor(stare / 1000) + 's';
+    if (stare >= STARE_LOOK){
+      if (elBarMain.getAttribute('data-phase') !== 'look'){
+        elBarMain.setAttribute('data-phase', 'look');
+        paintBar();
+      }
+    } else if (stare >= STARE_HOLD){
+      if (elBarMain.getAttribute('data-phase') !== 'hold'){
+        elBarMain.setAttribute('data-phase', 'hold');
+        paintBar();
+      }
+    }
+  }
+}, 1000);
+
+})();
+</script>
+</body>
+</html>

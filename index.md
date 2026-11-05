@@ -535,6 +535,117 @@ title: 🎮 沉答Ai小游戏乐园
     </div>
   </a>
 
+  <!-- ===== 半拍 ===== -->
+  <a class="game-card" href="games/banpai_v1.3.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #05121a, #14283d);">
+      <span class="card-cover-emoji">🥣</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">半拍 · 影子对决</div>
+      <div class="card-desc">没有 AI、没有随机数，对手就是 0.6 秒前的你自己。你往前冲，它半拍后也往前冲；你想绕后，它沿着你刚走过的路线绕后 —— 所以打一拳必须换个位置。等距视角的碗里滚着两颗球，四种模式：单人、双人同屏（各延迟 1 秒）、残影三连、延迟自动漂移，延迟数值一调就是全新难度。</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(52,224,208,0.15);color:#34e0d0;">镜像对决</span>
+        <span class="tag" style="background:rgba(176,107,255,0.15);color:#b06bff;">零随机</span>
+        <span class="tag" style="background:rgba(0,170,255,0.15);color:#0af;">双人同屏</span>
+        <span class="tag" style="background:rgba(255,187,0,0.15);color:#fb0;">残影 ×3</span>
+        <span class="tag" style="background:rgba(255,107,157,0.15);color:#FF6B9D;">v1.3</span>
+        <span class="tag" style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);">📴 单文件离线可跑</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#34e0d0,#0e7f79);color:#03181a;">▶ 开始游戏 (v1.3)</span>
+    </div>
+  </a>
+
+  <!-- ===== 误差 ===== -->
+  <a class="game-card" href="games/wucha_v1.2.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #0b1020, #1d2a4a);">
+      <span class="card-cover-emoji">⏱️</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">误差</div>
+      <div class="card-desc">给你一个秒数，不许看表，凭感觉按下去 —— 比的是你和时间的默契。毫秒级判定，误差 50ms 内算恐怖直觉，150ms 内算稳，超过 500ms 就是心不在焉。三种模式：标准、盲按（倒计时全程隐藏）、本地双人（轮流按同一目标，A 按完不揭晓，等 B 按完一起开）。支持自定义目标时间（60 秒内），每次成绩自动记进历史，能看出你在什么时段手最稳。进来先选模式、定目标时长，再开始 —— 零网络、零加载，双击就玩。</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(125,249,255,0.15);color:#7DF9FF;">时间感知</span>
+        <span class="tag" style="background:rgba(255,187,0,0.15);color:#fb0;">毫秒判定</span>
+        <span class="tag" style="background:rgba(0,170,255,0.15);color:#0af;">双人轮流</span>
+        <span class="tag" style="background:rgba(176,107,255,0.15);color:#b06bff;">自定义时长</span>
+        <span class="tag" style="background:rgba(110,231,192,0.15);color:#6ee7c0;">主菜单</span>
+        <span class="tag" style="background:rgba(255,107,157,0.15);color:#FF6B9D;">v1.2</span>
+        <span class="tag" style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);">📴 单文件离线可跑</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#7DF9FF,#2a6fb0);color:#04121c;">▶ 开始游戏 (v1.2)</span>
+    </div>
+  </a>
+
+  <!-- ===== 像素挂机农场 ===== -->
+  <a class="game-card" href="games/farm_v1.2.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #10240f, #1e5c22);">
+      <span class="card-cover-emoji">🌾</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">像素挂机农场</div>
+      <div class="card-desc">种下种子，关掉网页，作物照样长 —— 第二天打开先收一波离线收益。8 种作物从 2 分钟萝卜到 5 小时金苹果，短周期在线刷、长周期睡前种，各有各的账。土地分沃土与普通（产量 +25%），6 项升级：开垦、浇水、肥料、稻草人、蜂箱、集市摊位。每天三个随机任务、一本 8 格作物图鉴，商队路过时收购价 +50%。离线结算有上限（8–22 小时）逼你每天回来一趟，成熟后放久了会降品质。存档双槽轮转 + 校验和，关掉浏览器也不丢档；纯前端零网络，双击就玩。</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(92,214,106,0.15);color:#5cd66a;">离线挂机</span>
+        <span class="tag" style="background:rgba(255,187,0,0.15);color:#fb0;">像素风</span>
+        <span class="tag" style="background:rgba(0,170,255,0.15);color:#0af;">每日任务</span>
+        <span class="tag" style="background:rgba(176,107,255,0.15);color:#b06bff;">作物图鉴</span>
+        <span class="tag" style="background:rgba(255,107,157,0.15);color:#FF6B9D;">v1.2</span>
+        <span class="tag" style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);">📴 单文件离线可跑</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#5cd66a,#1e5c22);color:#04160a;">▶ 开始游戏 (v1.2)</span>
+    </div>
+  </a>
+
+  <!-- ===== 后台剧场 ===== -->
+  <a class="game-card" href="games/theater_v1.1.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #0a1620, #1d4f60);">
+      <span class="card-cover-emoji">🐟</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">后台剧场</div>
+      <div class="card-desc">你盯着它，它一动不动；你切到别的标签页，它才开始生活。切回来只能看到结果 —— 桌上多了一叠纸、墙上多了一张字条，或者鱼缸里的水浑了、水草被拱倒了。两个场景：一间亮着台灯的小房间，和一个养着大肥鱼的鱼缸，进度各算各的。离开越久变化越多（单次最多推演 5.6 分钟），再久它会趴着睡一觉。盯着超过 30 秒它屏住呼吸、连尾巴都停下，超过 60 秒会抬头看你 —— 鱼缸那条会转过身正对着你。纯前端零网络，关掉标签页也在继续。</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(79,208,192,0.15);color:#4fd0c0;">切走才动</span>
+        <span class="tag" style="background:rgba(120,150,255,0.15);color:#8aa0ff;">像素房间</span>
+        <span class="tag" style="background:rgba(255,150,80,0.15);color:#ff9650;">大肥鱼</span>
+        <span class="tag" style="background:rgba(176,107,255,0.15);color:#b06bff;">注视反应</span>
+        <span class="tag" style="background:rgba(255,107,157,0.15);color:#FF6B9D;">v1.1</span>
+        <span class="tag" style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);">📴 单文件离线可跑</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#4fd0c0,#1d5f6e);color:#041a1e;">▶ 开始游戏 (v1.1)</span>
+    </div>
+  </a>
+
+  <!-- ===== 单词地牢 ===== -->
+  <a class="game-card" href="games/dungeon_v1.1.html">
+    <div class="card-cover" style="background: linear-gradient(135deg, #100a1c, #3b1256);">
+      <span class="card-cover-emoji">🗝️</span>
+    </div>
+    <div class="card-body">
+      <div class="card-title">单词地牢</div>
+      <div class="card-desc">怪物脸上的字，就是你手里的刀。每只怪头顶飘着一个单词，你把它完整拼出来，它才掉血；拼错、拼慢，它就趁机往前挪一大步。怪物会一路逼近你，被字砍中才会退。清完一波下一层，每 5 层是长单词 BOSS，血过半会狂暴变快。连击越高伤害越狠、暴击越频繁，连击断了就得重新攒。四套词库任意换：英文单词、中文拼音（上汉字下拼音）、代码关键字（JSON.stringify、addEventListener），还有每天固定 20 个词的「今日地牢」，全世界同一套，比谁爬得深。路上偶尔混进来一只金光宝箱怪，一刀砍爆必掉装备：利刃加伤害、拳套加暴击、护心镜加血、沙漏减速怪物、星符强化连击，每件最多叠 3 层，一局结束清空。纯前端零网络，成绩存在本地。</div>
+      <div class="card-tags">
+        <span class="tag" style="background:rgba(160,107,255,0.15);color:#a06bff;">打字战斗</span>
+        <span class="tag" style="background:rgba(255,201,74,0.15);color:#ffc94a;">连击暴击</span>
+        <span class="tag" style="background:rgba(111,227,160,0.15);color:#6fe3a0;">四套词库</span>
+        <span class="tag" style="background:rgba(79,208,232,0.15);color:#4fd0e8;">每日地牢</span>
+        <span class="tag" style="background:rgba(255,107,157,0.15);color:#FF6B9D;">v1.1</span>
+        <span class="tag" style="background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);">📴 单文件离线可跑</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span class="play-btn" style="background:linear-gradient(135deg,#a06bff,#5b31c9);color:#fff;">▶ 开始游戏 (v1.1)</span>
+    </div>
+  </a>
+
   <div class="game-card coming-soon">
     <div class="card-cover" style="background: linear-gradient(135deg, #1a1a1a, #2a2a2a);">
       <span class="card-cover-emoji">💣</span>

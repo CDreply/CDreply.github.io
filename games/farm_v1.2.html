@@ -1,0 +1,2139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f0d0b">
+<title>像素挂机农场 v1.2 · 关掉网页，作物照样长</title>
+<!-- 像素挂机农场 v1.2 · 8 作物 · 土地品质 · 每日任务 · 图鉴 · 随机事件 -->
+<style>
+:root{
+  --bg:#0f0d0b; --panel:#1a1613; --panel2:#221c17;
+  --line:#2e2721; --line2:#3d342b;
+  --txt:#f0e6d8; --dim:#9a8b78; --dim2:#6b5f51;
+  --gold:#ffc94a; --green:#7ec850; --red:#e8563f; --sky:#7ec4e8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+html{background:var(--bg);}
+body{
+  background-color:var(--bg);
+  background-image:radial-gradient(120% 70% at 50% -8%, #1e1812 0%, #131009 55%, #0f0d0b 100%);
+  background-repeat:no-repeat;
+  color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+  overflow-x:hidden;
+}
+.app{
+  width:100%;max-width:480px;margin:0 auto;
+  height:100vh;height:100dvh;
+  padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;
+}
+
+/* ---------- 顶栏 ---------- */
+.top{
+  flex:none;display:flex;align-items:center;gap:8px;
+  padding:9px 12px;border-radius:12px;
+  background:var(--panel);border:1px solid var(--line);
+}
+.coin{display:flex;align-items:center;gap:7px;flex:1;min-width:0;}
+.coin i{
+  width:16px;height:16px;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 35% 30%, #ffe08a, #e0a021 70%, #b57c10);
+  box-shadow:0 0 0 1px #8a5f0a inset;
+}
+.coin b{
+  font:700 17px/1 ui-monospace,"SF Mono",Consolas,monospace;
+  color:var(--gold);font-variant-numeric:tabular-nums;
+  letter-spacing:.01em;
+}
+.coin span{font:500 10px/1 inherit;color:var(--dim2);letter-spacing:.1em;}
+.wx{display:flex;align-items:center;gap:5px;font:500 11.5px/1 inherit;color:var(--dim);}
+.wx b{font-size:13px;color:var(--txt);}
+.top .sep{width:1px;height:18px;background:var(--line2);flex:none;}
+.sea{
+  font:600 11px/1 inherit;letter-spacing:.12em;
+  padding:4px 8px;border-radius:6px;
+  background:rgba(126,200,80,.10);color:#9ad46a;border:1px solid rgba(126,200,80,.2);
+}
+
+/* ---------- 田 ---------- */
+.stage{
+  flex:none;margin-top:10px;display:flex;justify-content:center;
+  padding:8px;border-radius:14px;
+  background:var(--panel2);border:1px solid var(--line);
+}
+#cv{
+  display:block;image-rendering:pixelated;image-rendering:crisp-edges;
+  border-radius:4px;cursor:pointer;
+}
+
+/* ---------- 事件条 ---------- */
+.evbar{
+  flex:none;margin-top:8px;display:flex;align-items:center;gap:8px;
+  padding:8px 11px;border-radius:10px;
+  background:linear-gradient(90deg,rgba(255,201,74,.16),rgba(255,201,74,.03));
+  border:1px solid rgba(255,201,74,.3);
+  font:500 11.5px/1.45 inherit;color:var(--gold);
+  animation:evin .3s ease both;
+}
+@keyframes evin{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+.evbar b{color:#ffe08a;font-weight:700;}
+.evbar em{font-style:normal;color:rgba(255,201,74,.6);font-size:10.5px;}
+.evbar .t{flex:none;font:700 11px/1 ui-monospace,Consolas,monospace;color:#ffe08a;}
+
+/* ---------- 每日任务 ---------- */
+.dly{
+  margin-bottom:9px;padding:10px 11px;border-radius:10px;
+  border:1px solid var(--line);background:rgba(255,255,255,.02);
+}
+.dlyh{display:flex;justify-content:space-between;align-items:baseline;cursor:pointer;padding:1px 0;}
+.dly.closed .dlyh{margin-bottom:0;}
+.dlyh:hover b{color:var(--gold);}
+.dlyh b{font:600 11.5px/1 inherit;letter-spacing:.1em;color:#c9bda9;}
+.dlyh span{font:700 10.5px/1 ui-monospace,Consolas,monospace;color:var(--dim2);}
+.dlyr{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.dlyr:last-child{margin-bottom:0;}
+.dlyt{
+  flex:none;width:56px;white-space:nowrap;
+  font:500 10.5px/1 inherit;color:var(--dim);
+}
+.dlyv{
+  flex:none;width:49px;text-align:right;white-space:nowrap;
+  font:600 9.5px/1 ui-monospace,Consolas,monospace;color:var(--dim2);
+  font-variant-numeric:tabular-nums;
+}
+.dlyb{
+  flex:1;min-width:22px;height:5px;border-radius:3px;overflow:hidden;
+  background:rgba(255,255,255,.06);
+}
+.dlyb i{display:block;height:100%;background:linear-gradient(90deg,#c99a30,#ffd35e);border-radius:3px;transition:width .3s;}
+.dlyr.done .dlyb i{background:linear-gradient(90deg,#4e9e3a,#9ad46a);}
+.dlyc{
+  flex:none;padding:5px 9px;border-radius:6px;cursor:pointer;
+  border:1px solid rgba(255,201,74,.4);background:rgba(255,201,74,.12);
+  color:var(--gold);font:700 10px/1 ui-monospace,Consolas,monospace;
+}
+.dlyc:hover{background:rgba(255,201,74,.22);}
+.dlyok{flex:none;font:700 10px/1 ui-monospace,monospace;color:#7ec850;letter-spacing:.06em;}
+
+/* ---------- 档案 ---------- */
+.stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:11px;
+}
+.stats div{
+  padding:10px 6px;border-radius:10px;text-align:center;
+  border:1px solid var(--line);background:rgba(255,255,255,.02);
+}
+.stats b{
+  display:block;font:700 15px/1 ui-monospace,Consolas,monospace;
+  color:var(--gold);font-variant-numeric:tabular-nums;margin-bottom:5px;
+}
+.stats span{font:500 9.5px/1 inherit;color:var(--dim2);letter-spacing:.1em;}
+
+.dexgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:11px;}
+.dexi{
+  padding:9px 3px 7px;border-radius:9px;text-align:center;
+  border:1px solid var(--line);background:rgba(255,255,255,.015);
+  opacity:.38;
+}
+.dexi.on{opacity:1;border-color:rgba(255,201,74,.22);background:rgba(255,201,74,.05);}
+.dexi span{display:block;font-size:15px;margin-bottom:4px;filter:grayscale(1);}
+.dexi.on span{filter:none;}
+.dexi b{display:block;font:600 9.5px/1.2 inherit;color:var(--dim);margin-bottom:4px;}
+.dexi em{
+  font-style:normal;font:700 10.5px/1 ui-monospace,Consolas,monospace;color:var(--dim2);
+}
+.dexi.on em{color:var(--gold);}
+
+/* ---------- 状态条 ---------- */
+.bar{
+  flex:none;margin-top:8px;min-height:44px;
+  display:flex;align-items:center;gap:9px;
+  padding:8px 11px;border-radius:11px;
+  background:var(--panel);border:1px solid var(--line);
+  font-size:12px;line-height:1.5;color:var(--dim);
+}
+.bar .grow1{flex:1;min-width:0;}
+.bar b{color:var(--txt);font-weight:600;}
+.bar .tag{
+  display:inline-block;padding:2px 7px;border-radius:4px;margin-right:6px;
+  font:700 9.5px/1.5 ui-monospace,Consolas,monospace;letter-spacing:.08em;
+  background:rgba(255,201,74,.12);color:var(--gold);
+}
+.bar .tag.g{background:rgba(126,200,80,.14);color:#9ad46a;}
+.bar .tag.r{background:rgba(232,86,63,.14);color:#ef7f6b;}
+
+.mini{
+  flex:none;padding:7px 12px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--line2);background:rgba(255,255,255,.03);
+  color:var(--txt);font:600 11.5px/1 inherit;letter-spacing:.06em;
+  transition:.15s;white-space:nowrap;
+}
+.mini:hover{border-color:rgba(255,201,74,.4);color:var(--gold);}
+.mini.pri{
+  background:linear-gradient(180deg,#ffd35e,#e0a021);
+  border-color:#b57c10;color:#3a2503;
+}
+.mini.pri:hover{filter:brightness(1.06);color:#3a2503;}
+.mini:disabled{opacity:.38;cursor:default;filter:none;}
+
+/* ---------- 页签 ---------- */
+.tabs{flex:none;display:flex;gap:6px;margin-top:10px;}
+.tabs button{
+  flex:1;padding:9px 0;border-radius:9px 9px 0 0;cursor:pointer;
+  border:1px solid var(--line);border-bottom:0;
+  background:rgba(255,255,255,.02);color:var(--dim2);
+  font:600 12px/1 inherit;letter-spacing:.1em;transition:.16s;
+}
+.tabs button.on{background:var(--panel);color:var(--gold);border-color:var(--line2);}
+
+/* ---------- 面板 ---------- */
+.panel{
+  flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding:11px;border-radius:0 0 13px 13px;
+  background:var(--panel);border:1px solid var(--line);border-top:0;
+}
+.panel::-webkit-scrollbar{width:3px;}
+.panel::-webkit-scrollbar-thumb{background:var(--line2);border-radius:2px;}
+
+.card{
+  display:flex;align-items:center;gap:10px;
+  padding:10px;border-radius:10px;margin-bottom:7px;
+  border:1px solid var(--line);background:rgba(255,255,255,.018);
+  cursor:pointer;transition:.15s;
+}
+.card:last-child{margin-bottom:0;}
+.card:hover{border-color:var(--line2);background:rgba(255,255,255,.035);}
+.card.on{border-color:rgba(255,201,74,.5);background:rgba(255,201,74,.07);}
+.card.lock{opacity:.45;cursor:default;}
+.card.lock:hover{border-color:var(--line);background:rgba(255,255,255,.018);}
+
+.card .ic{
+  width:30px;height:30px;flex:none;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;background:rgba(0,0,0,.3);
+}
+.card .body{flex:1;min-width:0;}
+.card .nm{font:600 13px/1.3 inherit;color:var(--txt);}
+.card .nm em{
+  font-style:normal;font:600 9px/1 ui-monospace,monospace;
+  color:var(--dim2);margin-left:6px;letter-spacing:.06em;
+}
+.card .ds{font:500 10.5px/1.5 inherit;color:var(--dim2);margin-top:3px;}
+.card .rt{flex:none;text-align:right;}
+.card .price{
+  font:700 12.5px/1 ui-monospace,Consolas,monospace;color:var(--gold);
+  font-variant-numeric:tabular-nums;
+}
+.card .price.no{color:var(--dim2);}
+.card .own{font:500 9.5px/1 inherit;color:var(--dim2);margin-top:4px;letter-spacing:.06em;}
+
+.upcard{display:flex;align-items:center;gap:10px;padding:11px 10px;border-radius:10px;
+  margin-bottom:7px;border:1px solid var(--line);background:rgba(255,255,255,.018);}
+.upcard:last-child{margin-bottom:0;}
+.upcard .body{flex:1;min-width:0;}
+.upcard .nm{font:600 12.5px/1.3 inherit;}
+.upcard .lv{
+  font:700 9px/1 ui-monospace,monospace;letter-spacing:.1em;
+  color:var(--dim2);margin-left:7px;
+}
+.upcard .ds{font:500 10.5px/1.5 inherit;color:var(--dim2);margin-top:3px;}
+.upcard .buy{
+  flex:none;padding:8px 12px;border-radius:8px;cursor:pointer;
+  border:1px solid rgba(255,201,74,.3);background:rgba(255,201,74,.09);
+  color:var(--gold);font:700 11.5px/1 ui-monospace,monospace;
+  font-variant-numeric:tabular-nums;transition:.15s;
+}
+.upcard .buy:hover{background:rgba(255,201,74,.16);}
+.upcard .buy:disabled{opacity:.35;cursor:default;border-color:var(--line);background:0;color:var(--dim2);}
+.upcard .buy.max{color:#9ad46a;border-color:rgba(126,200,80,.3);background:rgba(126,200,80,.08);}
+
+.offer{
+  display:flex;align-items:center;gap:9px;padding:9px 11px;margin-bottom:9px;
+  border-radius:10px;border:1px dashed rgba(255,201,74,.35);
+  background:linear-gradient(90deg,rgba(255,201,74,.09),rgba(255,201,74,.02));
+  font-size:11px;color:var(--dim);line-height:1.5;
+}
+.offer .grow1{flex:1;min-width:0;}
+.offer .pr{
+  flex:none;color:var(--gold);
+  font:700 12px/1.2 ui-monospace,Consolas,monospace;
+  font-variant-numeric:tabular-nums;
+}
+.offer b{color:var(--gold);}
+.offer em{font-style:normal;color:var(--dim2);font-size:10px;}
+
+.foot-note{
+  flex:none;margin-top:9px;padding-top:2px;
+  font:500 10px/1.7 inherit;color:var(--dim2);
+  letter-spacing:.02em;text-align:center;
+}
+.foot-note a{color:var(--dim);text-decoration:underline;cursor:pointer;}
+
+/* ---------- 弹窗 ---------- */
+.sheet{
+  position:fixed;inset:0;z-index:60;display:none;
+  align-items:center;justify-content:center;padding:22px;
+  background:rgba(6,5,4,.78);
+  -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+}
+.sheet.on{display:flex;animation:fade .2s ease both;}
+@keyframes fade{from{opacity:0;}to{opacity:1;}}
+.sheet-card{
+  width:100%;max-width:352px;
+  background:var(--panel2);border:1px solid var(--line2);
+  border-radius:16px;padding:20px;
+  animation:pop .26s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes pop{from{transform:translateY(12px) scale(.98);opacity:0;}to{transform:none;opacity:1;}}
+.sheet-card h3{
+  font:700 15px/1.3 inherit;letter-spacing:.06em;margin-bottom:5px;
+}
+.sheet-card .sub{font:500 11px/1.6 inherit;color:var(--dim2);margin-bottom:14px;}
+.sheet-card .kv{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);
+  font:500 12px/1.4 inherit;color:var(--dim);
+}
+.sheet-card .kv:last-of-type{border-bottom:0;}
+.sheet-card .kv b{
+  font:700 13px/1 ui-monospace,monospace;color:var(--txt);
+  font-variant-numeric:tabular-nums;
+}
+.sheet-card .kv b.gold{color:var(--gold);}
+.sheet-card .kv b.green{color:#9ad46a;}
+.sheet-card .kv b.red{color:#ef7f6b;}
+.sheet-card .acts{display:flex;gap:8px;margin-top:16px;}
+.sheet-card .acts button{
+  flex:1;padding:11px 0;border-radius:9px;cursor:pointer;
+  font:600 12.5px/1 inherit;letter-spacing:.06em;transition:.15s;
+}
+.btn-pri{
+  border:1px solid #b57c10;color:#3a2503;
+  background:linear-gradient(180deg,#ffd35e,#e0a021);
+}
+.btn-pri:hover{filter:brightness(1.06);}
+.btn-ghost{
+  border:1px solid var(--line2);background:rgba(255,255,255,.03);color:var(--dim);
+}
+.btn-ghost:hover{color:var(--txt);}
+.sheet-card textarea{
+  display:block;width:100%;height:94px;margin:8px 0 2px;padding:9px 10px;
+  border-radius:9px;border:1px solid var(--line2);
+  background:rgba(0,0,0,.32);color:var(--txt);
+  font:500 10.5px/1.55 ui-monospace,Consolas,monospace;
+  resize:none;word-break:break-all;letter-spacing:.02em;
+}
+.sheet-card textarea:focus{outline:none;border-color:rgba(255,201,74,.45);}
+.oflist{margin:10px 0 2px;max-height:180px;overflow:auto;}
+.oflist div{
+  display:flex;justify-content:space-between;gap:8px;
+  font:500 11.5px/1.9 ui-monospace,Consolas,monospace;color:var(--dim);
+}
+.oflist div span:last-child{color:var(--txt);}
+
+/* 飘字 */
+.float{
+  position:fixed;z-index:70;pointer-events:none;
+  font:700 15px/1 ui-monospace,Consolas,monospace;
+  color:var(--gold);text-shadow:0 2px 6px rgba(0,0,0,.8);
+  animation:fly 1.1s cubic-bezier(.2,.7,.3,1) both;
+}
+@keyframes fly{
+  0%{transform:translate(-50%,0) scale(.85);opacity:0;}
+  18%{transform:translate(-50%,-10px) scale(1.06);opacity:1;}
+  100%{transform:translate(-50%,-46px) scale(1);opacity:0;}
+}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);z-index:80;
+  padding:10px 16px;border-radius:9px;max-width:88vw;
+  background:rgba(34,28,23,.96);border:1px solid var(--line2);
+  color:var(--txt);font:500 12px/1.4 inherit;letter-spacing:.03em;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);
+  animation:tin .22s ease both;text-align:center;
+}
+@keyframes tin{from{opacity:0;transform:translate(-50%,8px);}to{opacity:1;transform:translate(-50%,0);}}
+
+@media (max-width:390px){
+  .app{padding:10px 10px calc(12px + env(safe-area-inset-bottom));}
+  .coin b{font-size:15px;}
+  .card .ds{display:none;}
+}
+@media (max-height:700px){
+  .app{padding:8px 12px calc(8px + env(safe-area-inset-bottom));}
+  .top{padding:6px 10px;}
+  .stage{margin-top:7px;padding:5px;}
+  .bar{margin-top:6px;min-height:36px;padding:6px 9px;font-size:11.5px;}
+  .tabs{margin-top:7px;}
+  .tabs button{padding:7px 0;}
+  .panel{padding:8px;}
+  .card{padding:8px;margin-bottom:6px;}
+  .foot-note{font-size:9px;margin-top:8px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="top">
+    <div class="coin"><i></i><b id="coinN">0</b><span>金币</span></div>
+    <div class="sep"></div>
+    <div class="wx"><b id="wxIcon">☀</b><span id="wxName">晴</span></div>
+    <div class="sep"></div>
+    <div class="sea" id="seaLbl">春</div>
+  </div>
+
+  <div class="evbar" id="evbar" style="display:none"></div>
+
+  <div class="stage" id="stage"><canvas id="cv"></canvas></div>
+
+  <div class="bar" id="barInfo"></div>
+
+  <div class="tabs">
+    <button data-tab="seed" class="on" type="button">种 植</button>
+    <button data-tab="up" type="button">升 级</button>
+    <button data-tab="dex" type="button">档 案</button>
+  </div>
+  <div class="panel" id="panel"></div>
+
+  <p class="foot-note" id="footNote">
+    <span id="footMain">关掉网页也在长 · 离线上限 <b id="capTxt">8 小时</b></span>
+    <span id="footWarn" style="display:none;color:#ef7f6b">⚠ 存档写不进去，关掉页面会丢进度</span>
+  </p>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="sheet-card" id="sheetCard"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ================================================================
+   像素挂机农场 v1.0
+   核心：两块时间戳。plantedAt 记种下那一刻，lastSeen 记离开那一刻。
+   回来时一并结算 —— 纯前端做出「有人在替你种地」的错觉。
+   ================================================================ */
+
+var SLOTS = ['pixelfarm_save', 'pixelfarm_save__b'];   // 两个槽轮着写，坏一个还有另一个
+var SAVE_VER = 3;
+var COLS = 4, ROWS = 3, CELL = 26;
+var W = COLS * CELL, H = ROWS * CELL;
+var PLOT_MAX = COLS * ROWS;
+var HOUR = 3600000, MIN = 60000, DAY = 86400000;
+
+/* ---------------- 工具 ---------------- */
+var T = (typeof performance !== 'undefined' && performance.now)
+  ? function(){ return Date.now(); }
+  : function(){ return Date.now(); };
+
+function $(id){ return document.getElementById(id); }
+
+function hash32(n){
+  n = n >>> 0;
+  n = (n ^ 61) ^ (n >>> 16);
+  n = (n + (n << 3)) >>> 0;
+  n = n ^ (n >>> 4);
+  n = Math.imul(n, 0x27d4eb2d) >>> 0;
+  n = n ^ (n >>> 15);
+  return n >>> 0;
+}
+function rand01(seed){ return hash32(seed) / 4294967296; }
+
+function fmt(n){
+  n = Math.floor(n);
+  if (n < 10000) return String(n);
+  if (n < 100000000){
+    var w = n / 10000;
+    return (w < 10 ? w.toFixed(1) : Math.floor(w)) + '万';
+  }
+  return (n / 100000000).toFixed(2) + '亿';
+}
+function dur(ms){
+  if (ms < 0) ms = 0;
+  var m = Math.floor(ms / MIN);
+  if (m < 1) return Math.max(1, Math.round(ms / 1000)) + ' 秒';
+  if (m < 60) return m + ' 分钟';
+  var h = Math.floor(m / 60), rm = m % 60;
+  if (h < 24) return h + ' 时' + (rm ? ' ' + rm + ' 分' : '');
+  var d = Math.floor(h / 24), rh = h % 24;
+  return d + ' 天' + (rh ? ' ' + rh + ' 时' : '');
+}
+function durShort(ms){
+  var m = Math.floor(ms / MIN);
+  if (m < 60) return m + 'm';
+  var h = m / 60;
+  return (h < 10 ? h.toFixed(1) : Math.round(h)) + 'h';
+}
+function dayKey(t){
+  var d = new Date(t);
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+
+/* ---------------- 作物表 ----------------
+   每分钟收益故意做成「短的在线划算、长的离线划算」，
+   否则玩家永远只种萝卜，挂机游戏就没了挂机的理由。 */
+var CROPS = {
+  turnip: {
+    id: 'turnip', name: '萝卜', tag: '2 分钟', icon: '🥕',
+    seed: 5, grow: 2 * MIN, num: 3, price: 10,
+    unlock: 0,
+    desc: '两分钟一茬，边刷手机边收的入门作物。'
+  },
+  potato: {
+    id: 'potato', name: '土豆', tag: '10 分钟', icon: '🥔',
+    seed: 20, grow: 10 * MIN, num: 4, price: 26,
+    unlock: 5,
+    desc: '耐放、走量，适合攒第一台洒水器。'
+  },
+  berry: {
+    id: 'berry', name: '草莓', tag: '25 分钟', icon: '🍓',
+    seed: 60, grow: 25 * MIN, num: 6, price: 36,
+    unlock: 15,
+    desc: '一次结六颗，夏季还能再加价。'
+  },
+  pumpkin: {
+    id: 'pumpkin', name: '南瓜', tag: '80 分钟', icon: '🎃',
+    seed: 150, grow: 80 * MIN, num: 2, price: 260,
+    unlock: 40,
+    desc: '一个顶一片萝卜，秋季最值钱。'
+  },
+  star: {
+    id: 'star', name: '星辉麦', tag: '100 分钟', icon: '🌾',
+    seed: 400, grow: 100 * MIN, num: 1, price: 1600,
+    unlock: 100,
+    desc: '一株换一袋金币。睡前种，醒来收。'
+  },
+  melon: {
+    id: 'melon', name: '甜瓜', tag: '140 分钟', icon: '🍈',
+    seed: 900, grow: 140 * MIN, num: 3, price: 900,
+    unlock: 200,
+    desc: '一株结三个，藤蔓能拉满半块地。'
+  },
+  herb: {
+    id: 'herb', name: '灵芝', tag: '200 分钟', icon: '🍄',
+    seed: 2200, grow: 200 * MIN, num: 2, price: 2800,
+    unlock: 320,
+    desc: '长得慢，但两朵就够买十亩地。'
+  },
+  apple: {
+    id: 'apple', name: '金苹果', tag: '300 分钟', icon: '🍎',
+    seed: 6000, grow: 300 * MIN, num: 1, price: 16000,
+    unlock: 500,
+    desc: '农场的天花板。睡前一颗，醒来一袋。'
+  }
+};
+var CROP_ORDER = ['turnip', 'potato', 'berry', 'pumpkin', 'star', 'melon', 'herb', 'apple'];
+
+/* ---------------- 天气 / 季节 ---------------- */
+var WEATHERS = [
+  { id: 'sun',     name: '晴',   icon: '☀', mult: 1.00, w: 30, tip: '标准光照' },
+  { id: 'cloud',   name: '阴',   icon: '☁', mult: 0.98, w: 20, tip: '光照略差' },
+  { id: 'rain',    name: '雨',   icon: '🌧', mult: 1.12, w: 22, tip: '雨水充足 +12%' },
+  { id: 'drought', name: '旱',   icon: '🔥', mult: 0.85, w: 13, tip: '干旱减产 −15%' },
+  { id: 'fog',     name: '雾',   icon: '🌫', mult: 1.05, w: 10, tip: '湿度高 +5%' },
+  { id: 'meteor',  name: '流星雨', icon: '✨', mult: 1.35, w: 5,  tip: '罕见！+35%' }
+];
+var SEASONS = [
+  { name: '春', mult: { turnip: 1.20 }, color: '#9ad46a' },
+  { name: '夏', mult: { berry: 1.25 },  color: '#ffc94a' },
+  { name: '秋', mult: { pumpkin: 1.30 }, color: '#e8963f' },
+  { name: '冬', mult: { potato: 1.15, star: 1.30 }, color: '#7ec4e8' }
+];
+var WX_SPAN = 3 * HOUR;
+var SEA_SPAN = 6 * HOUR;
+
+function weatherNow(t){
+  var seg = Math.floor(t / WX_SPAN);
+  var total = 0, i;
+  for (i = 0; i < WEATHERS.length; i++) total += WEATHERS[i].w;
+  var r = rand01(seg * 2654435761) * total;
+  var acc = 0;
+  for (i = 0; i < WEATHERS.length; i++){
+    acc += WEATHERS[i].w;
+    if (r < acc) return WEATHERS[i];
+  }
+  return WEATHERS[0];
+}
+function seasonNow(t){
+  var seg = Math.floor(t / SEA_SPAN);
+  return SEASONS[seg % SEASONS.length];
+}
+
+/* ---------------- 升级表 ---------------- */
+var UPS = [
+  {
+    id: 'plot', name: '开垦新地', max: 8,
+    cost: function(lv){ return [150, 400, 900, 1800, 3600, 7000, 14000, 28000][lv] || 0; },
+    info: function(lv){ return '田地 ' + (4 + lv) + ' / 12 块'; },
+    desc: '多一块地就多一条被动收入。'
+  },
+  {
+    id: 'water', name: '洒水器', max: 5,
+    cost: function(lv){ return [120, 300, 700, 1500, 3000][lv] || 0; },
+    info: function(lv){ return '生长速度 +' + (lv * 8) + '%'; },
+    desc: '所有作物长得更快，含离线时段。'
+  },
+  {
+    id: 'fert', name: '肥料仓', max: 4,
+    cost: function(lv){ return [200, 500, 1200, 2600][lv] || 0; },
+    info: function(lv){ return '离线上限 ' + [8, 10, 13, 17, 22][lv] + ' 小时'; },
+    desc: '离开更久也不会被掐断。'
+  },
+  {
+    id: 'crow', name: '稻草人', max: 3,
+    cost: function(lv){ return [250, 700, 1800][lv] || 0; },
+    info: function(lv){ return '保鲜 +' + (lv * 25) + '% · 防鸟 −' + (lv * 3) + '%'; },
+    desc: '作物在地里待久了会蔫，稻草人拖住它。'
+  },
+  {
+    id: 'bee', name: '蜂箱', max: 3,
+    cost: function(lv){ return [500, 1400, 3600][lv] || 0; },
+    info: function(lv){ return '变异几率 ' + Math.round(4 + lv * 2) + '%'; },
+    desc: '蜜蜂授粉，更容易长出三倍价的变异株。'
+  },
+  {
+    id: 'mart', name: '集市摊位', max: 4,
+    cost: function(lv){ return [800, 2000, 5000, 12000][lv] || 0; },
+    info: function(lv){ return '售价 +' + (lv * 6) + '%'; },
+    desc: '自己摆摊比等人收，多卖一点是一点。'
+  }
+];
+
+/* ---------------- 存档 ----------------
+   单键存档的死穴是「唯一副本」：写坏、被清、被别的标签页覆盖，全都没了。
+   这里改成两个槽轮转写，每份带一个校验和与单调递增的序号：
+     · 读档时两槽都读，取序号大的那份合法数据
+     · 写档时写「另一个」槽，永远保留上一份完整的
+     · 校验和不对就跳过，直接吃另一个槽
+   localStorage 写入本身是同步原子的，不会出现写一半；校验和防的是
+   扩展/同步工具截断、以及手动改档。 */
+var S = null;
+var memStore = null;      // localStorage 不可用时的兜底（只在本次会话有效）
+var storeLost = false;    // 写档失败标记，UI 会提示
+var otherWarned = false;  // 双开同步提示只出一次
+
+function defaultSave(t){
+  var plots = [];
+  for (var i = 0; i < PLOT_MAX; i++){
+    // 头一批地里掺两块沃土，让新手一开始就能看见差别
+    plots.push({ c: null, g: 0, mu: 0, at: 0, rich: (i === 1 || i === 3) ? 1 : 0 });
+  }
+  return {
+    ver: SAVE_VER,
+    coins: 60,
+    harvests: 0,
+    totalCoins: 0,
+    plots: plots,
+    up: { plot: 0, water: 0, fert: 0, crow: 0, bee: 0, mart: 0 },
+    pick: 'turnip',
+    lastSeen: t,
+    day: dayKey(t),
+    offer: null,
+    plays: 0,
+    dex: {},          // 每种作物累计收获次数
+    daily: null,      // 每日任务
+    n: 0,          // 单调递增的存档序号，用来判断哪个槽更新
+    slot: 0        // 上一次写到哪个槽（0/1）
+  };
+}
+
+function migrate(o, t){
+  if (!o || typeof o !== 'object') return defaultSave(t);
+  var base = defaultSave(t);
+  var out = {
+    ver: SAVE_VER,
+    coins: num(o.coins, base.coins),
+    harvests: num(o.harvests, 0),
+    totalCoins: num(o.totalCoins, 0),
+    plots: base.plots,
+    up: {
+      plot: clamp(num(o.up && o.up.plot, 0), 0, 8),
+      water: clamp(num(o.up && o.up.water, 0), 0, 5),
+      fert: clamp(num(o.up && o.up.fert, 0), 0, 4),
+      crow: clamp(num(o.up && o.up.crow, 0), 0, 3),
+      bee: clamp(num(o.up && o.up.bee, 0), 0, 3),
+      mart: clamp(num(o.up && o.up.mart, 0), 0, 4)
+    },
+    pick: CROPS[o.pick] ? o.pick : 'turnip',
+    lastSeen: num(o.lastSeen, t),
+    day: typeof o.day === 'string' ? o.day : dayKey(t),
+    offer: o.offer && CROPS[o.offer.crop] ? o.offer : null,
+    plays: num(o.plays, 0),
+    n: num(o.n, 0),
+    slot: 0,
+    dex: (o.dex && typeof o.dex === 'object') ? sanitizeDex(o.dex) : {},
+    daily: (o.daily && typeof o.daily === 'object' && o.daily.day) ? o.daily : null
+  };
+  if (Array.isArray(o.plots)){
+    for (var i = 0; i < PLOT_MAX; i++){
+      var p = o.plots[i];
+      if (!p || !CROPS[p.c]) continue;
+      out.plots[i] = {
+        c: p.c,
+        g: Math.max(0, num(p.g, 0)),
+        mu: p.mu ? 1 : 0,
+        at: num(p.at, 0),
+        rich: p.rich ? 1 : 0
+      };
+    }
+  }
+  return out;
+}
+function sanitizeDex(d){
+  var out = {}, k;
+  for (k in d){
+    if (!CROPS[k]) continue;
+    var v = Math.floor(Number(d[k]));
+    if (isFinite(v) && v > 0) out[k] = Math.min(v, 999999);
+  }
+  return out;
+}
+
+function num(v, d){
+  var n = Number(v);
+  return (isFinite(n) && n >= 0) ? n : d;
+}
+function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
+
+/* djb2：只用来发现「内容被动过 / 被截断」，不是防伪造的哈希 */
+function chkSum(str){
+  var h = 5381;
+  for (var i = 0; i < str.length; i++){
+    h = ((h * 33) ^ str.charCodeAt(i)) >>> 0;
+  }
+  return h.toString(36);
+}
+
+/* 读一个槽。返回 {data, ver, n} 或 null */
+function readSlot(key){
+  var raw = null;
+  try { raw = window.localStorage.getItem(key); } catch (e) { return null; }
+  if (!raw) return null;
+
+  var box = null;
+  try { box = JSON.parse(raw); } catch (e) { return null; }
+
+  // 新格式：{ h: 校验和, d: 存档 JSON 字符串 }
+  if (box && typeof box.d === 'string'){
+    if (box.h !== chkSum(box.d)) return null;      // 校验失败，当作这槽坏了
+    var inner = null;
+    try { inner = JSON.parse(box.d); } catch (e) { return null; }
+    return inner;
+  }
+
+  // 兼容 v1 的裸存档：没有包装，直接就是对象
+  if (box && typeof box === 'object' && ('coins' in box) && ('plots' in box)){
+    return box;
+  }
+  return null;
+}
+
+function readAllSlots(){
+  var a = readSlot(SLOTS[0]);
+  var b = readSlot(SLOTS[1]);
+  var pick = null, slot = 0;
+  if (a && b){
+    if (num(b.n, 0) > num(a.n, 0)){ pick = b; slot = 1; }
+    else { pick = a; slot = 0; }
+  } else if (a){ pick = a; slot = 0; }
+  else if (b){ pick = b; slot = 1; }
+  return { data: pick, slot: slot, any: !!(a || b) };
+}
+
+var lastSave = 0;
+
+function save(force){
+  if (!S) return;
+  if (S.__locked) return;            // 遇到更新版本的存档，一律不写，避免抹平
+  var now = Date.now();
+  if (!force && now - lastSave < 4000) return;
+  lastSave = now;
+
+  S.lastSeen = now;
+  S.ver = SAVE_VER;
+  S.n = num(S.n, 0) + 1;             // 序号只增不减，读档时比大小
+
+  var data;
+  try { data = JSON.stringify(S); } catch (e) { return; }
+  var box = JSON.stringify({ h: chkSum(data), d: data });
+
+  var target = SLOTS[1 - (S.slot === 1 ? 1 : 0)];   // 永远写「另一个」槽
+
+  try {
+    window.localStorage.setItem(target, box);
+    S.slot = (target === SLOTS[1]) ? 1 : 0;
+    memStore = null;
+    if (storeLost){ storeLost = false; paintStoreNote(); }
+    return;
+  } catch (e) {
+    // 配额满 / 被拒绝：先腾出旧槽再试一次（旧档还有另一槽兜着）
+    try {
+      window.localStorage.removeItem(target);
+      window.localStorage.setItem(target, box);
+      S.slot = (target === SLOTS[1]) ? 1 : 0;
+      memStore = null;
+      if (storeLost){ storeLost = false; paintStoreNote(); }
+      return;
+    } catch (e2) {
+      memStore = box;                // 本局兜底
+      storeLost = true;
+      paintStoreNote();
+    }
+  }
+}
+
+function load(){
+  var now = Date.now();
+  var got = readAllSlots();
+  var o = got.data;
+
+  // 用户手动导出过、但 localStorage 被清空了：从 memStore 里捞
+  if (!o && memStore){
+    try { o = JSON.parse(memStore); } catch (e) { o = null; }
+  }
+
+  S = migrate(o, now);
+  S.slot = got.slot;
+
+  // 关键：存档版本比本程序新，说明用户用更新版玩过。
+  // 这时迁移会丢掉不认识的字段，再存一次就把新档毁了 —— 直接锁死只读。
+  if (o && num(o.ver, 0) > SAVE_VER){
+    S.__locked = true;
+  }
+
+  S.plays = (S.plays || 0) + 1;
+}
+
+/* 另一个标签页写了档：把内存对齐到磁盘，别用旧状态把人家的进度盖回去 */
+function syncFromOther(rawStr, key){
+  var box = null;
+  try { box = JSON.parse(rawStr); } catch (e) { return; }
+  var inner = null;
+  if (box && typeof box.d === 'string'){
+    if (box.h !== chkSum(box.d)) return;
+    try { inner = JSON.parse(box.d); } catch (e) { return; }
+  } else if (box && typeof box === 'object' && ('plots' in box)){
+    inner = box;
+  } else return;
+
+  if (!inner || num(inner.n, 0) <= num(S.n, 0)) return;
+
+  var keepPick = S.pick;
+  var keepSel = selIdx;
+  S = migrate(inner, Date.now());
+  S.pick = keepPick;
+  selIdx = (keepSel >= plotCount()) ? -1 : keepSel;
+  // 记住对方刚写的是哪个槽，自己下次必须写另一个，否则又把它盖回去
+  S.slot = (key === SLOTS[1]) ? 1 : 0;
+
+  paintAll();
+  if (!otherWarned){
+    otherWarned = true;
+    toast('另一个窗口也在玩，已同步到较新的进度');
+  }
+}
+
+/* ---------------- 导出 / 导入 ---------------- */
+function exportCode(){
+  var data = JSON.stringify(S);
+  var code;
+  try {
+    code = btoa(unescape(encodeURIComponent(data)));
+  } catch (e) {
+    code = data;
+  }
+  // 每 60 字符换一行，方便复制粘贴
+  return code.replace(/(.{60})/g, '$1\n');
+}
+
+function importCode(txt){
+  if (!txt) return false;
+  var clean = txt.replace(/\s+/g, '');
+  var data = null;
+  try {
+    data = decodeURIComponent(escape(atob(clean)));
+  } catch (e) {
+    data = clean;                      // 也许是直接贴的 JSON
+  }
+  var o = null;
+  try { o = JSON.parse(data); } catch (e) { return false; }
+  if (!o || typeof o !== 'object' || !o.plots) return false;
+
+  S = migrate(o, Date.now());
+  S.lastSeen = Date.now();
+  S.n = num(o.n, 0);
+  S.plays = num(o.plays, 1);
+  S.__locked = false;
+  save(true);
+  paintAll();
+  return true;
+}
+
+/* ---------------- 数值 ---------------- */
+function isUnlocked(id){ return S.harvests >= CROPS[id].unlock; }
+function plotCount(){ return Math.min(PLOT_MAX, 4 + S.up.plot); }
+function capMs(){ return [8, 10, 13, 17, 22][S.up.fert] * HOUR; }
+function speedMult(){ return 1 + S.up.water * 0.08; }
+function martMult(){ return 1 + S.up.mart * 0.06; }
+function richMult(p){ return p && p.rich ? 1.25 : 1; }
+function mutantRate(){ return 0.04 + S.up.bee * 0.02; }
+function freshMs(id){
+  // 保鲜期 = max(2 小时, 成熟时间 × 2.5)
+  // 短周期作物给足宽容（谁也不会为萝卜守着），长周期作物按比例收紧
+  var base = Math.max(2 * HOUR, CROPS[id].grow * 2.5);
+  return base * (1 + S.up.crow * 0.25);
+}
+function crowRate(){ return Math.max(0.03, 0.12 - S.up.crow * 0.03); }
+
+function qualityOf(p){
+  var c = CROPS[p.c];
+  if (!c || p.g < c.grow) return null;
+  var over = p.g - c.grow;
+  var fresh = freshMs(p.c);
+  if (over < fresh) return { id: 'fresh', name: '新鲜', mult: 1.00, cls: 'g' };
+  if (over < fresh * 2.2) return { id: 'ok', name: '尚可', mult: 0.82, cls: '' };
+  if (over < fresh * 3.6) return { id: 'wilt', name: '蔫了', mult: 0.55, cls: 'r' };
+  return { id: 'dead', name: '枯了', mult: 0.30, cls: 'r' };
+}
+
+function yieldCoins(p){
+  var c = CROPS[p.c];
+  var q = qualityOf(p);
+  if (!q) return 0;
+  var wx = weatherNow(Date.now());
+  var sea = seasonNow(Date.now());
+  var m = q.mult * wx.mult * (sea.mult[p.c] || 1) * (p.mu ? 3 : 1)
+    * richMult(p) * martMult() * eventMult();
+  return Math.round(c.num * c.price * m);
+}
+function wxBonusFor(id){
+  var wx = weatherNow(Date.now());
+  var sea = seasonNow(Date.now());
+  var m = wx.mult * (sea.mult[id] || 1);
+  return m;
+}
+
+/* ---------------- 生长推进 ----------------
+   统一走 applyGrowing：在线 tick 和离线结算共用一套，
+   免得「挂着的时长」和「关掉的时长」算出两个结果。 */
+function applyGrowing(ms){
+  if (ms <= 0) return 0;
+  var eff = ms * speedMult();
+  var matured = 0;
+  var n = plotCount();
+  for (var i = 0; i < n; i++){
+    var p = S.plots[i];
+    if (!p.c) continue;
+    var c = CROPS[p.c];
+    var before = p.g;
+    p.g += eff;
+    if (before < c.grow && p.g >= c.grow) matured++;
+  }
+  return matured;
+}
+
+function offlineSettle(){
+  var now = Date.now();
+  var away = now - S.lastSeen;
+  if (away < 5000) return null;
+
+  var cap = capMs();
+  var credited = Math.min(away, cap);
+  var capped = away > cap;
+  // applyGrowing 直接返回「这一批里跨过成熟线的块数」，别再拿前后快照相减，会重复计
+  var matured = applyGrowing(credited);
+
+  // 乌鸦：只有离线才来，且只叼成熟的那几块
+  var stolen = 0;
+  if (away > 10 * MIN){
+    var n = plotCount();
+    for (var i = 0; i < n; i++){
+      var p = S.plots[i];
+      if (!p.c || !qualityOf(p)) continue;
+      if (rand01(i * 977 + Math.floor(S.lastSeen / HOUR)) < crowRate()){
+        p.mu = 0;
+        p.g = CROPS[p.c].grow * 1.02;
+        stolen++;
+      }
+    }
+  }
+
+  S.lastSeen = now;
+
+  if (away < 60 * MIN) return null;    // 走开一下不打扰
+  return {
+    away: away, credited: credited, capped: capped,
+    matured: matured,
+    stolen: stolen,
+    coins: pendingValue()
+  };
+}
+
+function countMature(){
+  var n = plotCount(), k = 0;
+  for (var i = 0; i < n; i++){
+    if (S.plots[i].c && qualityOf(S.plots[i])) k++;
+  }
+  return k;
+}
+function pendingValue(){
+  var n = plotCount(), v = 0;
+  for (var i = 0; i < n; i++){
+    if (S.plots[i].c && qualityOf(S.plots[i])) v += yieldCoins(S.plots[i]);
+  }
+  return v;
+}
+
+/* ---------------- 操作 ---------------- */
+function plant(idx){
+  var c = S.pick;
+  var def = CROPS[c];
+  if (!def) return;
+  if (idx >= plotCount()) { toast('这块地还没开垦'); return; }
+  var p = S.plots[idx];
+  if (p.c) { toast('这块地上还有作物'); return; }
+  if (!isUnlocked(c)) { toast(def.name + '还没解锁（累计收获 ' + def.unlock + ' 次）'); return; }
+  var cost = priceOf(c);
+  if (S.coins < cost) { toast('金币不够，差 ' + (cost - S.coins)); return; }
+
+  S.coins -= cost;
+  var seedN = hash32(Math.floor(Date.now() / 1000) * 7919 + idx * 131 + S.harvests * 17);
+  p.c = c;
+  p.g = 0;
+  p.at = Date.now();
+  p.mu = rand01(seedN) < mutantRate() ? 1 : 0;
+
+  dailyCount('plant', 1);
+  sfx('plant');
+  paintPanel();
+  paintTop();
+  save(true);
+  if (p.mu) toast('变异作物！这颗能卖三倍价');
+}
+
+function harvest(idx){
+  var p = S.plots[idx];
+  if (!p.c) return;
+  var q = qualityOf(p);
+  if (!q){ toast('还没长好，再等等'); return; }
+
+  var before = S.harvests;
+  var coins = yieldCoins(p);
+  S.coins += coins;
+  S.totalCoins += coins;
+  S.harvests++;
+  S.dex[p.c] = (S.dex[p.c] || 0) + 1;
+  dailyCount('h', 1);
+  dailyCount('coins', coins);
+  sfx(q.id === 'fresh' ? 'good' : 'ok');
+  floatText(idx, '+' + fmt(coins));
+  p.c = null; p.g = 0; p.mu = 0; p.at = 0;
+
+  paintTop();
+  paintPanel();
+  paintBar();
+  save(true);
+  checkUnlock(before);
+}
+
+function harvestAll(){
+  var before = S.harvests;
+  var n = plotCount(), got = 0, k = 0;
+  // 一次遍历搞定：算钱、记图鉴、清地。分两趟的话第二趟已经算不出钱了
+  for (var i = 0; i < n; i++){
+    var p = S.plots[i];
+    if (!p.c || !qualityOf(p)) continue;
+    got += yieldCoins(p);
+    S.dex[p.c] = (S.dex[p.c] || 0) + 1;
+    p.c = null; p.g = 0; p.mu = 0; p.at = 0;
+    k++;
+  }
+  if (!k) return;
+  S.coins += got;
+  S.totalCoins += got;
+  S.harvests += k;
+  dailyCount('h', k);
+  dailyCount('coins', got);
+  sfx('good');
+  paintTop(); paintPanel(); paintBar();
+  save(true);
+  toast('收了 ' + k + ' 块地，+' + fmt(got) + ' 金币');
+  checkUnlock(before);
+}
+
+function checkUnlock(before){
+  if (typeof before !== 'number') before = S.harvests;
+  var got = [];
+  for (var i = 0; i < CROP_ORDER.length; i++){
+    var c = CROPS[CROP_ORDER[i]];
+    // 一次收多块可能跨过好几个门槛，用区间判断而不是相等
+    if (c.unlock > before && c.unlock <= S.harvests) got.push(c.name);
+  }
+  if (got.length) toast('解锁新作物：' + got.join('、'));
+}
+
+function priceOf(id){
+  if (S.offer && S.offer.crop === id && S.offer.day === dayKey(Date.now())){
+    return Math.max(1, Math.round(CROPS[id].seed * 0.6));
+  }
+  return CROPS[id].seed;
+}
+
+function buyUp(id){
+  var def = null;
+  for (var i = 0; i < UPS.length; i++) if (UPS[i].id === id) def = UPS[i];
+  if (!def) return;
+  var lv = S.up[id];
+  if (lv >= def.max){ toast('已经满级'); return; }
+  var cost = def.cost(lv);
+  if (S.coins < cost){ toast('金币不够，差 ' + fmt(cost - S.coins)); return; }
+  S.coins -= cost;
+  S.up[id] = lv + 1;
+
+  var richNew = false;
+  if (id === 'plot'){
+    var fresh2 = 4 + lv;                       // 刚开出来的那块
+    if (fresh2 < PLOT_MAX){
+      var roll = rand01(Math.floor(Date.now() / 1000) + fresh2 * 977);
+      richNew = roll < 0.35;
+      S.plots[fresh2].rich = richNew ? 1 : 0;
+    }
+  }
+
+  sfx('up');
+  paintAll();
+  save(true);
+  toast(def.name + ' 升到 ' + (lv + 1) + ' 级');
+  if (id === 'plot') toast(richNew ? '开出一块沃土！产量 +25%' : '多了一块地');
+}
+
+/* ---------------- 每日任务 ----------------
+   三个任务每天换数值，按累计收益缩放 —— 老玩家不会觉得任务太轻。
+   完成只是打勾，奖励还得手动点，给一个「回来收作业」的动作。 */
+var DAILY_DEFS = [
+  { key: 'h',     name: '收获地块', unit: '块', base: 8,   span: 6,  rate: 16 },
+  { key: 'coins', name: '赚取金币', unit: '金', base: 240, span: 320, rate: 0.5 },
+  { key: 'plant', name: '种下作物', unit: '次', base: 4,   span: 4,  rate: 28 }
+];
+
+function dailyRoll(){
+  var today = dayKey(Date.now());
+  if (S.daily && S.daily.day === today) return;
+  var seed = hash32(parseInt(today.replace(/-/g, ''), 10) || 7);
+  // 按累计金币的对数缩放：线性放大会让后期任务量离谱（赚 10 万就该一天收 50 块地吗）
+  var lg = Math.log(Math.max(100, S.totalCoins)) / Math.LN10;
+  var scale = 1 + Math.min(3, Math.max(0, Math.floor(lg) - 2));
+  var need = [];
+  for (var i = 0; i < DAILY_DEFS.length; i++){
+    var d = DAILY_DEFS[i];
+    need.push(Math.round((d.base + rand01(seed + i * 37) * d.span) * scale));
+  }
+  S.daily = { day: today, h: 0, coins: 0, plant: 0, need: need, got: [false, false, false] };
+}
+
+function dailyVal(i){
+  if (!S.daily) return 0;
+  return S.daily[DAILY_DEFS[i].key] || 0;
+}
+function dailyDone(i){
+  if (!S.daily) return false;
+  return dailyVal(i) >= S.daily.need[i];
+}
+function dailyReward(i){
+  if (!S.daily) return 0;
+  return Math.round(S.daily.need[i] * DAILY_DEFS[i].rate);
+}
+function dailyDoneCount(){
+  if (!S.daily) return 0;
+  var k = 0;
+  for (var i = 0; i < DAILY_DEFS.length; i++) if (dailyDone(i)) k++;
+  return k;
+}
+
+function dailyFinished(){
+  if (!S.daily) return 0;
+  var k = 0;
+  for (var i = 0; i < DAILY_DEFS.length; i++){
+    if (dailyDone(i) && S.daily.got[i]) k++;
+  }
+  return k;
+}
+
+function dailyCount(kind, v){
+  if (!S.daily || !v) return;
+  S.daily[kind] = (S.daily[kind] || 0) + v;
+  refreshDailyUI();
+}
+
+function refreshDailyUI(){
+  if (!S.daily) return;
+  for (var i = 0; i < DAILY_DEFS.length; i++){
+    var v = Math.min(dailyVal(i), S.daily.need[i]);
+    var need = S.daily.need[i];
+    var el = $('dlyv' + i);
+    if (el) el.textContent = fmt(v) + ' / ' + fmt(need);
+    var bar = $('dlyb' + i);
+    if (bar) bar.style.width = Math.min(100, dailyVal(i) / need * 100).toFixed(1) + '%';
+    var btn = $('dlyc' + i);
+    if (btn && dailyDone(i) && !S.daily.got[i]){
+      btn.style.display = '';
+      btn.textContent = '领 ' + fmt(dailyReward(i));
+    }
+  }
+}
+
+function claimDaily(i){
+  if (!dailyDone(i)) return;
+  if (S.daily.got[i]) return;
+  var r = dailyReward(i);
+  S.daily.got[i] = true;
+  S.coins += r;
+  S.totalCoins += r;
+  sfx('good');
+  if (dailyClaimable() === 0) dailyOpen = false;
+  paintTop(); paintPanel(); paintBar();
+  save(true);
+  toast('领到 ' + fmt(r) + ' 金币');
+}
+
+/* ---------------- 随机事件 ----------------
+   只在开着页面时触发，不写进存档 —— 事件是「当时在场」的奖励。 */
+var curEvent = null;
+var lastEventSlot = -1;
+
+var EVENT_POOL = ['caravan', 'dew', 'dew', 'caravan'];
+
+function rollEvent(now){
+  if (curEvent && now < curEvent.until) return;
+  if (curEvent && now >= curEvent.until){
+    curEvent = null;
+    paintEventBar();
+  }
+  var slot = Math.floor(now / (5 * MIN));
+  if (slot === lastEventSlot) return;
+  lastEventSlot = slot;
+  if (rand01(slot * 7919 + 3) > 0.28) return;
+  fireEvent(Math.floor(rand01(slot * 131 + 17) * EVENT_POOL.length), slot);
+}
+
+function fireEvent(idx, slot){
+  var id = EVENT_POOL[idx % EVENT_POOL.length];
+  if (id === 'caravan'){
+    curEvent = { id: 'caravan', until: Date.now() + 3 * MIN, name: '商队路过', desc: '收购价 +50%', icon: '🐎' };
+    paintEventBar();
+    toast('商队路过，3 分钟内收购价 +50%');
+  } else {
+    // 露水：挑一块正在长、且还没熟的地，猛推一截
+    var cand = [];
+    for (var i = 0; i < plotCount(); i++){
+      var p = S.plots[i];
+      if (p.c && !qualityOf(p)) cand.push(i);
+    }
+    if (!cand.length) return;
+    var pick = cand[Math.floor(rand01(slot * 977 + 41) * cand.length)];
+    var pp = S.plots[pick];
+    var c = CROPS[pp.c];
+    pp.g += c.grow * 0.45;
+    curEvent = { id: 'dew', until: Date.now() + 45 * 1000, name: '夜里下了露水', desc: '一块地猛长了一截', icon: '💧' };
+    paintEventBar();
+    paintBar();
+    toast('夜里下了露水，第 ' + (pick + 1) + ' 块地长了一大截');
+  }
+}
+
+function eventMult(){
+  return (curEvent && curEvent.id === 'caravan') ? 1.5 : 1;
+}
+
+/* ---------------- 今日特供 ---------------- */
+function rollOffer(){
+  var today = dayKey(Date.now());
+  if (S.offer && S.offer.day === today) return;
+  var seed = hash32(parseInt(today.replace(/-/g, ''), 10) || 1);
+  var unlocked = [];
+  for (var i = 0; i < CROP_ORDER.length; i++){
+    if (isUnlocked(CROP_ORDER[i])) unlocked.push(CROP_ORDER[i]);
+  }
+  var pick = unlocked[Math.floor(rand01(seed) * unlocked.length)] || 'turnip';
+  if (unlocked.length > 1){
+    pick = unlocked[Math.floor(rand01(seed + 77) * unlocked.length)];
+  }
+  S.offer = { crop: pick, day: today };
+}
+
+/* ---------------- 渲染：顶栏 ---------------- */
+function paintTop(){
+  $('coinN').textContent = fmt(S.coins);
+  var wx = weatherNow(Date.now());
+  var sea = seasonNow(Date.now());
+  $('wxIcon').textContent = wx.icon;
+  $('wxName').textContent = wx.name;
+  var sl = $('seaLbl');
+  sl.textContent = sea.name;
+  sl.style.color = sea.color;
+  sl.style.background = sea.color + '1f';
+  sl.style.borderColor = sea.color + '4d';
+  $('capTxt').textContent = [8, 10, 13, 17, 22][S.up.fert] + ' 小时';
+}
+
+/* ---------------- 渲染：状态条 ---------------- */
+var selIdx = -1;
+
+function paintBar(){
+  var el = $('barInfo');
+  var mature = countMature();
+
+  if (selIdx >= 0 && S.plots[selIdx] && S.plots[selIdx].c){
+    var p = S.plots[selIdx];
+    var c = CROPS[p.c];
+    var q = qualityOf(p);
+    var ratio = p.g / c.grow;
+    var html = '';
+    if (!q){
+      var left = Math.max(0, c.grow - p.g) / speedMult();
+      html = '<span class="tag">生长中</span><b>' + c.name
+        + (p.rich ? ' <span style="color:#c9a44a">沃土</span>' : '') + '</b> '
+        + Math.round(ratio * 100) + '% · 还需 ' + dur(left);
+    } else {
+      var coins = yieldCoins(p);
+      html = '<span class="tag ' + q.cls + '">' + q.name + '</span><b>' + c.name
+        + (p.mu ? ' <span style="color:#9ad46a">变异</span>' : '')
+        + (p.rich ? ' <span style="color:#c9a44a">沃土</span>' : '')
+        + '</b> 可卖 ' + fmt(coins) + ' 金币';
+    }
+    if (wxBonusFor(p.c) > 1.01) html += ' <span style="color:#9ad46a">天时佳</span>';
+    else if (wxBonusFor(p.c) < 0.95) html += ' <span style="color:#ef7f6b">天时差</span>';
+    el.innerHTML = '<div class="grow1">' + html + '</div>'
+      + (q ? '<button class="mini pri" data-act="take" type="button">收 获</button>' : '');
+  } else if (mature > 0){
+    el.innerHTML = '<div class="grow1"><span class="tag g">可收获</span><b>'
+      + mature + ' 块地</b> 熟了，合计 ' + fmt(pendingValue()) + ' 金币</div>'
+      + '<button class="mini pri" data-act="all" type="button">一键收获</button>';
+  } else {
+    var grown = 0, total = 0;
+    for (var i = 0; i < plotCount(); i++) if (S.plots[i].c){ grown++; }
+    total = plotCount();
+    el.innerHTML = '<div class="grow1">'
+      + (grown ? '<b>' + grown + '</b> / ' + total + ' 块地在长 · 点空地种下，点地里的看进度'
+               : '点下面的种子，再点一块空地就能种下')
+      + '</div>';
+  }
+}
+
+/* ---------------- 渲染：面板 ---------------- */
+var curTab = 'seed';
+
+function paintPanel(){
+  var el = $('panel');
+  if (curTab === 'seed') el.innerHTML = seedHTML();
+  else if (curTab === 'up') el.innerHTML = upHTML();
+  else el.innerHTML = dexHTML();
+}
+
+function seedHTML(){
+  rollOffer();
+  dailyRoll();
+  var h = dailyHTML();
+  if (S.offer){
+    var oc = CROPS[S.offer.crop];
+    h += '<div class="offer"><div class="grow1">今日特供 <b>' + oc.name
+      + '</b> 六折 <em>· ' + durShort(oc.grow) + ' 成熟</em></div>'
+      + '<span class="pr">' + priceOf(S.offer.crop) + ' 金</span></div>';
+  }
+  for (var i = 0; i < CROP_ORDER.length; i++){
+    var id = CROP_ORDER[i];
+    var c = CROPS[id];
+    var ok = isUnlocked(id);
+    var price = priceOf(id);
+    var on = (S.pick === id);
+    var wx = wxBonusFor(id);
+    var est = Math.round(c.num * c.price * wx);
+    h += '<div class="card' + (on ? ' on' : '') + (ok ? '' : ' lock')
+      + '" data-crop="' + id + '">'
+      + '<div class="ic">' + c.icon + '</div>'
+      + '<div class="body"><div class="nm">' + c.name
+      + '<em>' + c.tag + '</em></div>'
+      + '<div class="ds">' + (ok ? c.desc
+          : '累计收获 ' + c.unlock + ' 次解锁（现在 ' + S.harvests + '）') + '</div></div>'
+      + '<div class="rt"><div class="price' + (S.coins < price ? ' no' : '') + '">'
+      + (ok ? price + ' 金' : '🔒') + '</div>'
+      + '<div class="own">' + (ok ? '一茬约 ' + fmt(est) + ' 金' : '') + '</div></div>'
+      + '</div>';
+  }
+  return h;
+}
+
+var dailyOpen = false;
+
+function dailyClaimable(){
+  if (!S.daily) return 0;
+  var k = 0;
+  for (var i = 0; i < DAILY_DEFS.length; i++){
+    if (dailyDone(i) && !S.daily.got[i]) k++;
+  }
+  return k;
+}
+
+function dailyHTML(){
+  if (!S.daily) return '';
+  // 有奖可领就自动摊开，平时收起 —— 不然任务卡把作物列表挤到只剩一行
+  var open = dailyOpen || dailyClaimable() > 0;
+  var h = '<div class="dly' + (open ? '' : ' closed') + '">'
+    + '<div class="dlyh" data-dly="1"><b>今日任务</b><span>'
+    + dailyDoneCount() + ' / ' + DAILY_DEFS.length + ' 完成'
+    + (open ? ' ▾' : ' ▸') + '</span></div>';
+  if (!open) return h + '</div>';
+  for (var i = 0; i < DAILY_DEFS.length; i++){
+    var d = DAILY_DEFS[i];
+    var v = Math.min(dailyVal(i), S.daily.need[i]);
+    var need = S.daily.need[i];
+    var done = dailyDone(i), got = S.daily.got[i];
+    var pct = Math.min(100, dailyVal(i) / need * 100);
+    h += '<div class="dlyr' + (done ? ' done' : '') + '">'
+      + '<span class="dlyt">' + d.name + '</span>'
+      + '<span class="dlyv" id="dlyv' + i + '">' + fmt(v) + ' / ' + fmt(need) + '</span>'
+      + '<div class="dlyb"><i id="dlyb' + i + '" style="width:' + pct.toFixed(1) + '%"></i></div>'
+      + (got
+          ? '<span class="dlyok">已领</span>'
+          : '<button class="dlyc" id="dlyc' + i + '" data-claim="' + i + '" type="button"'
+            + (done ? '' : ' style="display:none"') + '>领 ' + fmt(dailyReward(i)) + '</button>')
+      + '</div>';
+  }
+  return h + '</div>';
+}
+
+function dexHTML(){
+  var h = '<div class="stats">'
+    + '<div><b>' + fmt(S.harvests) + '</b><span>累计收获</span></div>'
+    + '<div><b>' + fmt(S.totalCoins) + '</b><span>累计金币</span></div>'
+    + '<div><b>' + plotCount() + ' / ' + PLOT_MAX + '</b><span>田地</span></div>'
+    + '</div>';
+
+  h += '<div class="dexgrid">';
+  for (var i = 0; i < CROP_ORDER.length; i++){
+    var id = CROP_ORDER[i], c = CROPS[id];
+    var cnt = S.dex[id] || 0;
+    h += '<div class="dexi' + (cnt ? ' on' : '') + '">'
+      + '<span>' + c.icon + '</span>'
+      + '<b>' + c.name + '</b>'
+      + '<em>' + (cnt ? fmt(cnt) : '—') + '</em>'
+      + '</div>';
+  }
+  h += '</div>';
+
+  h += '<p class="foot-note" style="margin-top:10px">'
+    + '<a data-act="export">导出存档</a> · '
+    + '<a data-act="import">导入存档</a> · '
+    + '<a data-act="reset">清除存档</a></p>';
+  return h;
+}
+
+function upHTML(){
+  var h = '';
+  for (var i = 0; i < UPS.length; i++){
+    var u = UPS[i];
+    var lv = S.up[u.id];
+    var maxed = lv >= u.max;
+    var cost = maxed ? 0 : u.cost(lv);
+    var can = !maxed && S.coins >= cost;
+    h += '<div class="upcard">'
+      + '<div class="body"><div class="nm">' + u.name
+      + '<span class="lv">Lv.' + lv + ' / ' + u.max + '</span></div>'
+      + '<div class="ds">' + u.info(lv) + ' · ' + u.desc + '</div></div>'
+      + (maxed
+          ? '<button class="buy max" type="button" disabled>满级</button>'
+          : '<button class="buy" data-up="' + u.id + '" type="button"' + (can ? '' : ' disabled') + '>'
+            + fmt(cost) + '</button>')
+      + '</div>';
+  }
+  h += '<p class="foot-note" style="margin-top:12px">'
+    + '累计收获 <b style="color:#f0e6d8">' + S.harvests + '</b> 次 · '
+    + '累计赚 <b style="color:#f0e6d8">' + fmt(S.totalCoins) + '</b> 金币<br>'
+    + '存档备份在「档案」里</p>';
+  return h;
+}
+
+function paintEventBar(){
+  var el = $('evbar');
+  if (!el) return;
+  if (!curEvent){
+    el.style.display = 'none';
+    return;
+  }
+  var left = curEvent.until - Date.now();
+  if (left <= 0 && curEvent.id !== 'dew'){
+    curEvent = null;
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'flex';
+  el.innerHTML = '<span style="font-size:14px">' + curEvent.icon + '</span>'
+    + '<span style="flex:1;min-width:0"><b>' + curEvent.name + '</b>'
+    + ' <em>' + curEvent.desc + '</em></span>'
+    + (left > 800 ? '<span class="t">' + Math.ceil(left / 1000) + 's</span>' : '');
+}
+
+function paintAll(){
+  paintTop(); paintPanel(); paintBar(); paintEventBar(); fitCanvas(); draw();
+}
+
+/* ---------------- Canvas ---------------- */
+var cv = $('cv'), ctx = cv.getContext('2d');
+var SCALE = 4;
+
+function fitCanvas(){
+  var stage = $('stage');
+  var avail = stage.clientWidth - 16;
+  var s = Math.max(2, Math.min(7, Math.floor(avail / W)));
+  SCALE = s;
+  cv.width = W * s;
+  cv.height = H * s;
+  cv.style.width = (W * s) + 'px';
+  cv.style.height = (H * s) + 'px';
+}
+
+function px(g, x, y, w, h, col){
+  g.fillStyle = col;
+  g.fillRect(x | 0, y | 0, w | 0, h | 0);
+}
+
+function drawTile(g, x, y, idx, p, now){
+  var open = idx < plotCount();
+
+  if (!open){
+    // 未开垦：野地，带格子边界和几簇杂草
+    var gb = (idx % 2 === 0) ? '#1c1e16' : '#191b14';
+    px(g, x, y, CELL, CELL, gb);
+    px(g, x, y, CELL, 1, '#262a1d');
+    px(g, x, y, 1, CELL, '#232619');
+    px(g, x, y + CELL - 1, CELL, 1, '#11130d');
+    px(g, x + CELL - 1, y, 1, CELL, '#14160f');
+    // 杂草
+    var sd = hash32(idx * 97 + 13);
+    for (var q = 0; q < 3; q++){
+      var gx = 3 + (sd >>> (q * 5)) % (CELL - 8);
+      var gy = 4 + (sd >>> (q * 7 + 3)) % (CELL - 10);
+      px(g, x + gx, y + gy, 1, 3, '#2f3a22');
+      px(g, x + gx + 2, y + gy + 1, 1, 2, '#354024');
+    }
+    px(g, x + 5 + (sd % 9), y + 16 + (sd % 4), 3, 2, '#2b2d20');
+    return;
+  }
+
+  // 土壤底色：偏灰褐，不要橙亮
+  var base = (idx % 3 === 0) ? '#3e2818' : ((idx % 3 === 1) ? '#442c1b' : '#392316');
+  px(g, x, y, CELL, CELL, base);
+
+  var sd = hash32(idx * 977 + 31);
+  // 垄沟：短段、错位、长短不一 —— 长横线会看成一排木箱
+  for (var k = 0; k < 3; k++){
+    var ly = 6 + k * 7 + ((sd >>> (k * 4)) & 1);
+    var lx = 2 + ((sd >>> (k * 3 + 1)) % 6);
+    var lw = CELL - 7 - ((sd >>> (k * 5 + 2)) % 5);
+    g.fillStyle = 'rgba(0,0,0,.15)';
+    g.fillRect(x + lx, y + ly, lw, 1);
+    g.fillStyle = 'rgba(255,196,130,.045)';
+    g.fillRect(x + lx, y + ly + 1, lw, 1);
+  }
+  // 土粒
+  for (var q2 = 0; q2 < 9; q2++){
+    var gx2 = 2 + ((sd >>> (q2 * 3)) % (CELL - 4));
+    var gy2 = 3 + ((sd >>> (q2 * 3 + 2)) % (CELL - 6));
+    px(g, x + gx2, y + gy2, (q2 & 1) ? 2 : 1, 1, (q2 % 3 === 0) ? '#503520' : '#2c1b0e');
+  }
+  // 沃土：偏暖、带金粒，一眼能跟普通地分清
+  if (p.rich){
+    px(g, x, y, CELL, CELL, 'rgba(196,150,58,.09)');
+    px(g, x + 4, y + 8, 1, 1, '#9a7a24');
+    px(g, x + 16, y + 6, 1, 1, '#9a7a24');
+    px(g, x + 11, y + 14, 1, 1, '#9a7a24');
+    px(g, x + 19, y + 18, 1, 1, '#9a7a24');
+    px(g, x + 2, y + 2, 2, 2, '#b8933a');
+  }
+  // 边缘：只压暗，不加亮顶
+  px(g, x, y, CELL, 1, 'rgba(255,200,140,.05)');
+  px(g, x, y + CELL - 1, CELL, 1, '#1c1007');
+  px(g, x, y, 1, CELL, 'rgba(0,0,0,.13)');
+  px(g, x + CELL - 1, y, 1, CELL, 'rgba(0,0,0,.2)');
+
+  var cx = x + CELL / 2;
+  var by = y + CELL - 6;       // 地面线
+
+  if (!p.c){
+    // 空地：一个浅浅的播种坑
+    px(g, cx - 3, by - 1, 6, 2, '#2a1a0d');
+    px(g, cx - 2, by, 4, 1, '#1f1208');
+  } else {
+    var c = CROPS[p.c];
+    var ratio = p.g / c.grow;
+    var q = qualityOf(p);
+    var k2 = clamp(ratio, 0, 1);
+
+    // 破土：土堆
+    if (k2 < 0.98){
+      px(g, cx - 5, by - 1, 10, 2, '#4a3018');
+    }
+
+    var grow = clamp(k2, 0.04, 1);
+
+    // 成熟后的轻微起伏（整像素，不糊）
+    var bob = 0;
+    if (q) bob = Math.round(Math.sin(now / 420 + idx) * 1);
+
+    var wilt = (q && (q.id === 'wilt' || q.id === 'dead'));
+    var tint = q ? (q.id === 'dead' ? '#8a6a3a'
+      : (q.id === 'ok' ? '#c9b98a' : null)) : null;
+
+    if (q && q.id === 'dead'){
+      // 枯死：地上掉两片残叶，一眼看得出来
+      px(g, cx - 8, by - 1, 3, 1, '#6a5a34');
+      px(g, cx + 6, by - 2, 2, 1, '#5e4f2c');
+    }
+
+    if (grow < 0.78){
+      // 幼苗期：各品种看着都差不多，先长叶子
+      var lv = grow < 0.22 ? 1 : (grow < 0.5 ? 2 : 3);
+      drawSprout(g, cx, by, lv, wilt, p.mu);
+    } else {
+      // 后期：完整形态，从土里一点点冒出来
+      var k3 = (grow - 0.78) / 0.22;
+      var visible = Math.round(17 * (0.72 + 0.28 * k3));
+      g.save();
+      g.beginPath();
+      g.rect(x + 1, by - visible, CELL - 2, visible + 2);
+      g.clip();
+      drawCrop(g, p.c, cx, by + bob, wilt, tint, p.mu);
+      g.restore();
+    }
+
+    // 成熟标记：右上角小三角
+    if (q){
+      var blink = q.id === 'fresh' ? 1 : 0.55;
+      g.globalAlpha = blink;
+      px(g, x + CELL - 5, y + 2, 3, 3, q.id === 'fresh' ? '#ffd35e' : '#8a7350');
+      g.globalAlpha = 1;
+    }
+  }
+
+  if (idx === selIdx){
+    // 选中框
+    g.strokeStyle = 'rgba(255,211,94,.9)';
+    g.lineWidth = 1;
+    g.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+  }
+}
+
+/* 幼苗：三档，绿芽 → 双叶 → 三叶带花苞 */
+function drawSprout(g, cx, by, lv, wilt, mutant){
+  var stem = wilt ? '#6b7a3a' : '#3f8f33';
+  var lf = wilt ? '#8a9a4a' : '#5cb047';
+  var lf2 = wilt ? '#7c8c42' : '#4aa03c';
+
+  if (mutant){
+    g.globalAlpha = 0.2;
+    px(g, cx - 6, by - 14, 13, 14, '#9ad46a');
+    g.globalAlpha = 1;
+  }
+
+  if (lv === 1){
+    px(g, cx - 1, by - 4, 2, 4, stem);
+    px(g, cx - 3, by - 5, 3, 2, lf);
+    px(g, cx + 1, by - 6, 3, 2, lf);
+  } else if (lv === 2){
+    px(g, cx - 1, by - 7, 2, 7, stem);
+    px(g, cx - 5, by - 8, 4, 3, lf);
+    px(g, cx + 2, by - 9, 4, 3, lf);
+    px(g, cx - 4, by - 5, 3, 2, lf2);
+  } else {
+    px(g, cx - 1, by - 10, 2, 10, stem);
+    px(g, cx - 6, by - 11, 5, 3, lf);
+    px(g, cx + 2, by - 12, 5, 3, lf);
+    px(g, cx - 5, by - 7, 4, 2, lf2);
+    px(g, cx + 2, by - 8, 4, 2, lf2);
+    px(g, cx - 1, by - 13, 3, 3, mutant ? '#9ad46a' : (wilt ? '#8a9a4a' : '#7ec850'));
+  }
+}
+
+/* 作物像素画：锚点 (cx, by) 为底部中心，向上生长 */
+function drawCrop(g, id, cx, by, wilt, tint, mutant){
+  var leafD = wilt ? '#6b7a3a' : '#3f8f33';
+  var leafL = wilt ? '#8a9a4a' : '#5cb047';
+  var rootC = '#e8563f', rootD = '#b03a26';
+  var halo = mutant ? '#9ad46a' : null;
+
+  if (halo){
+    g.globalAlpha = 0.22;
+    px(g, cx - 7, by - 16, 14, 16, halo);
+    g.globalAlpha = 1;
+    px(g, cx - 6, by - 17, 1, 1, '#d8ffb0');
+    px(g, cx + 6, by - 13, 1, 1, '#d8ffb0');
+    px(g, cx - 7, by - 9, 1, 1, '#d8ffb0');
+  }
+
+  if (id === 'turnip'){
+    if (tint) { rootC = tint; rootD = '#8a6a3a'; }
+    px(g, cx - 1, by - 15, 2, 7, leafD);
+    px(g, cx - 5, by - 13, 4, 3, leafL);
+    px(g, cx + 2, by - 13, 4, 3, leafL);
+    px(g, cx - 4, by - 10, 3, 2, leafD);
+    px(g, cx + 2, by - 10, 3, 2, leafD);
+    px(g, cx - 4, by - 8, 9, 5, rootC);
+    px(g, cx - 3, by - 3, 7, 2, rootC);
+    px(g, cx - 2, by - 1, 5, 1, rootD);
+    px(g, cx - 3, by - 7, 3, 1, tint ? '#b08a6a' : '#ff8f7a');
+
+  } else if (id === 'potato'){
+    if (tint) { rootC = '#9a8a60'; rootD = '#6a5c38'; }
+    px(g, cx - 2, by - 14, 2, 6, leafD);
+    px(g, cx - 6, by - 13, 5, 3, leafL);
+    px(g, cx + 2, by - 12, 5, 3, leafL);
+    rootC = tint || '#c79a5e'; rootD = '#8a6634';
+    px(g, cx - 5, by - 8, 11, 6, rootC);
+    px(g, cx - 4, by - 9, 9, 1, '#dfb77c');
+    px(g, cx - 2, by - 5, 2, 1, rootD);
+    px(g, cx + 2, by - 3, 1, 1, rootD);
+    px(g, cx - 4, by - 2, 9, 1, rootD);
+
+  } else if (id === 'berry'){
+    px(g, cx - 1, by - 16, 2, 8, leafD);
+    px(g, cx - 6, by - 14, 5, 3, leafL);
+    px(g, cx + 2, by - 13, 5, 3, leafL);
+    var bc = tint || '#e03b52';
+    px(g, cx - 4, by - 9, 9, 6, bc);
+    px(g, cx - 3, by - 3, 7, 2, bc);
+    px(g, cx - 2, by - 1, 5, 1, '#a8223a');
+    px(g, cx - 2, by - 7, 1, 1, '#ffe9a0');
+    px(g, cx + 1, by - 6, 1, 1, '#ffe9a0');
+    px(g, cx - 1, by - 4, 1, 1, '#ffe9a0');
+    px(g, cx - 3, by - 11, 7, 2, leafD);
+
+  } else if (id === 'pumpkin'){
+    px(g, cx, by - 8, 2, 8, '#6b8a3a');
+    px(g, cx - 7, by - 13, 5, 4, leafL);
+    px(g, cx + 3, by - 12, 5, 4, leafL);
+    var pc = tint || '#e8822c';
+    px(g, cx - 7, by - 9, 15, 8, pc);
+    px(g, cx - 6, by - 10, 13, 1, tint ? '#a8875a' : '#f59a3e');
+    px(g, cx - 3, by - 9, 1, 8, tint ? '#7d6440' : '#c96a1d');
+    px(g, cx + 2, by - 9, 1, 8, tint ? '#7d6440' : '#c96a1d');
+    px(g, cx - 1, by - 1, 3, 1, '#a8531a');
+
+  } else if (id === 'melon'){
+    // 藤
+    px(g, cx - 8, by - 6, 3, 4, '#4aa03c');
+    px(g, cx + 5, by - 5, 3, 4, '#4aa03c');
+    px(g, cx - 7, by - 2, 15, 1, '#3a7d2c');
+    // 阶梯椭圆：一行行收窄，硬画方块会像个绿箱子
+    var mc = tint || '#8ec14a';
+    px(g, cx - 4, by - 13, 9, 1, tint ? '#a8b06a' : '#a8d666');
+    px(g, cx - 6, by - 12, 13, 1, mc);
+    px(g, cx - 7, by - 11, 15, 7, mc);
+    px(g, cx - 6, by - 4, 13, 1, mc);
+    px(g, cx - 4, by - 3, 9, 1, '#5f8f2c');
+    // 网纹
+    px(g, cx - 3, by - 11, 1, 7, tint ? '#7c8a4a' : '#6d9c34');
+    px(g, cx + 2, by - 11, 1, 7, tint ? '#7c8a4a' : '#6d9c34');
+    px(g, cx - 7, by - 8, 15, 1, tint ? '#7c8a4a' : '#6d9c34');
+
+  } else if (id === 'herb'){
+    px(g, cx - 1, by - 8, 3, 8, tint ? '#b8a888' : '#e8dcc0');
+    px(g, cx - 2, by - 9, 5, 1, tint ? '#9a8a6a' : '#cbbfa4');
+    px(g, cx - 7, by - 13, 15, 5, tint || '#8b4a2f');
+    px(g, cx - 6, by - 14, 13, 1, tint ? '#9a7050' : '#a86040');
+    px(g, cx - 8, by - 9, 17, 1, tint ? '#6a4a34' : '#6b3620');
+    px(g, cx - 3, by - 12, 1, 3, tint ? '#6a4a34' : '#5a2a16');
+    px(g, cx + 2, by - 12, 1, 3, tint ? '#6a4a34' : '#5a2a16');
+    px(g, cx - 6, by - 16, 1, 1, '#c8a0ff');
+    px(g, cx + 5, by - 17, 1, 1, '#c8a0ff');
+
+  } else if (id === 'apple'){
+    px(g, cx, by - 18, 2, 6, '#7a5a2a');
+    px(g, cx + 2, by - 19, 4, 3, '#4aa03c');
+    var ac = tint || '#f0b429';
+    // 阶梯圆：上三行收窄，下两行也收窄
+    px(g, cx - 3, by - 15, 7, 1, tint ? '#b09450' : '#ffd75e');
+    px(g, cx - 5, by - 14, 11, 1, tint ? '#c0a868' : '#ffdf7a');
+    px(g, cx - 6, by - 13, 13, 9, ac);
+    px(g, cx - 5, by - 4, 11, 1, ac);
+    px(g, cx - 3, by - 3, 7, 1, tint ? '#8a6a20' : '#c08a10');
+    // 高光
+    px(g, cx - 4, by - 12, 3, 2, tint ? '#d8c898' : '#fff0b0');
+    px(g, cx + 5, by - 10, 1, 2, tint ? '#c0a868' : '#ffd75e');
+
+  } else if (id === 'star'){
+    px(g, cx, by - 16, 2, 16, wilt ? '#8a7a4a' : '#c8b060');
+    var sc = tint || '#ffd85e';
+    px(g, cx - 3, by - 18, 8, 6, sc);
+    px(g, cx - 2, by - 20, 6, 2, '#ffe98a');
+    px(g, cx - 4, by - 14, 2, 3, sc);
+    px(g, cx + 4, by - 15, 2, 3, sc);
+    px(g, cx - 7, by - 11, 1, 1, '#a8e4ff');
+    px(g, cx + 6, by - 8, 1, 1, '#a8e4ff');
+    px(g, cx - 6, by - 4, 1, 1, '#a8e4ff');
+  }
+}
+
+function draw(){
+  var now = Date.now();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#241a12';
+  ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+
+  for (var i = 0; i < PLOT_MAX; i++){
+    var x = (i % COLS) * CELL;
+    var y = Math.floor(i / COLS) * CELL;
+    drawTile(ctx, x, y, i, S.plots[i], now);
+  }
+}
+
+/* 绘制循环：限到 ~14fps，省电，也够看出苗在长 */
+var lastDraw = 0;
+function loop(ts){
+  if (!ts) ts = T();
+  if (ts - lastDraw > 70){
+    lastDraw = ts;
+    draw();
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ---------------- 提示 / 飘字 ---------------- */
+var toastTimer = 0;
+function toast(msg){
+  var old = document.querySelector('.toast');
+  if (old && old.parentNode) old.parentNode.removeChild(old);
+  var d = document.createElement('div');
+  d.className = 'toast';
+  d.textContent = msg;
+  document.body.appendChild(d);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){
+    if (d.parentNode) d.parentNode.removeChild(d);
+  }, 1900);
+}
+
+function floatText(idx, txt){
+  var r = cv.getBoundingClientRect();
+  var cx = (idx % COLS) * CELL + CELL / 2;
+  var cy = Math.floor(idx / COLS) * CELL + CELL / 2;
+  var d = document.createElement('div');
+  d.className = 'float';
+  d.textContent = txt;
+  d.style.left = (r.left + cx * SCALE) + 'px';
+  d.style.top = (r.top + cy * SCALE) + 'px';
+  document.body.appendChild(d);
+  setTimeout(function(){
+    if (d.parentNode) d.parentNode.removeChild(d);
+  }, 1150);
+}
+
+/* ---------------- 音效（很轻，只是反馈） ---------------- */
+var AC = null;
+function sfx(kind){
+  if (S.muted) return;
+  try {
+    if (!AC){
+      var C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return;
+      AC = new C();
+    }
+    if (AC.state === 'suspended') AC.resume();
+    var t = AC.currentTime;
+    var o = AC.createOscillator(), g = AC.createGain();
+    o.type = 'square';
+    var f = kind === 'plant' ? 420 : (kind === 'good' ? 760 : (kind === 'up' ? 560 : 300));
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.exponentialRampToValueAtTime(f * (kind === 'good' ? 1.5 : 0.75), t + 0.09);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.055, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    o.connect(g); g.connect(AC.destination);
+    o.start(t); o.stop(t + 0.14);
+  } catch (e) {}
+}
+
+/* ---------------- 弹窗 ---------------- */
+function paintStoreNote(){
+  var w = $('footWarn');
+  if (w) w.style.display = storeLost ? 'inline' : 'none';
+}
+
+function exportSheet(){
+  sheet('<h3>导出存档</h3>'
+    + '<div class="sub">把下面这串存好。换设备、清了浏览器数据，都能靠它恢复。</div>'
+    + '<textarea id="expTxt" readonly></textarea>'
+    + '<div class="acts">'
+    + '<button class="btn-pri" data-act="copyexp" type="button">复制</button>'
+    + '<button class="btn-ghost" data-act="close" type="button">关闭</button>'
+    + '</div>');
+  var t = $('expTxt');
+  if (t){
+    t.value = exportCode();
+    try { t.focus(); t.select(); } catch (e) {}
+  }
+}
+
+function importSheet(){
+  sheet('<h3>导入存档</h3>'
+    + '<div class="sub">把之前导出的那串贴进来。会覆盖当前进度，先确认一下。</div>'
+    + '<textarea id="impTxt" placeholder="粘贴存档代码…"></textarea>'
+    + '<div class="acts">'
+    + '<button class="btn-pri" data-act="doimp" type="button">导入并覆盖</button>'
+    + '<button class="btn-ghost" data-act="close" type="button">取消</button>'
+    + '</div>');
+  var t = $('impTxt');
+  if (t){ try { t.focus(); } catch (e) {} }
+}
+
+function sheet(html){
+  $('sheetCard').innerHTML = html;
+  $('sheet').classList.add('on');
+}
+function closeSheet(){ $('sheet').classList.remove('on'); }
+
+function offlineSheet(info){
+  if (!info) return;
+  var h = '<h3>你离开了 ' + dur(info.away) + '</h3>';
+  h += '<div class="sub">'
+    + (info.capped ? '超过离线上限，只结算了 ' + dur(info.credited) + '（升级肥料仓可延长）'
+                   : '这段时间作物一直在长')
+    + '</div>';
+  if (info.matured > 0) h += '<div class="kv"><span>新成熟</span><b class="green">' + info.matured + ' 块地</b></div>';
+  if (info.stolen > 0) h += '<div class="kv"><span>被乌鸦祸害</span><b class="red">' + info.stolen + ' 块</b></div>';
+  h += '<div class="kv"><span>地里现成能卖</span><b class="gold">' + fmt(info.coins) + ' 金币</b></div>';
+  h += '<div class="acts">'
+    + (info.coins > 0
+        ? '<button class="btn-pri" data-act="all2" type="button">一键收获</button>'
+        : '<button class="btn-pri" data-act="close" type="button">去看看</button>')
+    + (info.coins > 0 ? '<button class="btn-ghost" data-act="close" type="button">等会儿收</button>' : '')
+    + '</div>';
+  sheet(h);
+}
+
+/* ---------------- 事件 ---------------- */
+$('sheet').addEventListener('click', function(e){
+  if (e.target === $('sheet')){ closeSheet(); return; }
+  var b = e.target.closest('[data-act]');
+  if (!b) return;
+  var act = b.getAttribute('data-act');
+  if (act === 'close'){ closeSheet(); return; }
+  if (act === 'all2'){ closeSheet(); harvestAll(); return; }
+
+  if (act === 'copyexp'){
+    var t = $('expTxt');
+    if (!t){ return; }
+    try {
+      t.select();
+      t.setSelectionRange(0, t.value.length);
+      var ok = document.execCommand('copy');
+      toast(ok ? '已复制到剪贴板' : '请手动长按选中复制');
+    } catch (err) {
+      toast('请手动长按选中复制');
+    }
+    return;
+  }
+
+  if (act === 'export2'){ closeSheet(); exportSheet(); return; }
+
+  if (act === 'doimp'){
+    var it = $('impTxt');
+    if (it && importCode(it.value)){
+      closeSheet();
+      toast('存档已导入');
+    } else {
+      toast('这串代码不完整，检查一下有没有漏字符');
+    }
+    return;
+  }
+});
+
+$('barInfo').addEventListener('click', function(e){
+  var b = e.target.closest('[data-act]');
+  if (!b) return;
+  var act = b.getAttribute('data-act');
+  if (act === 'take' && selIdx >= 0) harvest(selIdx);
+  else if (act === 'all') harvestAll();
+});
+
+$('panel').addEventListener('click', function(e){
+  if (e.target.closest('[data-dly]')){
+    dailyOpen = !dailyOpen;
+    paintPanel();
+    return;
+  }
+
+  var cl = e.target.closest('[data-claim]');
+  if (cl){ claimDaily(parseInt(cl.getAttribute('data-claim'), 10)); return; }
+
+  var up = e.target.closest('[data-up]');
+  if (up){ buyUp(up.getAttribute('data-up')); return; }
+
+  var card = e.target.closest('[data-crop]');
+  if (card){
+    var id = card.getAttribute('data-crop');
+    if (!isUnlocked(id)){ toast('还没解锁，先把前面几种种够'); return; }
+    S.pick = id;
+    paintPanel();
+    save();
+    return;
+  }
+
+  var act = e.target.closest('[data-act]');
+  if (act){
+    var a2 = act.getAttribute('data-act');
+    if (a2 === 'export'){ exportSheet(); return; }
+    if (a2 === 'import'){ importSheet(); return; }
+  }
+  if (act && act.getAttribute('data-act') === 'reset'){
+    if (confirm('确定清除存档重新开始？所有地和金币都会消失。')){
+      try {
+        window.localStorage.removeItem(SLOTS[0]);
+        window.localStorage.removeItem(SLOTS[1]);
+      } catch (err) {}
+      S = defaultSave(Date.now());
+      S.plays = 1;
+      rollOffer();
+      paintAll();
+      toast('存档已清除');
+    }
+  }
+});
+
+document.querySelectorAll('.tabs button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.tabs button').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+    curTab = b.getAttribute('data-tab');
+    paintPanel();
+  });
+});
+
+// canvas 点选
+cv.addEventListener('click', function(e){
+  var r = cv.getBoundingClientRect();
+  var lx = (e.clientX - r.left) / (r.width / W);
+  var ly = (e.clientY - r.top) / (r.height / H);
+  var cx = Math.floor(lx / CELL), cy = Math.floor(ly / CELL);
+  if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) return;
+  var idx = cy * COLS + cx;
+
+  if (idx >= plotCount()){ toast('这块地还没开垦'); return; }
+  selIdx = idx;
+  var p = S.plots[idx];
+
+  if (!p.c){
+    if (S.pick){
+      plant(idx);
+      paintBar();
+      draw();
+    }
+  } else if (qualityOf(p)){
+    harvest(idx);
+    selIdx = -1;
+    paintBar();
+    draw();
+  } else {
+    paintBar();
+    draw();
+  }
+});
+
+/* ---------------- 启动 ---------------- */
+function boot(){
+  load();
+  var info = offlineSettle();
+  rollOffer();
+  dailyRoll();
+
+  paintTop();
+  paintPanel();
+  paintBar();
+  paintStoreNote();
+  fitCanvas();
+  draw();
+  requestAnimationFrame(loop);
+
+  if (S.__locked){
+    setTimeout(function(){
+      sheet('<h3>存档来自更新的版本</h3>'
+        + '<div class="sub">这份存档是更新版本的游戏写下的。为了不把它写坏，'
+        + '本次只读，不会保存任何改动。<br><br>想继续玩请用新版打开，'
+        + '或者先「导出存档」备份一份。</div>'
+        + '<div class="acts">'
+        + '<button class="btn-pri" data-act="export2" type="button">导出备份</button>'
+        + '<button class="btn-ghost" data-act="close" type="button">知道了</button>'
+        + '</div>');
+    }, 400);
+  }
+
+  // 每秒推进在线生长
+  var lastTick = Date.now();
+  setInterval(function(){
+    var now = Date.now();
+    var delta = now - lastTick;
+    lastTick = now;
+    if (delta <= 0) return;
+    // 标签页被挂起很久时，单次 delta 也按上限处理，避免一夜暴涨
+    applyGrowing(Math.min(delta, capMs()));
+    rollEvent(now);
+    if (curEvent) paintEventBar();
+    paintBar();
+    save();
+  }, 1000);
+
+  // 每 30 秒刷一次天气/季节（跨段时）
+  setInterval(paintTop, 30000);
+
+  if (info) offlineSheet(info);
+  else if (S.plays <= 1){
+    setTimeout(function(){
+      toast('先点下面的萝卜，再点一块空地');
+    }, 700);
+  }
+}
+
+// 另一个标签页写档时，把这边对齐过去，别用旧状态覆盖人家的进度
+window.addEventListener('storage', function(e){
+  if (!e || !e.key) return;
+  if (e.key !== SLOTS[0] && e.key !== SLOTS[1]) return;
+  if (e.newValue === null) return;      // 被删了（清档），不动
+  syncFromOther(e.newValue, e.key);
+}, false);
+
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden){
+    save(true);
+  } else {
+    var now = Date.now();
+    var away = now - S.lastSeen;
+    if (away > 2 * MIN){
+      var info = offlineSettle();
+      paintAll();
+      if (info) offlineSheet(info);
+    } else {
+      paintTop(); paintBar(); draw();
+    }
+  }
+});
+
+window.addEventListener('beforeunload', function(){ save(true); });
+window.addEventListener('resize', function(){ fitCanvas(); draw(); });
+
+boot();
+
+})();
+</script>
+</body>
+</html>

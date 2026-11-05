@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0b0f">
+<title>误差 v1.2 · 给你一个秒数，凭感觉按下</title>
+<!-- 误差 v1.2 · 单文件 · 无外部依赖 · 单调时钟计时 · 主菜单 / 双人 / 自定义时间 / 历史记录 -->
+<style>
+:root{
+  --txt:#e8edf4; --dim:#8b95a5; --dim2:#57606e;
+  --line:rgba(255,255,255,.09);
+  --acc:#6ee7c0; --warm:#ffb46b;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+html{background:#08090c;}
+body{
+  margin:0;
+  background-color:#08090c;
+  background-image:radial-gradient(130% 80% at 50% -10%, #151a24 0%, #0b0c11 55%, #08090c 100%);
+  background-repeat:no-repeat;
+  color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+  overflow-x:hidden;
+  transition:background-color .3s ease;
+}
+body.blind{background-color:#000;background-image:none;}
+
+/* 计时中：顶栏与底栏退到背景里，画面只剩那个呼吸 */
+body.running .dots{opacity:.28;}
+body.running .foot span{opacity:.42;}
+body.running .foot{border-top-color:rgba(255,255,255,.05);}
+body.running .tools{opacity:.34;pointer-events:none;}
+body.running .brand{opacity:.5;transition:opacity .3s;}
+
+.wrap{
+  position:relative;width:100%;max-width:560px;margin:0 auto;
+  min-height:100vh;min-height:100dvh;
+  padding:24px 22px 18px;
+  display:flex;flex-direction:column;
+}
+
+/* ---------- 顶栏 ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;flex:none;}
+.brand{font:600 12px/1 inherit;letter-spacing:.34em;color:#9aa4b4;}
+.brand em{font-style:normal;font-size:9px;letter-spacing:.22em;color:#464f5d;margin-left:9px;}
+.dots{display:flex;gap:6px;transition:opacity .4s;}
+.dots i{width:18px;height:3px;border-radius:2px;background:rgba(255,255,255,.10);transition:.28s;}
+.dots i.on{background:var(--acc);}
+.dots i.cur{background:rgba(110,231,192,.42);}
+body.blind .dots{opacity:.32;}
+
+/* ---------- 舞台 ---------- */
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:18px 0;}
+.view{display:none;width:100%;text-align:center;}
+.view.on{display:block;animation:vin .32s cubic-bezier(.2,.8,.3,1) both;}
+@keyframes vin{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:none;}}
+
+.kick{font:600 10px/1 inherit;letter-spacing:.26em;color:var(--dim2);margin:0 0 22px;}
+
+/* ---------- 准备 ---------- */
+.goal{display:flex;align-items:baseline;justify-content:center;gap:9px;}
+.goal .num{
+  font:600 clamp(56px,17vw,86px)/.95 ui-monospace,"SF Mono",Consolas,monospace;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+}
+.goal em{font-style:normal;font-size:20px;color:var(--dim);letter-spacing:.12em;}
+
+.hint{margin:22px 0 0;font-size:13.5px;line-height:1.85;color:var(--dim);}
+.hint b{color:#cbd5e1;font-weight:600;}
+
+.best{margin:13px 0 0;font:500 11.5px/1.7 ui-monospace,Consolas,monospace;color:var(--dim2);letter-spacing:.02em;}
+.best.hit{color:var(--acc);}
+#endBest{margin-top:19px;}
+
+/* ---------- 呼吸 ---------- */
+.orb{
+  width:min(66vw,268px);aspect-ratio:1;margin:0 auto;position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+.halo{
+  position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 50% 50%, rgba(110,231,192,.22) 0%, rgba(110,231,192,.07) 45%, transparent 72%);
+  border:1px solid rgba(110,231,192,.17);
+  will-change:transform,opacity;
+}
+.dot{
+  width:11px;height:11px;border-radius:50%;background:var(--acc);
+  box-shadow:0 0 20px rgba(110,231,192,.72),0 0 46px rgba(110,231,192,.28);
+  will-change:transform,opacity;
+}
+body.blind .orb{visibility:hidden;}
+
+/* ---------- 单局结果 ---------- */
+.verdict{
+  font:600 24px/1.3 inherit;letter-spacing:.14em;margin:0 0 18px;color:#c6d0dd;
+}
+.err{font:500 15px/1 inherit;color:var(--dim);letter-spacing:.06em;}
+.err b{
+  font:700 46px/1 ui-monospace,"SF Mono",Consolas,monospace;color:var(--acc);
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;padding:0 3px;
+}
+.err.slow b{color:var(--warm);}
+.detail{
+  margin:17px 0 0;font:500 12px/1.7 ui-monospace,Consolas,monospace;
+  color:var(--dim2);letter-spacing:.02em;
+}
+
+.go{
+  margin-top:30px;display:inline-flex;align-items:center;gap:10px;
+  padding:13px 27px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(110,231,192,.28);background:rgba(110,231,192,.07);color:var(--acc);
+  font:600 14px/1 inherit;letter-spacing:.08em;transition:.18s;
+}
+.go:hover{background:rgba(110,231,192,.13);border-color:rgba(110,231,192,.45);}
+.go:active{transform:scale(.98);}
+.go em{font-style:normal;font:500 10px/1 ui-monospace,Consolas,monospace;color:rgba(110,231,192,.62);letter-spacing:.1em;}
+
+/* ---------- 结算 ---------- */
+.verdict.big{font-size:40px;letter-spacing:.08em;color:#f2f6fb;font-weight:700;margin-bottom:14px;}
+.avg{display:flex;align-items:baseline;justify-content:center;gap:8px;}
+.avg b{font:600 27px/1 ui-monospace,Consolas,monospace;letter-spacing:-.02em;color:#aab5c4;font-variant-numeric:tabular-nums;}
+.avg em{font-style:normal;font-size:11.5px;color:var(--dim2);letter-spacing:.1em;}
+
+.list{margin:28px auto 0;max-width:316px;display:flex;flex-direction:column;gap:10px;}
+.row{
+  display:grid;grid-template-columns:16px 1fr auto;align-items:baseline;gap:10px;
+  font:500 12px/1.5 ui-monospace,Consolas,monospace;color:var(--dim);
+}
+.row i{font-style:normal;color:var(--dim2);}
+.row span{text-align:left;color:#93a0b0;}
+.row b{font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums;min-width:52px;text-align:right;}
+.row b.fast{color:var(--acc);}
+.row b.slow{color:var(--warm);}
+
+/* ---------- 主菜单 ---------- */
+#vMenu{padding:4px 0 0;}
+.mtitle{
+  font:700 clamp(40px,13vw,56px)/1 inherit;letter-spacing:.3em;text-indent:.3em;
+  margin:0 0 11px;color:#f4f8fd;
+}
+.msub{
+  font:500 9px/1 ui-monospace,Consolas,monospace;letter-spacing:.3em;
+  color:#5d6775;margin:0 0 23px;
+}
+.mlead{margin:0 0 25px;font-size:13px;line-height:1.95;color:var(--dim);}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.mcard{
+  padding:13px 6px 11px;border-radius:12px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(255,255,255,.028);
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  transition:.18s;font-family:inherit;
+}
+.mcard b{font:600 13px/1 inherit;letter-spacing:.1em;color:#aeb9c7;}
+.mcard i{font-style:normal;font:500 9.5px/1.1 inherit;letter-spacing:.03em;color:#525b69;}
+.mcard:hover{border-color:rgba(255,255,255,.18);}
+.mcard.on{border-color:rgba(110,231,192,.42);background:rgba(110,231,192,.08);}
+.mcard.on b{color:var(--acc);}
+.mcard.on i{color:rgba(110,231,192,.56);}
+
+.mrow{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:19px auto 0;max-width:332px;padding:11px 2px;
+  border-top:1px solid rgba(255,255,255,.055);
+  border-bottom:1px solid rgba(255,255,255,.055);
+}
+.mrow span{font:500 11.5px/1 inherit;letter-spacing:.12em;color:var(--dim2);}
+.mtime{
+  padding:7px 13px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line);background:transparent;color:#c3cdd9;
+  font:600 11.5px/1 ui-monospace,Consolas,monospace;letter-spacing:.03em;transition:.16s;
+}
+.mtime:hover{border-color:rgba(110,231,192,.34);color:var(--acc);}
+.mtime.fixed{border-color:rgba(110,231,192,.34);color:var(--acc);}
+.mgo{margin-top:25px;padding:14px 34px;font-size:14.5px;}
+
+.ghost{
+  margin-top:11px;display:inline-block;padding:9px 18px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line);background:transparent;color:var(--dim);
+  font:500 11.5px/1 inherit;letter-spacing:.1em;transition:.16s;
+}
+.ghost:hover{color:var(--txt);border-color:rgba(255,255,255,.2);}
+
+@media (max-height:660px){
+  .mtitle{font-size:clamp(34px,10vw,44px);margin-bottom:8px;}
+  .msub{margin-bottom:16px;}
+  .mlead{margin-bottom:18px;font-size:12.5px;}
+  .mcard{padding:10px 5px 9px;}
+  .mrow{margin-top:14px;padding:9px 2px;}
+  .mgo{margin-top:18px;padding:12px 28px;}
+}
+
+/* ---------- 底栏 ---------- */
+.foot{
+  flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding-top:14px;border-top:1px solid var(--line);
+}
+.foot span{font:500 11px/1.4 inherit;color:var(--dim2);letter-spacing:.08em;}
+.tools{display:flex;gap:8px;flex:none;}
+.tool{
+  padding:6px 12px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line);background:transparent;color:var(--dim);
+  font:500 11px/1 inherit;letter-spacing:.06em;transition:.16s;white-space:nowrap;
+}
+.tool:hover{color:var(--txt);border-color:rgba(255,255,255,.18);}
+.tool.on{border-color:rgba(110,231,192,.35);color:var(--acc);}
+.tool.mute{color:#414a57;}
+
+/* ---------- 底部面板 ---------- */
+.sheet{
+  position:fixed;inset:0;z-index:60;display:none;
+  align-items:flex-end;justify-content:center;
+  background:rgba(4,5,9,.74);
+  -webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+}
+.sheet.on{display:flex;animation:sfade .18s ease both;}
+@keyframes sfade{from{opacity:0;}to{opacity:1;}}
+.sheet-card{
+  width:100%;max-width:560px;max-height:84vh;overflow:auto;
+  background:#11141b;border:1px solid var(--line);
+  border-radius:18px 18px 0 0;
+  padding:18px 20px calc(20px + env(safe-area-inset-bottom));
+  animation:sup .26s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes sup{from{transform:translateY(18px);opacity:.6;}to{transform:none;opacity:1;}}
+@media (min-width:640px){
+  .sheet{align-items:center;padding:24px;}
+  .sheet-card{max-width:520px;border-radius:16px;padding:20px 22px 22px;}
+  .sheet-card{animation:sIn .24s cubic-bezier(.2,.8,.3,1) both;}
+  @keyframes sIn{from{transform:translateY(10px) scale(.985);opacity:0;}to{transform:none;opacity:1;}}
+}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.sheet-head b{font:600 13px/1 inherit;letter-spacing:.16em;color:#cfd8e4;}
+.sheet-x{
+  padding:6px 12px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line);background:transparent;color:var(--dim);
+  font:500 11px/1 inherit;letter-spacing:.08em;
+}
+.sheet-x:hover{color:var(--txt);border-color:rgba(255,255,255,.2);}
+
+/* 时间选择 */
+.tgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.tchip{
+  padding:11px 0;border-radius:10px;cursor:pointer;text-align:center;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);color:#c2ccd9;
+  font:600 13px/1 ui-monospace,Consolas,monospace;
+}
+.tchip:hover{border-color:rgba(255,255,255,.2);color:var(--txt);}
+.tchip.on{border-color:rgba(110,231,192,.45);background:rgba(110,231,192,.10);color:var(--acc);}
+.trow{display:flex;align-items:center;gap:10px;}
+.trow input{
+  flex:1;min-width:0;padding:11px 13px;border-radius:10px;
+  border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--txt);
+  font:600 15px/1 ui-monospace,Consolas,monospace;
+  -webkit-appearance:none;appearance:none;
+}
+.trow input:focus{outline:none;border-color:rgba(110,231,192,.45);}
+.trow button{
+  padding:11px 18px;border-radius:10px;cursor:pointer;white-space:nowrap;
+  border:1px solid rgba(110,231,192,.34);background:rgba(110,231,192,.10);color:var(--acc);
+  font:600 12.5px/1 inherit;letter-spacing:.08em;
+}
+.tnote{margin:14px 0 0;font-size:11.5px;line-height:1.8;color:var(--dim2);}
+
+/* 历史 */
+.hrow{
+  display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:10px;
+  padding:11px 0;border-bottom:1px solid rgba(255,255,255,.055);
+  font:500 12px/1.4 ui-monospace,Consolas,monospace;color:var(--dim);
+}
+.hrow:last-child{border-bottom:0;}
+.hrow .ht{color:var(--dim2);font-size:11px;}
+.hrow .hm{color:#8b95a5;font-size:11px;letter-spacing:.06em;}
+.hrow b{font:700 13px/1 ui-monospace,Consolas,monospace;color:#dbe4ef;font-variant-numeric:tabular-nums;}
+.hrow b s{text-decoration:none;color:var(--dim2);font-weight:500;padding:0 5px;}
+.hempty{padding:26px 0;text-align:center;color:var(--dim2);font-size:12.5px;line-height:1.9;}
+.hclear{
+  margin-top:16px;width:100%;padding:12px;border-radius:10px;cursor:pointer;
+  border:1px solid rgba(255,120,110,.22);background:transparent;color:#c98b84;
+  font:500 12px/1 inherit;letter-spacing:.1em;
+}
+.hclear:hover{background:rgba(255,120,110,.07);}
+
+/* 双人对比 */
+.duo-line{display:flex;align-items:baseline;justify-content:center;gap:9px;
+  font:500 14px/1 inherit;color:var(--dim);letter-spacing:.04em;}
+.duo-line + .duo-line{margin-top:19px;}
+.duo-line i{font-style:normal;font:700 11px/1 ui-monospace,Consolas,monospace;
+  color:#79838f;letter-spacing:.1em;min-width:16px;text-align:right;}
+.duo-line b{font:700 30px/1 ui-monospace,"SF Mono",Consolas,monospace;
+  color:var(--acc);font-variant-numeric:tabular-nums;}
+.duo-line b.slow{color:var(--warm);}
+
+@media (max-height:660px){
+  main{padding:8px 0;}
+  .kick{margin-bottom:15px;}
+  .goal .num{font-size:clamp(42px,12vw,64px);}
+  .goal em{font-size:17px;}
+  .hint{margin-top:16px;}
+  .verdict{font-size:29px;}
+  .go{margin-top:22px;}
+  .list{margin-top:18px;gap:7px;}
+}
+@media (max-width:440px){
+  .wrap{padding:18px 16px 14px;}
+  .foot{gap:6px;}
+  .foot span{min-width:0;font-size:10px;}
+  .tools{gap:5px;}
+  .tool{padding:6px 8px;font-size:10px;letter-spacing:.02em;}
+  .tool{padding:6px 9px;font-size:10.5px;}
+  .row{font-size:11px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">误差<em>ERROR</em></div>
+    <div class="dots" id="dots"><i></i><i></i><i></i></div>
+  </div>
+
+  <main id="stage">
+
+    <!-- 主菜单 -->
+    <section class="view" id="vMenu">
+      <h1 class="mtitle">误差</h1>
+      <p class="msub">秒 感 测 验</p>
+      <p class="mlead">给你一个秒数，不许看表。<br>凭感觉按下去 —— 比的是你和时间的默契。</p>
+
+      <div class="modes" id="mModes">
+        <button class="mcard" data-m="std" type="button"><b>标准</b><i>看得见呼吸</i></button>
+        <button class="mcard" data-m="blind" type="button"><b>盲按</b><i>屏幕全黑</i></button>
+        <button class="mcard" data-m="duo" type="button"><b>双人</b><i>轮流各一次</i></button>
+      </div>
+
+      <div class="mrow">
+        <span>目标时长</span>
+        <button class="mtime" id="mTime" type="button">随机 3 – 12 秒</button>
+      </div>
+
+      <button class="go mgo" id="btnStart" type="button">开始 · 三局 <em>空格</em></button>
+
+      <p class="best" id="menuBest"></p>
+    </section>
+
+    <!-- 准备：给出目标 -->
+    <section class="view on" id="vReady">
+      <p class="kick" id="rKick">第 1 局 · 共 3 局</p>
+      <div class="goal"><span class="num" id="goalNum">7.30</span><em>秒</em></div>
+      <p class="hint" id="readyHint">记住这个数。<b>按空格</b>之后，屏幕会安静下来。</p>
+      <p class="best" id="bestLine"></p>
+    </section>
+
+    <!-- 计时：只剩呼吸 -->
+    <section class="view" id="vRun">
+      <div class="orb"><div class="halo" id="halo"></div><div class="dot" id="dot"></div></div>
+    </section>
+
+    <!-- 单局结果 -->
+    <section class="view" id="vRes">
+      <p class="kick" id="resKick">第 1 局</p>
+      <div class="verdict" id="resVerdict">极准</div>
+      <div class="err" id="resErr">快了 <b>0.18</b> 秒</div>
+      <p class="detail" id="resDetail"></p>
+      <button class="go" id="btnNext" type="button">下一局 <em>空格</em></button>
+    </section>
+
+    <!-- 三局结算 -->
+    <section class="view" id="vEnd">
+      <p class="kick" id="endKick">三局结束</p>
+      <div class="verdict big" id="endVerdict">手很稳</div>
+      <div class="avg"><b id="endAvg">0.214</b><em id="endAvgHint">秒 · 平均误差</em></div>
+      <div class="list" id="endList"></div>
+      <p class="best" id="endBest"></p>
+      <button class="go" id="btnAgain" type="button">再来三局</button>
+      <div><button class="ghost" id="btnHome" type="button">回主菜单</button></div>
+    </section>
+
+  </main>
+
+  <div class="sheet" id="sheet" aria-hidden="true">
+    <div class="sheet-card" role="dialog" aria-modal="true">
+      <div class="sheet-head">
+        <b id="sheetTitle">设置</b>
+        <button class="sheet-x" id="sheetX" type="button">关闭</button>
+      </div>
+      <div class="sheet-body" id="sheetBody"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span id="footNote">按空格开始</span>
+    <div class="tools">
+      <button class="tool" id="btnMode" type="button">标准</button>
+      <button class="tool" id="btnTime" type="button">随机</button>
+      <button class="tool" id="btnSound" type="button">音效</button>
+      <button class="tool" id="btnHist" type="button">记录</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+var ROUNDS = 3;
+
+/* ---------------- 时钟 ----------------
+   performance.now 是单调时钟，不受系统时间调整影响；缺失时才退回 Date.now。
+   注意：所有计时都读这一个函数，绝不靠帧数或 setInterval 累加。 */
+var T = (function(){
+  var p = (typeof performance !== 'undefined') ? performance : null;
+  if (p && typeof p.now === 'function'){
+    return function(){ return p.now(); };
+  }
+  return function(){ return Date.now(); };
+})();
+
+var RAF = (typeof requestAnimationFrame === 'function')
+  ? function(fn){ return requestAnimationFrame(fn); }
+  : function(fn){ return setTimeout(fn, 16); };
+var CAF = (typeof cancelAnimationFrame === 'function')
+  ? function(id){ cancelAnimationFrame(id); }
+  : function(id){ clearTimeout(id); };
+
+/* ---------------- 伪随机：xorshift32，确定性、不依赖系统随机源 ---------------- */
+function Rand(seed){
+  this.s = (seed >>> 0) || 0x9e3779b9;
+}
+Rand.prototype.f = function(){
+  var x = this.s;
+  x ^= (x << 13); x >>>= 0;
+  x ^= (x >>> 17);
+  x ^= (x << 5);  x >>>= 0;
+  this.s = x;
+  return x / 4294967296;
+};
+Rand.prototype.int = function(a, b){
+  return a + Math.floor(this.f() * (b - a + 1));
+};
+var rnd = new Rand((Date.now() ^ 0x5f3a91c7) >>> 0);
+
+/* ---------------- DOM ---------------- */
+function $(id){ return document.getElementById(id); }
+var elDots = $('dots');
+var vReady = $('vReady'), vRun = $('vRun'), vRes = $('vRes'), vEnd = $('vEnd');
+var elKick = $('rKick'), elGoal = $('goalNum'), elBest = $('bestLine'), elReadyHint = $('readyHint');
+var elHalo = $('halo'), elDot = $('dot');
+var elResKick = $('resKick'), elResVerdict = $('resVerdict'), elResErr = $('resErr'),
+    elResDetail = $('resDetail'), elResGo = $('btnNext');
+var elEndKick = $('endKick'), elEndVerdict = $('endVerdict'), elEndAvg = $('endAvg'),
+    elEndAvgHint = $('endAvgHint'), elEndList = $('endList'), elEndBest = $('endBest');
+var elFoot = $('footNote');
+var elMode = $('btnMode'), elTime = $('btnTime'),
+    elSound = $('btnSound'), elHist = $('btnHist');
+var vMenu = $('vMenu'), elModes = $('mModes'), elMTime = $('mTime'),
+    elStart = $('btnStart'), elHome = $('btnHome'), elMenuBest = $('menuBest');
+
+/* ---------------- 状态 ---------------- */
+var S = {
+  phase: 'menu',      // menu | ready | run | result | end
+  round: 0,           // 已完成局数
+  target: 0,          // 本局目标秒数
+  t0: 0,              // 计时起点
+  used: 0,            // 实际用时（秒）
+  rounds: [],         // [{target, shots:[{who,used,ms,timeout}], done}]
+  mode: 'std',        // std | blind | duo
+  turn: 'A',          // 双人模式当前是谁
+  custom: 0,          // 0 = 随机目标；>0 = 固定秒数（1~60）
+  sound: true,
+  bestAvg: null,
+  bestSingle: null,
+  hist: [],
+  lockUntil: 0,
+  canNext: 0,
+  raf: 0,
+  timer: 0,
+  watch: 0,
+  lastPaint: 0,
+  guard: 0
+};
+
+/* ---------------- 模式表 ---------------- */
+var MODES = {
+  std:   { label: '标准', blind: false, duo: false },
+  blind: { label: '盲按', blind: true,  duo: false },
+  duo:   { label: '双人', blind: false, duo: true  }
+};
+var MODE_SEQ = ['std', 'blind', 'duo'];
+
+function modeOf(){ return MODES[S.mode] || MODES.std; }
+function isDuo(){ return S.mode === 'duo'; }
+function isBlind(){ return S.mode === 'blind'; }
+
+/* ---------------- 本地存储 ---------------- */
+var LS = 'wucha_v1';
+var HIST_MAX = 20;
+
+function loadStore(){
+  try {
+    var raw = window.localStorage.getItem(LS);
+    if (!raw) return;
+    var o = JSON.parse(raw);
+    if (!o) return;
+    if (typeof o.avg === 'number' && isFinite(o.avg)) S.bestAvg = o.avg;
+    if (typeof o.single === 'number' && isFinite(o.single)) S.bestSingle = o.single;
+    if (o.hist && o.hist.length){
+      S.hist = o.hist.slice(0, HIST_MAX);
+    }
+  } catch (e) {}
+}
+function saveStore(){
+  try {
+    window.localStorage.setItem(LS, JSON.stringify({
+      avg: S.bestAvg, single: S.bestSingle, hist: S.hist
+    }));
+  } catch (e) {}
+}
+function bestText(){
+  if (S.bestAvg === null) return '还没有记录 —— 三局之后会有一个数字';
+  var t = '最佳 · 平均 ' + S.bestAvg.toFixed(3) + ' 秒';
+  if (S.bestSingle !== null) t += ' · 单局 ' + S.bestSingle.toFixed(3) + ' 秒';
+  return t;
+}
+
+/* ---------------- 音效 ----------------
+   全部现场合成。关键是总线和压缩器：早先每声只有 0.05 的增益、14ms 起音，
+   高频正弦又衰减极快，实际音量小到听不见。现在统一过 compressor，单声 0.2~0.35，
+   并给「停表」配一个噪声瞬态，短促的「嗒」比长音更容易被耳朵抓住。 */
+var AC = null, BUS = null, NOISE = null;
+
+function actx(){
+  if (AC) return AC;
+  var C = window.AudioContext || window.webkitAudioContext;
+  if (!C) return null;
+  try { AC = new C(); } catch (e) { return null; }
+  return AC;
+}
+
+function bus(){
+  var c = actx();
+  if (!c) return null;
+  if (BUS) return BUS;
+  var comp = c.createDynamicsCompressor();
+  comp.threshold.value = -16;
+  comp.knee.value = 22;
+  comp.ratio.value = 3;
+  comp.attack.value = 0.004;
+  comp.release.value = 0.22;
+  var g = c.createGain();
+  g.gain.value = 0.85;
+  comp.connect(g);
+  g.connect(c.destination);
+  BUS = comp;
+  return BUS;
+}
+
+function wake(){
+  var c = actx();
+  if (!c) return null;
+  if (c.state === 'suspended'){ try { c.resume(); } catch (e) {} }
+  return c;
+}
+
+function tone(freq, dur, vol, opt){
+  if (!S.sound) return;
+  var c = wake(); if (!c) return;
+  var out = bus(); if (!out) return;
+  opt = opt || {};
+  var t0 = c.currentTime + (opt.at || 0);
+  var o = c.createOscillator(), g = c.createGain();
+  o.type = opt.type || 'sine';
+  o.frequency.setValueAtTime(freq, t0);
+  if (opt.slide) o.frequency.exponentialRampToValueAtTime(opt.slide, t0 + dur * 0.9);
+
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + 0.006);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * 0.38), t0 + dur * 0.4);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+
+  o.connect(g); g.connect(out);
+  o.start(t0);
+  o.stop(t0 + dur + 0.05);
+}
+
+function noiseBuf(c){
+  if (NOISE) return NOISE;
+  var n = Math.floor(c.sampleRate * 0.3);
+  var b = c.createBuffer(1, n, c.sampleRate);
+  var d = b.getChannelData(0);
+  var x = 0x2f6b1a3d;
+  for (var i = 0; i < n; i++){
+    x ^= (x << 13); x >>>= 0;
+    x ^= (x >>> 17);
+    x ^= (x << 5);  x >>>= 0;
+    d[i] = (x / 2147483648);
+  }
+  NOISE = b;
+  return b;
+}
+
+function tick(vol, freq, at){
+  if (!S.sound) return;
+  var c = wake(); if (!c) return;
+  var out = bus(); if (!out) return;
+  var t0 = c.currentTime + (at || 0);
+  var src = c.createBufferSource();
+  src.buffer = noiseBuf(c);
+  var f = c.createBiquadFilter();
+  f.type = 'bandpass';
+  f.frequency.value = freq || 2600;
+  f.Q.value = 0.9;
+  var g = c.createGain();
+  g.gain.setValueAtTime(vol, t0);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.055);
+  src.connect(f); f.connect(g); g.connect(out);
+  src.start(t0);
+  src.stop(t0 + 0.09);
+}
+
+function sfxStart(){
+  tick(0.55, 2300);
+  tone(320, 0.15, 0.30, { slide: 250 });
+}
+
+function sfxStop(){
+  tick(0.85, 3300);
+  tone(1240, 0.055, 0.24);
+}
+
+function sfxJudge(ms){
+  var a = Math.abs(ms);
+  if (a <= 120){
+    tone(784, 0.26, 0.34, { at: 0.04 });
+    tone(988, 0.28, 0.28, { at: 0.12 });
+    tone(1319, 0.40, 0.22, { at: 0.21 });
+  } else if (a <= 400){
+    tone(660, 0.24, 0.32, { at: 0.04 });
+    tone(880, 0.28, 0.22, { at: 0.13 });
+  } else if (a <= 1200){
+    tone(392, 0.28, 0.30, { type: 'triangle', at: 0.04 });
+  } else {
+    tone(220, 0.42, 0.34, { type: 'triangle', slide: 165, at: 0.04 });
+    tone(207, 0.42, 0.17, { at: 0.04 });
+  }
+}
+
+function sfxEnd(kind){
+  if (kind === 0){
+    tone(523, 0.46, 0.28);
+    tone(659, 0.46, 0.24, { at: 0.02 });
+    tone(784, 0.46, 0.20, { at: 0.04 });
+    tone(1046, 0.66, 0.16, { at: 0.13 });
+  } else if (kind === 1){
+    tone(587, 0.36, 0.28);
+    tone(880, 0.48, 0.19, { at: 0.10 });
+  } else {
+    tone(311, 0.46, 0.28, { type: 'triangle' });
+    tone(294, 0.46, 0.20, { type: 'triangle', at: 0.03 });
+  }
+}
+
+function sfxHandoff(){ tone(520, 0.11, 0.20); tick(0.30, 1800); }
+function sfxUi(){ tone(880, 0.05, 0.13); }
+
+/* ---------------- 视图 ---------------- */
+function show(el){
+  var all = [vMenu, vReady, vRun, vRes, vEnd];
+  for (var i = 0; i < all.length; i++){
+    all[i].classList.toggle('on', all[i] === el);
+  }
+}
+function drawDots(){
+  var kids = elDots.children;
+  for (var i = 0; i < kids.length; i++){
+    var cls = '';
+    if (i < S.round) cls = 'on';
+    else if (i === S.round && S.phase !== 'end' && S.phase !== 'menu') cls = 'cur';
+    kids[i].className = cls;
+  }
+}
+
+/* ---------------- 目标生成 ---------------- */
+function newTarget(){
+  if (S.custom > 0){
+    S.target = S.custom;
+    return;
+  }
+  var t = 0, guard = 0;
+  do {
+    t = rnd.int(30, 120) / 10;          // 3.0 ~ 12.0 秒
+    guard++;
+  } while (guard < 24 && S.target > 0 && Math.abs(t - S.target) < 0.8);
+  S.target = t;
+}
+
+/* ---------------- 流程：准备 ---------------- */
+function readyHint(){
+  if (isDuo()){
+    return S.turn === 'A'
+      ? '玩家 A 先来。记住这个数，<b>按空格</b>开始。'
+      : '玩家 B 接手，还是这个数。<b>按空格</b>开始。';
+  }
+  if (isBlind()) return '记住这个数。<b>按空格</b>后屏幕会全黑，只能靠自己数。';
+  return '记住这个数。<b>按空格</b>之后，屏幕会安静下来。';
+}
+
+function toReady(){
+  S.phase = 'ready';
+  document.body.classList.remove('blind');
+
+  elKick.textContent = '第 ' + (S.round + 1) + ' / ' + ROUNDS + ' 局'
+    + (isDuo() ? ' · 玩家 ' + S.turn : '');
+  elGoal.textContent = S.target.toFixed(2);
+  elBest.textContent = bestText();
+  elReadyHint.innerHTML = readyHint();
+
+  elFoot.textContent = isDuo()
+    ? ('轮到玩家 ' + S.turn + ' · 空格开始')
+    : (isBlind() ? '盲按 · 屏幕全黑，只剩你和时间' : '按空格开始');
+
+  drawDots();
+  show(vReady);
+}
+
+/* ---------------- 流程：主菜单 ---------------- */
+function toMenu(){
+  stopPaint();
+  if (S.guard){ clearTimeout(S.guard); S.guard = 0; }
+  document.body.classList.remove('running', 'blind');
+  S.phase = 'menu';
+  S.round = 0;
+  S.rounds = [];
+  S.turn = 'A';
+  S.target = 0;
+  S.canNext = 0;
+  S.lockUntil = 0;
+  elFoot.textContent = '按空格开始';
+  refreshMenu();
+  drawDots();
+  show(vMenu);
+}
+
+function refreshMenu(){
+  var cards = elModes.children;
+  for (var i = 0; i < cards.length; i++){
+    cards[i].classList.toggle('on', cards[i].getAttribute('data-m') === S.mode);
+  }
+  elMTime.textContent = S.custom > 0 ? ('固定 ' + S.custom + ' 秒') : '随机 3 – 12 秒';
+  elMTime.classList.toggle('fixed', S.custom > 0);
+  elStart.innerHTML = '开始 · ' + (isDuo() ? '三回合' : '三局') + ' <em>空格</em>';
+  elMenuBest.textContent = bestText();
+}
+
+function beginGame(){
+  if (S.phase !== 'menu') return;
+  restart();
+}
+
+/* ---------------- 流程：计时 ---------------- */
+function paint(){
+  if (S.phase !== 'run') return;
+  var t = (T() - S.t0) / 1000;
+  var ph = Math.sin(t * 1.7453293);       // 周期 3.6 秒，非整数，不容易被当拍子数
+  var k = 0.5 + 0.5 * ph;                 // 0 → 1
+  elHalo.style.transform = 'scale(' + (0.93 + 0.075 * k).toFixed(4) + ')';
+  elHalo.style.opacity = (0.34 + 0.52 * k).toFixed(3);
+  elDot.style.transform = 'scale(' + (0.78 + 0.42 * k).toFixed(3) + ')';
+  elDot.style.opacity = (0.55 + 0.45 * k).toFixed(3);
+  S.lastPaint = T();
+}
+
+function loopRaf(){
+  if (S.phase !== 'run') return;
+  paint();
+  S.raf = RAF(loopRaf);
+}
+
+function startPaint(){
+  stopPaint();
+  S.lastPaint = T();
+  S.raf = RAF(loopRaf);
+  // 兜底：某些环境下 rAF 会被掐断（内嵌 webview、省电模式、无头浏览器都可能），
+  // 半秒还没画过就改用定时器。这只是视觉装饰，不需要跟帧同步。
+  S.watch = setTimeout(function(){
+    if (S.phase !== 'run') return;
+    if (T() - S.lastPaint < 300) return;
+    if (S.raf){ CAF(S.raf); S.raf = 0; }
+    S.timer = setInterval(function(){
+      if (S.phase !== 'run'){ clearInterval(S.timer); S.timer = 0; return; }
+      paint();
+    }, 33);
+  }, 500);
+}
+
+function stopPaint(){
+  if (S.raf){ CAF(S.raf); S.raf = 0; }
+  if (S.timer){ clearInterval(S.timer); S.timer = 0; }
+  if (S.watch){ clearTimeout(S.watch); S.watch = 0; }
+}
+
+function startRun(){
+  if (S.phase !== 'ready') return;
+  if (sheetOn) return;
+
+  S.phase = 'run';
+  S.used = 0;
+  document.body.classList.add('running');
+  document.body.classList.toggle('blind', isBlind());
+  elFoot.textContent = '该按的时候，按下去';
+  drawDots();
+  show(vRun);
+
+  // 起点在取画面之前，越靠近按键越好
+  S.t0 = T();
+  startPaint();
+
+  if (S.guard) clearTimeout(S.guard);
+  // 自定义可以到 60 秒，固定的 60 秒保护会立刻误判超时
+  var limit = Math.max(20000, S.target * 2000 + 15000);
+  S.guard = setTimeout(function(){
+    if (S.phase === 'run'){
+      S.used = (T() - S.t0) / 1000;
+      stopPaint();
+      endShot(true);
+    }
+  }, limit);
+
+  sfxStart();
+}
+
+function stopRun(){
+  if (S.phase !== 'run') return;
+  S.used = (T() - S.t0) / 1000;
+  stopPaint();
+  if (S.guard){ clearTimeout(S.guard); S.guard = 0; }
+  endShot(false);
+}
+
+/* ---------------- 判定 ---------------- */
+function judgeOf(ms){
+  var a = Math.abs(ms);
+  if (a <= 50)  return '神';
+  if (a <= 120) return '极准';
+  if (a <= 300) return '还行';
+  if (a <= 700) return '有点飘';
+  if (a <= 1500) return '离谱';
+  return '你在数别的';
+}
+
+function dirOf(ms, timeout){
+  if (timeout) return '没按';
+  if (ms === 0) return '正中';
+  return ms < 0 ? '快了' : '慢了';
+}
+
+function duoLine(who, shot){
+  var abs = Math.abs(shot.ms) / 1000;
+  var slow = !(shot.ms < 0 || shot.ms === 0);
+  return '<div class="duo-line"><i>' + who + '</i>' + dirOf(shot.ms, shot.timeout)
+    + ' <b' + (slow ? ' class="slow"' : '') + '>' + abs.toFixed(2) + '</b> 秒</div>';
+}
+
+/* ---------------- 一次按表 ---------------- */
+function endShot(timeout){
+  document.body.classList.remove('running', 'blind');
+
+  var ms = Math.round((S.used - S.target) * 1000);
+  if (!S.rounds[S.round]) S.rounds[S.round] = { target: S.target, shots: [] };
+  S.rounds[S.round].shots.push({ who: S.turn, used: S.used, ms: ms, timeout: !!timeout });
+
+  sfxStop();
+
+  // 双人：A 按完不出成绩，直接交给 B，成绩留到 B 也按完一起揭
+  if (isDuo() && S.turn === 'A'){
+    S.turn = 'B';
+    S.phase = 'ready';
+    sfxHandoff();
+    toReady();
+    S.lockUntil = T() + 900;      // 手指还没离开，别让抖动直接开始 B 的计时
+    return;
+  }
+
+  S.rounds[S.round].done = true;
+  showResult();
+}
+
+/* ---------------- 单局结果（含双人对比） ---------------- */
+function showResult(){
+  S.phase = 'result';
+  var cur = S.rounds[S.round];
+  var duo = isDuo();
+
+  elResKick.textContent = duo
+    ? ('回合 ' + (S.round + 1) + ' / ' + ROUNDS)
+    : ('第 ' + (S.round + 1) + ' 局');
+
+  if (duo){
+    var a = cur.shots[0], b = cur.shots[1];
+    var da = Math.abs(a.ms), db = Math.abs(b.ms);
+    var gap = Math.abs(da - db) / 1000;
+    elResVerdict.textContent = (Math.abs(da - db) <= 30)
+      ? '打平'
+      : (da < db ? 'A 赢' : 'B 赢');
+    elResErr.className = 'err duo';
+    elResErr.innerHTML = duoLine('A', a) + duoLine('B', b);
+    elResDetail.textContent = '目标 ' + cur.target.toFixed(2) + ' 秒 · 差 '
+      + (gap < 0.005 ? '不到 0.01' : gap.toFixed(2)) + ' 秒';
+  } else {
+    var s0 = cur.shots[0];
+    var abs = Math.abs(s0.ms) / 1000;
+    var fast = s0.ms < 0;
+    elResVerdict.textContent = s0.timeout ? '没有按' : judgeOf(s0.ms);
+    elResErr.className = 'err' + (fast || s0.ms === 0 ? '' : ' slow');
+    elResErr.innerHTML = s0.timeout
+      ? ('超出 <b>' + abs.toFixed(2) + '</b> 秒')
+      : (dirOf(s0.ms) + ' <b>' + abs.toFixed(2) + '</b> 秒');
+    elResDetail.textContent = s0.timeout
+      ? '你没有按。目标 ' + cur.target.toFixed(2) + ' 秒'
+      : '目标 ' + cur.target.toFixed(2) + ' 秒 · 你按在 ' + s0.used.toFixed(2) + ' 秒';
+
+    if (!s0.timeout && (S.bestSingle === null || abs < S.bestSingle)){
+      S.bestSingle = abs;
+      saveStore();
+    }
+  }
+
+  elResGo.innerHTML = (S.round + 1 >= ROUNDS)
+    ? '看总成绩 <em>空格</em>'
+    : (duo ? '下一回合 <em>空格</em>' : '下一局 <em>空格</em>');
+
+  elFoot.textContent = '空格继续';
+  S.canNext = T() + 550;
+  sfxJudge(duo
+    ? Math.min(Math.abs(cur.shots[0].ms), Math.abs(cur.shots[1].ms))
+    : cur.shots[0].ms);
+  drawDots();
+  show(vRes);
+}
+
+/* ---------------- 三局结算 ---------------- */
+function verdictEnd(avg){
+  if (avg <= 0.08) return '石英心脏';
+  if (avg <= 0.18) return '手很稳';
+  if (avg <= 0.35) return '正常人类';
+  if (avg <= 0.70) return '心里有事';
+  if (avg <= 1.50) return '时间在你手里是软的';
+  return '你和秒不是一回事';
+}
+
+function statOf(who){
+  var sum = 0, n = 0, i, j, sh;
+  for (i = 0; i < S.rounds.length; i++){
+    sh = S.rounds[i].shots || [];
+    for (j = 0; j < sh.length; j++){
+      if (who && sh[j].who !== who) continue;
+      sum += Math.abs(sh[j].ms);
+      n++;
+    }
+  }
+  return { avg: n ? sum / n / 1000 : 0, n: n };
+}
+
+function toEnd(){
+  S.phase = 'end';
+  S.round = ROUNDS;
+  drawDots();
+
+  var duo = isDuo();
+  var kind = 1;
+  var pushEntry = { t: Date.now(), m: S.mode, c: S.custom };
+
+  if (duo){
+    var sa = statOf('A'), sb = statOf('B');
+    var winner = 'B 赢';
+    if (Math.abs(sa.avg - sb.avg) <= 0.03) winner = '打平';
+    else if (sa.avg < sb.avg) winner = 'A 赢';
+
+    elEndKick.textContent = '三回合结束';
+    elEndVerdict.textContent = winner;
+    elEndAvg.textContent = sa.avg.toFixed(3) + ' : ' + sb.avg.toFixed(3);
+    elEndAvgHint.textContent = '秒 · A 平均 : B 平均';
+
+    var rows = '';
+    for (var r = 0; r < S.rounds.length; r++){
+      var rr = S.rounds[r];
+      var x = rr.shots[0], y = rr.shots[1] || { ms: 0 };
+      var dx = Math.abs(x.ms), dy = Math.abs(y.ms);
+      var w = Math.abs(dx - dy) <= 30 ? '平' : (dx < dy ? 'A' : 'B');
+      rows += '<div class="row"><i>' + (r + 1) + '</i>'
+            + '<span>目标 ' + rr.target.toFixed(2) + ' · A ' + (dx / 1000).toFixed(2)
+            + ' / B ' + (dy / 1000).toFixed(2) + '</span>'
+            + '<b class="fast">' + w + '</b></div>';
+    }
+    elEndList.innerHTML = rows;
+
+    elEndBest.textContent = '双人不计入个人最佳';
+    elEndBest.className = 'best';
+
+    kind = (Math.min(sa.avg, sb.avg) <= 0.18) ? 0 : (Math.min(sa.avg, sb.avg) <= 0.5 ? 1 : 2);
+    pushEntry.a = sa.avg;
+    pushEntry.b = sb.avg;
+  } else {
+    var st = statOf(null);
+    var avg = st.avg;
+
+    var isBest = (S.bestAvg === null || avg < S.bestAvg);
+    if (isBest) S.bestAvg = avg;
+
+    elEndKick.textContent = '三局结束';
+    elEndVerdict.textContent = verdictEnd(avg);
+    elEndAvg.textContent = avg.toFixed(3);
+    elEndAvgHint.textContent = '秒 · 平均误差';
+
+    var html = '';
+    for (var k = 0; k < S.rounds.length; k++){
+      var it = S.rounds[k].shots[0];
+      var a = Math.abs(it.ms) / 1000;
+      var cls = it.ms < 0 ? 'fast' : 'slow';
+      var sign = it.ms < 0 ? '−' : '+';
+      html += '<div class="row"><i>' + (k + 1) + '</i>'
+            + '<span>目标 ' + S.rounds[k].target.toFixed(2) + ' · 按在 ' + it.used.toFixed(2) + '</span>'
+            + '<b class="' + cls + '">' + sign + a.toFixed(2) + 's</b></div>';
+    }
+    elEndList.innerHTML = html;
+
+    elEndBest.textContent = isBest
+      ? '新的个人最佳'
+      : ('最佳 · 平均 ' + S.bestAvg.toFixed(3) + ' 秒');
+    elEndBest.className = 'best' + (isBest ? ' hit' : '');
+
+    kind = avg <= 0.18 ? 0 : (avg <= 0.5 ? 1 : 2);
+    pushEntry.a = avg;
+  }
+
+  saveStore();
+
+  // 历史：这次完整的几局
+  S.hist.unshift(pushEntry);
+  if (S.hist.length > HIST_MAX) S.hist.length = HIST_MAX;
+  saveStore();
+
+  sfxEnd(kind);
+  elFoot.textContent = duo ? '再来三回合？' : '再数三局？';
+  $('btnAgain').textContent = duo ? '再来三回合' : '再来三局';
+  show(vEnd);
+}
+
+/* ---------------- 轮次推进 ---------------- */
+function nextRound(){
+  S.round++;
+  S.turn = 'A';
+  if (S.round >= ROUNDS){ toEnd(); return; }
+  newTarget();
+  toReady();
+}
+
+function restart(){
+  stopPaint();
+  if (S.guard){ clearTimeout(S.guard); S.guard = 0; }
+  document.body.classList.remove('running', 'blind');
+  S.round = 0;
+  S.turn = 'A';
+  S.rounds = [];
+  S.target = 0;
+  newTarget();
+  toReady();
+}
+
+/* ---------------- 输入 ---------------- */
+function advance(){
+  if (S.phase === 'menu'){
+    beginGame();
+  } else if (S.phase === 'ready'){
+    startRun();
+  } else if (S.phase === 'run'){
+    stopRun();
+  } else if (S.phase === 'result'){
+    if (T() < S.canNext) return;
+    nextRound();
+  } else if (S.phase === 'end'){
+    restart();
+  }
+}
+
+function onDown(e){
+  if (sheetOn) return;
+  // 菜单只认「开始」按钮和空格，避免点空白误开局
+  if (S.phase === 'menu') return;
+  var t = e.target;
+  if (t && t.closest && t.closest('.tool')) return;
+
+  // 停表不看冷却：这一下必须是准的
+  if (S.phase === 'run'){
+    if (T() - S.t0 > 220) stopRun();   // 刚起步的连击不算
+    return;
+  }
+
+  var now = T();
+  if (now < S.lockUntil) return;
+  S.lockUntil = now + 220;
+  advance();
+}
+
+function onKey(e){
+  if (e.repeat) return;
+
+  if (e.key === 'Escape' || e.key === 'Esc'){
+    if (sheetOn){ closeSheet(); e.preventDefault(); return; }
+    if (S.phase === 'ready' || S.phase === 'result' || S.phase === 'end'){
+      toMenu(); e.preventDefault();
+    }
+    return;
+  }
+  if (sheetOn) return;
+
+  var k = e.key;
+  if (k !== ' ' && k !== 'Spacebar' && k !== 'Enter' && e.code !== 'Space') return;
+  e.preventDefault();
+
+  if (S.phase === 'run'){
+    if (T() - S.t0 > 220) stopRun();
+    return;
+  }
+
+  var now = T();
+  if (now < S.lockUntil) return;
+  S.lockUntil = now + 220;
+  advance();
+}
+
+if ('onpointerdown' in window){
+  document.addEventListener('pointerdown', onDown, false);
+} else {
+  document.addEventListener('mousedown', onDown, false);
+  document.addEventListener('touchstart', onDown, false);
+}
+document.addEventListener('keydown', onKey, false);
+
+/* ---------------- 面板 ---------------- */
+var sheetOn = false;
+var sheetKind = '';
+
+function openSheet(kind){
+  if (S.phase === 'run') return;      // 计时中不打断
+  sheetKind = kind;
+  sheetOn = true;
+  $('sheetTitle').textContent = (kind === 'time') ? '目标时长' : '最近记录';
+  $('sheetBody').innerHTML = (kind === 'time') ? timeSheetHTML() : histSheetHTML();
+  $('sheet').classList.add('on');
+  $('sheet').setAttribute('aria-hidden', 'false');
+  sfxUi();
+}
+
+function closeSheet(){
+  if (!sheetOn) return;
+  sheetOn = false;
+  sheetKind = '';
+  $('sheet').classList.remove('on');
+  $('sheet').setAttribute('aria-hidden', 'true');
+}
+
+function timeSheetHTML(){
+  var chips = [0, 5, 10, 15, 20, 30, 45, 60];
+  var h = '<div class="tgrid">';
+  for (var i = 0; i < chips.length; i++){
+    var v = chips[i];
+    h += '<button class="tchip' + (S.custom === v ? ' on' : '') + '" data-t="' + v + '">'
+      + (v === 0 ? '随机' : v + ' 秒') + '</button>';
+  }
+  h += '</div>';
+  h += '<div class="trow"><input id="tIn" type="number" min="1" max="60" step="0.5"'
+    + ' placeholder="1 ~ 60" value="' + (S.custom > 0 ? S.custom : '') + '">'
+    + '<button id="tSet" type="button">用这个数</button></div>';
+  h += '<p class="tnote">范围 1 ~ 60 秒。改时长只对还没开始的那一局生效。</p>';
+  return h;
+}
+
+function histSheetHTML(){
+  if (!S.hist.length){
+    return '<div class="hempty">还没有记录。<br>打完三局就会留一条。</div>';
+  }
+  var h = '';
+  for (var i = 0; i < S.hist.length; i++){
+    var e = S.hist[i];
+    var md = new Date(e.t);
+    var pad = function(n){ return n < 10 ? '0' + n : '' + n; };
+    var when = pad(md.getMonth() + 1) + '-' + pad(md.getDate()) + ' '
+      + pad(md.getHours()) + ':' + pad(md.getMinutes());
+    var label = (MODES[e.m] || MODES.std).label;
+    if (e.c > 0) label += ' · ' + e.c + 's';
+    var val = (typeof e.b === 'number')
+      ? (e.a.toFixed(3) + '<s>:</s>' + e.b.toFixed(3))
+      : e.a.toFixed(3);
+    h += '<div class="hrow"><span class="ht">' + when + '</span>'
+      + '<span class="hm">' + label + '</span><b>' + val + '</b></div>';
+  }
+  h += '<button class="hclear" id="hClear" type="button">清空记录</button>';
+  return h;
+}
+
+function applyCustom(v){
+  v = Math.round(v * 10) / 10;
+  if (!(v > 0) || v > 60) v = 0;
+  S.custom = v;
+  refreshTime();
+  closeSheet();
+  // 只在「这一局还没人按」时才换目标，避免双人公平性被破坏
+  var cur = S.rounds[S.round];
+  if (S.phase === 'ready' && !(cur && cur.shots.length)){
+    S.target = 0;
+    newTarget();
+    toReady();
+  }
+}
+
+$('sheetX').addEventListener('click', function(){ closeSheet(); sfxUi(); });
+
+$('sheet').addEventListener('click', function(e){
+  var t = e.target;
+  if (t === $('sheet')){ closeSheet(); return; }
+
+  if (t.id === 'hClear'){
+    S.hist = [];
+    saveStore();
+    $('sheetBody').innerHTML = histSheetHTML();
+    return;
+  }
+  if (t.id === 'tSet'){
+    var inp = $('tIn');
+    var v = parseFloat(inp.value);
+    if (isNaN(v) || v <= 0 || v > 60){
+      inp.value = '';
+      inp.placeholder = '1 到 60 之间';
+      return;
+    }
+    applyCustom(v);
+    return;
+  }
+  if (t.getAttribute && t.getAttribute('data-t') !== null){
+    applyCustom(parseFloat(t.getAttribute('data-t')) || 0);
+  }
+});
+
+/* ---------------- 底栏按钮 ---------------- */
+function refreshMode(){
+  var m = modeOf();
+  elMode.textContent = m.label;
+  elMode.classList.toggle('on', S.mode !== 'std');
+  if (S.phase === 'menu'){ refreshMenu(); return; }
+  if (S.phase === 'ready'){
+    elReadyHint.innerHTML = readyHint();
+    elFoot.textContent = isDuo()
+      ? ('轮到玩家 ' + S.turn + ' · 空格开始')
+      : (isBlind() ? '盲按 · 屏幕全黑，只剩你和时间' : '按空格开始');
+  }
+}
+
+function refreshTime(){
+  elTime.textContent = S.custom > 0 ? (S.custom + 's') : '随机';
+  elTime.classList.toggle('on', S.custom > 0);
+  if (S.phase === 'menu') refreshMenu();
+}
+
+function refreshSound(){
+  elSound.textContent = S.sound ? '音效' : '静音';
+  elSound.className = 'tool' + (S.sound ? '' : ' mute');
+}
+
+elMode.addEventListener('click', function(){
+  var i = MODE_SEQ.indexOf(S.mode);
+  var next = MODE_SEQ[(i + 1) % MODE_SEQ.length];
+  var needReset = isDuo() || next === 'duo';
+  S.mode = next;
+  refreshMode();
+  sfxUi();
+  if (S.phase === 'menu') return;
+  if (needReset){
+    restart();          // 单人和双人的局结构不同，得重来
+  } else if (S.phase === 'ready'){
+    toReady();
+  }
+});
+
+elTime.addEventListener('click', function(){ openSheet('time'); });
+elMTime.addEventListener('click', function(){ openSheet('time'); });
+
+elModes.addEventListener('click', function(e){
+  var t = e.target;
+  var b = (t && t.closest) ? t.closest('.mcard') : null;
+  if (!b) return;
+  var m = b.getAttribute('data-m');
+  if (!m || m === S.mode) return;
+  S.mode = m;
+  refreshMode();
+  refreshMenu();
+  sfxUi();
+});
+
+elStart.addEventListener('click', function(){ beginGame(); });
+elHome.addEventListener('click', function(){ sfxUi(); toMenu(); });
+elHist.addEventListener('click', function(){ openSheet('hist'); });
+
+elSound.addEventListener('click', function(){
+  S.sound = !S.sound;
+  refreshSound();
+  if (S.sound) sfxUi();
+});
+
+/* ---------------- 启动 ---------------- */
+loadStore();
+refreshMode();
+refreshTime();
+refreshSound();
+toMenu();
+
+
+})();
+</script>
+</body>
+</html>
